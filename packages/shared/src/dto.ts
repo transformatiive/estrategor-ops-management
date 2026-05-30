@@ -124,3 +124,55 @@ export interface ProjectFoldersDTO {
   rootFolderId: string | null;
   folders: FolderDTO[];
 }
+
+// ─── Recolha ao Cliente (TRNSF-937) ──────────────────────────────────────
+
+/** Pedido para gerar um link de recolha (consultor escolhe os tipos). */
+export interface CreateCollectionRequest {
+  documentTypeKeys: string[];
+  clientEmail?: string;
+  message?: string;
+  /** validade em dias (default no servidor) */
+  expiresInDays?: number;
+}
+
+/** Estado de um item da recolha por tipo de documento. */
+export interface CollectionItemDTO {
+  documentTypeKey: string;
+  documentTypeName: string;
+  status: ChecklistStatus; // EM_FALTA | RECEBIDO | EM_REVISAO
+  documentId: string | null;
+  fileName: string | null;
+  workdriveUrl: string | null;
+}
+
+/** Resumo de um pedido de recolha (vista do consultor, separador Recolha). */
+export interface CollectionRequestDTO {
+  id: string;
+  token: string;
+  url: string;
+  status: "ATIVO" | "USADO" | "EXPIRADO";
+  clientEmail: string | null;
+  expiresAt: string;
+  createdAt: string;
+  items: CollectionItemDTO[];
+}
+
+/** Estado da recolha de um projecto (lista de pedidos). */
+export interface ProjectCollectionDTO {
+  requests: CollectionRequestDTO[];
+}
+
+/** Vista pública do formulário do cliente (sem login, via token). */
+export interface PublicCollectionDTO {
+  projectTitle: string;
+  clientName: string;
+  programCode: string;
+  status: "ATIVO" | "USADO" | "EXPIRADO";
+  expiresAt: string;
+  items: {
+    documentTypeKey: string;
+    documentTypeName: string;
+    delivered: boolean;
+  }[];
+}

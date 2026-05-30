@@ -6,6 +6,7 @@ import { ProjectPage } from "./pages/ProjectPage.js";
 import { Pt2030 } from "./pages/Pt2030.js";
 import { Utilizadores } from "./pages/Utilizadores.js";
 import { Login } from "./pages/Login.js";
+import { RecolhaPublica } from "./pages/RecolhaPublica.js";
 import { Placeholder } from "./pages/Placeholder.js";
 import { useAuth } from "./lib/auth.js";
 
@@ -28,6 +29,8 @@ export function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      {/* Formulário público do cliente — sem login (TRNSF-937) */}
+      <Route path="/recolha/:token" element={<RecolhaPublica />} />
 
       <Route element={<RequireAuth />}>
         <Route element={<Layout />}>

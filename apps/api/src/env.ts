@@ -23,6 +23,10 @@ const schema = z.object({
   WORKDRIVE_OAUTH_BASE: z.string().default("https://accounts.zoho.com"),
   // Pasta-raiz (team folder / workspace) onde as pastas de cliente são criadas.
   WORKDRIVE_ROOT_FOLDER_ID: z.string().optional(),
+  // Diretório local onde o adaptador stub guarda os ficheiros carregados (dev/CI).
+  WORKDRIVE_STUB_DIR: z.string().default("/tmp/estrategor-workdrive"),
+  // Limite de tamanho por ficheiro carregado pelo cliente (bytes). Default 25 MB.
+  UPLOAD_MAX_BYTES: z.coerce.number().default(25 * 1024 * 1024),
 });
 
 export const env = schema.parse(process.env);

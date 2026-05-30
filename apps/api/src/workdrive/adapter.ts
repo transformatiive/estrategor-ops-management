@@ -1,7 +1,15 @@
+import { mkdirSync, writeFileSync } from "node:fs";
+import path from "node:path";
 import { env } from "../env.js";
 
 /** Resultado da criação de uma pasta no WorkDrive. */
 export interface CreatedFolder {
+  workdriveId: string;
+  workdriveUrl: string | null;
+}
+
+/** Resultado do upload de um ficheiro. */
+export interface UploadedFile {
   workdriveId: string;
   workdriveUrl: string | null;
 }
@@ -26,6 +34,13 @@ export interface WorkDriveAdapter {
   createFolder(parentId: string, name: string): Promise<CreatedFolder>;
   /** Lista o conteúdo de uma pasta. */
   listFolder(folderId: string): Promise<DriveItem[]>;
+  /** Carrega um ficheiro para dentro de `parentId` com o nome `fileName`. */
+  uploadFile(
+    parentId: string,
+    fileName: string,
+    content: Buffer,
+    mimeType: string,
+  ): Promise<UploadedFile>;
   /** ID da pasta-raiz onde as pastas de cliente/projecto são criadas. */
   rootFolderId(): string;
 }
@@ -54,6 +69,20 @@ export class StubWorkDrive implements WorkDriveAdapter {
 
   async listFolder(): Promise<DriveItem[]> {
     return [];
+  }
+
+  // Guarda o ficheiro no disco local do container (WORKDRIVE_STUB_DIR) para que
+  // o ciclo upload→ver→descarregar funcione em dev/CI/demo sem Zoho.
+  async uploadFile(
+    parentId: string,
+    fileName: string,
+    content: Buffer,
+  ): Promise<UploadedFile> {
+    const dir = path.join(env.WORKDRIVE_STUB_DIR, parentId);
+    mkdirSync(dir, { recursive: true });
+    const dest = path.join(dir, fileName);
+    writeFileSync(dest, content);
+    return { workdriveId: `stub-file-${parentId}-${fileName}`.slice(0, 160), workdriveUrl: null };
   }
 }
 
@@ -150,6 +179,35 @@ export class ZohoWorkDrive implements WorkDriveAdapter {
       type: it.attributes?.is_folder ? "folder" : "file",
       url: it.attributes?.permalink ?? null,
     }));
+  }
+
+  async uploadFile(
+    parentId: string,
+    fileName: string,
+    content: Buffer,
+    mimeType: string,
+  ): Promise<UploadedFile> {
+    // Upload via multipart para POST /upload (parent_id + content).
+    const form = new FormData();
+    form.append("parent_id", parentId);
+    form.append("filename", fileName);
+    form.append(
+      "content",
+      new Blob([content], { type: mimeType || "application/octet-stream" }),
+      fileName,
+    );
+    const res = await this.authedFetch("/upload", { method: "POST", body: form });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`WorkDrive: upload "${fileName}" falhou (${res.status}): ${text}`);
+    }
+    const json = (await res.json()) as {
+      data?: { attributes?: { resource_id?: string; permalink?: string } }[];
+    };
+    const attr = json.data?.[0]?.attributes;
+    const id = attr?.resource_id;
+    if (!id) throw new Error(`WorkDrive: resposta sem resource_id ao carregar "${fileName}".`);
+    return { workdriveId: id, workdriveUrl: attr?.permalink ?? null };
   }
 }
 

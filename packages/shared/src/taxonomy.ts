@@ -184,3 +184,49 @@ export function documentTypesForProgram(program: ProgramCode): DocumentTypeDef[]
     (d) => d.appliesTo === "all" || d.appliesTo.includes(program),
   );
 }
+
+/**
+ * Resolve o `targetFolder` da taxonomia (ex.: "ELEMENTOS", "INCENTIVOS/Candidatura")
+ * para um caminho real da árvore de pastas do projecto (ex.: "0-ELEMENTOS",
+ * "1-INCENTIVOS/SI nº 0182/Candidatura"). Devolve o caminho correspondente de
+ * entre `availablePaths`, ou "" (raiz) se nenhum encaixar. (TRNSF-937)
+ */
+export function resolveTargetFolderPath(
+  targetFolder: string,
+  availablePaths: string[],
+): string {
+  // ELEMENTOS → 0-ELEMENTOS
+  if (targetFolder === "ELEMENTOS" || targetFolder.startsWith("ELEMENTOS")) {
+    return availablePaths.find((p) => p === "0-ELEMENTOS") ?? "";
+  }
+  // INCENTIVOS/<sub> → 1-INCENTIVOS/<medida>/<sub>
+  if (targetFolder.startsWith("INCENTIVOS/")) {
+    const sub = targetFolder.split("/").pop()!;
+    const match = availablePaths.find(
+      (p) => p.startsWith("1-INCENTIVOS/") && p.endsWith(`/${sub}`),
+    );
+    return match ?? "";
+  }
+  return "";
+}
+
+/** Constrói o nome do ficheiro conforme §11: {Cliente}_{Programa}_{Tipo}_{Data}. */
+export function buildDocumentFilename(opts: {
+  clientName: string;
+  programCode: string;
+  documentTypeKey: string;
+  date?: Date;
+  extension?: string;
+}): string {
+  const slug = (s: string) =>
+    s
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .replace(/[^a-zA-Z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
+  const d = opts.date ?? new Date();
+  const dateStr = d.toISOString().slice(0, 10); // AAAA-MM-DD
+  const base = `${slug(opts.clientName)}_${slug(opts.programCode)}_${slug(opts.documentTypeKey)}_${dateStr}`;
+  const ext = opts.extension ? `.${opts.extension.replace(/^\.+/, "")}` : "";
+  return base + ext;
+}
