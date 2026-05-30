@@ -10,11 +10,14 @@ import {
   TableSkeleton,
 } from "../components/ui.js";
 import { ProjectDrawer } from "../components/ProjectDrawer.js";
+import { useAuth } from "../lib/auth.js";
 
 export function Dashboard() {
   const { data: projects, loading, error, reload } = useAsync(() => api.projects());
   const { data: health } = useAsync(() => api.health());
+  const { user } = useAuth();
   const [selected, setSelected] = useState<string | null>(null);
+  const firstName = user?.fullName.split(/\s+/)[0] ?? "";
 
   const list = projects ?? [];
   const emExecucao = list.filter((p) => p.state === "B1");
@@ -24,7 +27,7 @@ export function Dashboard() {
     <>
       <div className="page-header">
         <div>
-          <div className="page-title">Bom dia, Joana 👋</div>
+          <div className="page-title">Bom dia, {firstName} 👋</div>
           <div className="page-subtitle">
             {list.length} projectos · base de dados{" "}
             {health ? (health.db === "up" ? "ligada ✓" : "indisponível ✗") : "…"}

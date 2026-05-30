@@ -4,6 +4,8 @@ import cookie from "@fastify/cookie";
 import { env } from "./env.js";
 import { healthRoutes } from "./routes/health.js";
 import { projectRoutes } from "./routes/projects.js";
+import { authRoutes } from "./routes/auth.js";
+import { userRoutes } from "./routes/users.js";
 
 /** Constrói a instância Fastify com plugins e rotas registados. */
 export async function buildApp(): Promise<FastifyInstance> {
@@ -20,6 +22,8 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(cookie, { secret: env.SESSION_SECRET });
 
   await app.register(healthRoutes);
+  await app.register(authRoutes);
+  await app.register(userRoutes);
   await app.register(projectRoutes);
 
   return app;

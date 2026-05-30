@@ -45,6 +45,18 @@ pnpm dev
 - API: http://localhost:3001 — health-check em `GET /health`.
 - Web: http://localhost:5173 (faz proxy de `/api` e `/health` para a API).
 
+### Acesso (TRNSF-934)
+
+Após o seed, todos os utilizadores de demonstração partilham a palavra-passe
+`estrategor2026` (configurável via `SEED_DEMO_PASSWORD`). Exemplos:
+
+- `joana@estrategor.pt` — **Admin** (vê a gestão de utilizadores)
+- `tiago@estrategor.pt` — **Gestor**
+- `diana@estrategor.pt` — **Consultor** (sem gestão de utilizadores)
+
+Em produção, definir `ADMIN_EMAIL` + `ADMIN_PASSWORD` no Railway: se não existir
+nenhum gestor/admin activo, esse utilizador é criado/promovido no arranque.
+
 ## Scripts úteis
 
 | Comando | Efeito |

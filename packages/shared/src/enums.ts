@@ -14,6 +14,13 @@ export const ROLE_LABELS: Record<Role, string> = {
 };
 
 /**
+ * Pode gerir utilizadores? (TRNSF-934) gestor e admin gerem; consultor não.
+ */
+export function canManageUsers(role: Role): boolean {
+  return role === "GESTOR" || role === "ADMIN";
+}
+
+/**
  * Estados de um projeto (spec §8). A0–A4 = Fase A (candidatura/diagnóstico);
  * B0–B2 = Fase B (execução).
  */

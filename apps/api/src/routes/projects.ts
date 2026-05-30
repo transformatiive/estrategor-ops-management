@@ -5,12 +5,14 @@ import type {
   ProjectListItemDTO,
 } from "@estrategor/shared";
 import { prisma } from "../db.js";
+import { requireAuth } from "../auth/guards.js";
 
 /**
- * Endpoints de leitura de projetos (Fase 0 / base do Épico B-01 e B-04).
- * A criação/escrita e a autenticação chegam nos Épicos A e B.
+ * Endpoints de leitura de projetos (B-01 e B-04). Exigem sessão válida.
  */
 export async function projectRoutes(app: FastifyInstance) {
+  app.addHook("preHandler", requireAuth);
+
   // B-01 — lista de projetos com fase atual
   app.get("/api/projects", async () => {
     const projects = await prisma.project.findMany({
