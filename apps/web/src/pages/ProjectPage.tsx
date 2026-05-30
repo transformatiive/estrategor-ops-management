@@ -6,6 +6,7 @@ import { Avatars, ErrorState, Progress, ProgramBadge, StateBadge } from "../comp
 import { DocumentsTab } from "../components/DocumentsTab.js";
 import { RecolhaTab } from "../components/RecolhaTab.js";
 import { DiagnosticoTab } from "../components/DiagnosticoTab.js";
+import { SeguimentoTab } from "../components/SeguimentoTab.js";
 
 // Separadores da página de projecto. Os blocos restantes preenchem-nos nos tickets seguintes.
 const TABS = [
@@ -14,7 +15,7 @@ const TABS = [
   { key: "diagnostico", label: "Diagnóstico" },
   { key: "recolha", label: "Recolha" },
   { key: "documentos", label: "Documentos", ticket: "TRNSF-938 (E)" },
-  { key: "seguimento", label: "Checklist & Seguimento", ticket: "TRNSF-939 (F)" },
+  { key: "seguimento", label: "Checklist & Seguimento" },
 ] as const;
 
 type TabKey = (typeof TABS)[number]["key"];

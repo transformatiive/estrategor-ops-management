@@ -11,9 +11,11 @@ import type {
   ProjectDocumentsDTO,
   ProjectFoldersDTO,
   ProjectListItemDTO,
+  ProjectTrackingDTO,
   PublicCollectionDTO,
   SaveDiagnosticRequest,
   UpdateUserRequest,
+  UrgentDeadlineDTO,
   UserDTO,
 } from "@estrategor/shared";
 
@@ -91,6 +93,10 @@ export const api = {
   collections: (id: string) => get<ProjectCollectionDTO>(`/api/projects/${id}/collections`),
   createCollection: (id: string, data: CreateCollectionRequest) =>
     post<CollectionRequestDTO>(`/api/projects/${id}/collections`, data),
+
+  // rastreio e seguimento (TRNSF-939)
+  tracking: (id: string) => get<ProjectTrackingDTO>(`/api/projects/${id}/tracking`),
+  urgentDeadlines: () => get<UrgentDeadlineDTO[]>("/api/deadlines/urgent"),
 
   // documentos / classificação IA (TRNSF-938)
   documents: (id: string) => get<ProjectDocumentsDTO>(`/api/projects/${id}/documents`),

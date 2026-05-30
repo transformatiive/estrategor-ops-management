@@ -438,6 +438,19 @@ body {
   color: var(--danger);
 }
 
+/* ── SEGUIMENTO (checklist verde/vermelho) ── */
+.tk-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.tk-green { background: var(--accent); }
+.tk-red { background: var(--danger); }
+.tk-amber { background: var(--warning); }
+
 /* ── FILA DE VALIDAÇÃO (Documentos / IA) ── */
 .queue-card {
   margin-bottom: 10px;

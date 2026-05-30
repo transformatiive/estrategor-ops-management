@@ -11,6 +11,7 @@ import { prisma } from "../db.js";
 import { env } from "../env.js";
 import { requireAuth } from "../auth/guards.js";
 import { generateToken, ingestClientUpload } from "../recolha/service.js";
+import { scheduleFirstReminder } from "../seguimento/service.js";
 
 const createSchema = z.object({
   documentTypeKeys: z.array(z.string()).min(1, "Escolha pelo menos um documento."),
@@ -114,6 +115,8 @@ export async function recolhaRoutes(app: FastifyInstance) {
           description: `Gerou um pedido de recolha (${validKeys.length} documento(s)).`,
         },
       });
+      // agenda a 1.ª ronda de lembrete (§9), se houver email do cliente
+      await scheduleFirstReminder(link.id);
       return reply.code(201).send(await toRequestDTO(link.id));
     },
   );

@@ -90,5 +90,5 @@ Deploy automático ao fazer merge em `main`; cada PR corre o
 - [x] **TRNSF‑936 · C — Pastas no WorkDrive:** provisionamento da árvore de pastas por projecto (adaptador real Zoho + stub), separador *Documentos*.
 - [x] **TRNSF‑937 · D — Recolha + Formulário:** separador *Recolha* (link único para N documentos), formulário público do cliente (sem login, upload de PDF/foto), ficheiros na subpasta WorkDrive correta com nome `{Cliente}_{Programa}_{Tipo}_{Data}`, estado por documento.
 - [x] **TRNSF‑940/941 · G — A0 Diagnóstico:** separador *Diagnóstico* (condições de acesso como dados por aviso + motor de mérito `GrelhaMerito` configurável), grelha real SICE Qualificação MPr‑2025‑2 semeada, matriz regional A.1, transição A0→Candidatura só com diagnóstico concluído.
-- [ ] TRNSF‑938 · E — Classificação/Divisão/Arquivo (IA)
-- [ ] TRNSF‑939 · F — Rastreio e Seguimento
+- [x] **TRNSF‑938 · E — Classificação/Divisão/Arquivo (IA):** fila de validação no separador *Documentos*; IA (OpenRouter/Claude, com stub sem chave) propõe tipo+confiança, divide PDFs multi-documento, e só arquiva na pasta correcta após confirmação humana.
+- [x] **TRNSF‑939 · F — Rastreio e Seguimento:** separador *Checklist & Seguimento* (verde/vermelho por tipo), motor de lembretes por email (rondas T+1/T+3/T+5, §9) via endpoint de cron protegido, vista *Prazos* e bloco 🔴 *Prazos urgentes* (deadlines + recolhas em atraso).

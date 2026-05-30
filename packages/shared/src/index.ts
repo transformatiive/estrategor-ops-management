@@ -4,3 +4,4 @@ export * from "./dto.js";
 export * from "./merit.js";
 export * from "./classification.js";
 export * from "./documents.js";
+export * from "./seguimento.js";

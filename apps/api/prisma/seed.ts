@@ -300,6 +300,29 @@ async function main() {
   }
 
   // ── Grelhas de mérito (TRNSF-941) ──
+  // ── Prazos (deadlines) de demonstração — alimentam Prazos e 🔴 urgentes ──
+  console.log("→ Seed: prazos…");
+  const DEADLINES: { code: string; label: string; inDays: number; portal: string }[] = [
+    { code: "PT2030-2024-0182", label: "Pedido de Pagamento #3", inDays: 3, portal: "SGO 2030" },
+    { code: "PT2030-2024-0095", label: "Relatório Intercalar", inDays: 11, portal: "SGO 2030" },
+    { code: "PT2030-2023-0410", label: "Encerramento Administrativo", inDays: 31, portal: "SGO 2030" },
+    { code: "RFAI-2023-0341", label: "Mapa de Investimento Final", inDays: 46, portal: "SIGA BF" },
+    { code: "FORM-2026-A9", label: "Dossier Técnico Pedagógico", inDays: -2, portal: "SIGO" },
+  ];
+  for (const dl of DEADLINES) {
+    const proj = await prisma.project.findUnique({ where: { code: dl.code } });
+    if (!proj) continue;
+    await prisma.deadline.create({
+      data: {
+        projectId: proj.id,
+        label: dl.label,
+        dueDate: new Date(Date.now() + dl.inDays * 24 * 60 * 60 * 1000),
+        portal: dl.portal,
+        status: "pendente",
+      },
+    });
+  }
+
   console.log("→ Seed: grelhas de mérito…");
   const g = QUALIFICACAO_MPR_2025_2;
   await prisma.meritGrid.create({
