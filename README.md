@@ -36,7 +36,8 @@ cp .env.example .env          # ajustar DATABASE_URL
 
 # base de dados
 pnpm --filter @estrategor/api prisma:migrate     # cria/migra o schema
-pnpm --filter @estrategor/api prisma:seed        # dados de exemplo (do protótipo)
+pnpm --filter @estrategor/api prisma:seed:ref    # dados de referência (programas, tipos de doc, grelha) — idempotente
+pnpm --filter @estrategor/api prisma:seed        # dados de exemplo/demo (utilizadores + projetos do protótipo)
 
 # correr API + Web em paralelo
 pnpm dev
@@ -65,7 +66,8 @@ nenhum gestor/admin activo, esse utilizador é criado/promovido no arranque.
 | `pnpm typecheck` | `tsc --noEmit` em todos os pacotes |
 | `pnpm test` | testes (Vitest) |
 | `pnpm build` | build de todos os pacotes |
-| `pnpm --filter @estrategor/api prisma:seed` | popular a DB com dados de exemplo |
+| `pnpm --filter @estrategor/api prisma:seed:ref` | dados de **referência** (catálogo) — seguro em produção, idempotente |
+| `pnpm --filter @estrategor/api prisma:seed` | dados de **demo** (utilizadores + projetos) — só dev |
 
 ## Deploy (Railway)
 

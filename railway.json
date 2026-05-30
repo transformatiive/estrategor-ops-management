@@ -5,7 +5,7 @@
     "buildCommand": "pnpm install --frozen-lockfile && pnpm --filter @estrategor/api prisma:generate && pnpm --filter @estrategor/web build"
   },
   "deploy": {
-    "startCommand": "pnpm --filter @estrategor/api prisma:deploy && pnpm --filter @estrategor/api start",
+    "startCommand": "pnpm --filter @estrategor/api prisma:deploy && pnpm --filter @estrategor/api prisma:seed:ref && pnpm --filter @estrategor/api start",
     "healthcheckPath": "/health",
     "healthcheckTimeout": 100,
     "restartPolicyType": "ON_FAILURE",
