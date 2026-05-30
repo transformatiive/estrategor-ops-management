@@ -5,6 +5,24 @@ export function looksLikePdf(content: Buffer): boolean {
   return content.length >= 5 && content.subarray(0, 5).toString("latin1") === "%PDF-";
 }
 
+/**
+ * Extrai o texto de um PDF (até `maxChars`) para alimentar a classificação por IA.
+ * Devolve "" se não for PDF, se estiver vazio (PDF digitalizado/imagem) ou em erro.
+ */
+export async function extractPdfText(content: Buffer, maxChars = 6000): Promise<string> {
+  if (!looksLikePdf(content)) return "";
+  try {
+    // import dinâmico: pdf-parse é CommonJS e tem efeitos no top-level
+    const mod = (await import("pdf-parse")) as unknown as {
+      default: (b: Buffer) => Promise<{ text: string }>;
+    };
+    const parsed = await mod.default(content);
+    return (parsed.text ?? "").replace(/\s+\n/g, "\n").trim().slice(0, maxChars);
+  } catch {
+    return "";
+  }
+}
+
 /** Conta as páginas de um PDF; 1 para não-PDF ou em caso de erro. */
 export async function countPages(content: Buffer, mimeType: string): Promise<number> {
   if (mimeType !== "application/pdf" || !looksLikePdf(content)) return 1;

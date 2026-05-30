@@ -4,6 +4,7 @@ import {
   type ClassificationResult,
 } from "@estrategor/shared";
 import { env } from "../env.js";
+import { extractPdfText } from "./pdf.js";
 
 export interface ClassifyInput {
   originalFilename: string;
@@ -62,13 +63,33 @@ async function classifyWithOpenRouter(input: ClassifyInput): Promise<Classificat
     "Se for um único documento, proposedTypeKey preenchido e parts vazio. " +
     "Se contiver vários, multiDocument=true, proposedTypeKey=null e parts com as fronteiras por página (1-based).";
 
-  // conteúdo: imagem por data URL (visão); PDF/idênticos por descrição textual
+  // Conteúdo enviado ao modelo:
+  //  - imagem (foto/scan) → visão por data URL
+  //  - PDF com texto extraível (PDF "digital") → texto
+  //  - PDF sem texto (digitalizado = imagem) → enviar o PDF para visão (Sonnet lê
+  //    o documento), com fallback ao nome se o modelo não suportar PDF
+  //  - outros → excerto de texto simples
   const userContent: unknown[] = [{ type: "text", text: instruction }];
   if (isImage) {
     const dataUrl = `data:${input.mimeType};base64,${input.content.toString("base64")}`;
     userContent.push({ type: "image_url", image_url: { url: dataUrl } });
-  } else if (!isPdf) {
-    // texto simples: inclui um excerto
+  } else if (isPdf) {
+    const text = await extractPdfText(input.content);
+    if (text) {
+      userContent.push({ type: "text", text: `Conteúdo do PDF (excerto):\n${text}` });
+    } else {
+      // PDF digitalizado (sem texto) → visão sobre o próprio PDF
+      const dataUrl = `data:application/pdf;base64,${input.content.toString("base64")}`;
+      userContent.push({
+        type: "file",
+        file: { filename: input.originalFilename, file_data: dataUrl },
+      });
+      userContent.push({
+        type: "text",
+        text: "Este PDF é digitalizado (sem texto). Lê o documento e classifica pelo conteúdo.",
+      });
+    }
+  } else {
     userContent.push({ type: "text", text: `Excerto:\n${input.content.toString("utf8").slice(0, 4000)}` });
   }
 
