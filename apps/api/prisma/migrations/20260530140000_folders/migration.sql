@@ -21,3 +21,7 @@ CREATE UNIQUE INDEX "folders_project_id_path_key" ON "folders"("project_id", "pa
 
 -- AddForeignKey
 ALTER TABLE "folders" ADD CONSTRAINT "folders_project_id_fkey" FOREIGN KEY ("project_id") REFERENCES "projects"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AlterTable: rótulo da medida/aviso, usado para nomear a pasta em 1-INCENTIVOS
+-- (persistido para que a reprovisão das pastas seja idempotente).
+ALTER TABLE "projects" ADD COLUMN "measure_label" TEXT;

@@ -217,6 +217,8 @@ async function main() {
       data: { name: proj.clientName, nif: proj.nif },
     });
     const programId = programByCode.get(proj.program)!;
+    const measureLabel =
+      proj.program === "PT2030" ? `SI nº ${proj.code.split("-").pop()}` : undefined;
     const project = await prisma.project.create({
       data: {
         code: proj.code,
@@ -227,6 +229,7 @@ async function main() {
         investmentTotal: proj.investment,
         incentiveValue: proj.incentive,
         nextAction: proj.nextAction,
+        measureLabel,
         progress: proj.progress,
         responsibles: {
           create: proj.responsibles
@@ -272,8 +275,6 @@ async function main() {
         workdriveId: `stub-root-${project.id}`,
       },
     });
-    const measureLabel =
-      proj.program === "PT2030" ? `SI nº ${proj.code.split("-").pop()}` : undefined;
     for (const node of buildFolderTree(proj.program, measureLabel)) {
       await prisma.folder.create({
         data: {

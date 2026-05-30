@@ -74,6 +74,7 @@ export async function projectRoutes(app: FastifyInstance) {
           clientId: client.id,
           programId: programRow.id,
           state: "A0",
+          measureLabel: program === "PT2030" ? (measureLabel?.trim() || null) : null,
           responsibles: responsibleIds?.length
             ? { create: responsibleIds.map((userId) => ({ userId })) }
             : undefined,

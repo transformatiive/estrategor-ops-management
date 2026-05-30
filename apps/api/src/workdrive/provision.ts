@@ -51,10 +51,14 @@ export async function provisionProjectFolders(
   const idByPath = new Map<string, string>();
   idByPath.set("", root.workdriveId ?? "");
 
-  // subárvore conforme o programa
+  // subárvore conforme o programa. O rótulo da medida é estável: usa o valor
+  // persistido no projecto (ou o override), com fallback ao código — para que a
+  // reprovisão produza sempre os mesmos caminhos (idempotência).
   const measureLabel =
     program === "PT2030"
-      ? (measureLabelOverride?.trim() || `SI nº ${project.code.split("-").pop()}`)
+      ? (project.measureLabel?.trim() ||
+         measureLabelOverride?.trim() ||
+         `SI nº ${project.code.split("-").pop()}`)
       : undefined;
   const tree = buildFolderTree(program, measureLabel);
 
