@@ -586,6 +586,74 @@ body {
   text-align: center;
 }
 
+/* campo único de upload */
+.recolha-drop {
+  margin-top: 18px;
+  border: 2px dashed var(--border2);
+  border-radius: 12px;
+  padding: 28px 20px;
+  text-align: center;
+  cursor: pointer;
+  background: var(--bg);
+  transition: border-color 0.12s, background 0.12s;
+}
+.recolha-drop:hover {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+}
+.recolha-drop-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent2);
+}
+.recolha-drop-sub {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 6px;
+  line-height: 1.5;
+}
+.recolha-uploads {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.recolha-upload-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12.5px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+}
+.recolha-upload-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.recolha-ref {
+  margin-top: 22px;
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+.recolha-ref-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--hint);
+  margin-bottom: 8px;
+}
+.recolha-ref-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12.5px;
+  padding: 6px 0;
+}
+
 .progress-wrap {
   display: flex;
   align-items: center;

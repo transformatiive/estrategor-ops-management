@@ -171,14 +171,12 @@ export async function recolhaRoutes(app: FastifyInstance) {
     return dto;
   });
 
-  // D-03 — upload de um ficheiro pelo cliente (multipart; tipo via query string)
+  // D-03 — upload de um ficheiro pelo cliente (multipart). O tipo é opcional: o
+  // cliente carrega ficheiros e a IA classifica (campo único de upload).
   app.post<{ Params: { token: string }; Querystring: { type?: string } }>(
     "/api/recolha/:token/upload",
     async (req, reply) => {
     const documentTypeKey = req.query.type;
-    if (!documentTypeKey) {
-      return reply.code(400).send({ error: "Parâmetro 'type' (documentTypeKey) em falta." });
-    }
 
     const file = await req.file();
     if (!file) return reply.code(400).send({ error: "Nenhum ficheiro enviado." });
