@@ -13,8 +13,15 @@ datasource db {
 
 // ─── Enums ──────────────────────────────────────────────────────────────
 enum Role {
+  GESTOR
+  CONSULTOR
   ADMIN
-  PADRAO
+}
+
+enum MilestoneStatus {
+  FEITO
+  ATIVO
+  POR_FAZER
 }
 
 enum ProjectState {
@@ -58,7 +65,7 @@ model User {
   fullName     String   @map("full_name")
   email        String   @unique
   passwordHash String   @map("password_hash")
-  role         Role     @default(PADRAO)
+  role         Role     @default(CONSULTOR)
   initials     String
   color        String   @default("green")
   active       Boolean  @default(true)
@@ -127,6 +134,7 @@ model Project {
   collectionLinks  CollectionLink[]
   reminders        Reminder[]
   deadlines        Deadline[]
+  milestones       Milestone[]
   tasks            Task[]
   diagnostics      Diagnostic[]
   activities       ActivityLog[]
@@ -267,6 +275,21 @@ model Deadline {
 
   @@index([projectId])
   @@map("deadlines")
+}
+
+// Timeline de marcos do projeto (drawer de detalhe — TRNSF-935).
+model Milestone {
+  id        String          @id @default(cuid())
+  projectId String          @map("project_id")
+  name      String
+  date      String? // rótulo de data legível (ex.: "Mar 2024", "02 Jun 2026")
+  status    MilestoneStatus @default(POR_FAZER)
+  order     Int             @default(0)
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("milestones")
 }
 
 model Task {

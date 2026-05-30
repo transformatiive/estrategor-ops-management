@@ -3,6 +3,53 @@ import {
   type ProjectState,
 } from "@estrategor/shared";
 
+/** Estado de erro com botão para repetir (ligação à BD). */
+export function ErrorState({ error, onRetry }: { error: string; onRetry: () => void }) {
+  return (
+    <div className="error-state">
+      <p>Não foi possível ligar à base de dados.</p>
+      <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>{error}</p>
+      <button className="btn btn-secondary" onClick={onRetry}>
+        Repetir
+      </button>
+    </div>
+  );
+}
+
+/** Estado vazio genérico. */
+export function EmptyState({ message }: { message: string }) {
+  return (
+    <div className="empty">
+      <p>{message}</p>
+    </div>
+  );
+}
+
+/** Linhas skeleton para a tabela de projectos durante o carregamento. */
+export function TableSkeleton({ rows = 5 }: { rows?: number }) {
+  return (
+    <div className="project-table">
+      <div className="pt-head">
+        <div className="pt-head-cell">Projecto / Cliente</div>
+        <div className="pt-head-cell">Programa</div>
+        <div className="pt-head-cell">Fase</div>
+        <div className="pt-head-cell">Progresso</div>
+        <div className="pt-head-cell">Próxima acção</div>
+        <div className="pt-head-cell">Equipa</div>
+      </div>
+      {Array.from({ length: rows }).map((_, i) => (
+        <div className="pt-row" key={i}>
+          {Array.from({ length: 6 }).map((__, j) => (
+            <div className="pt-cell" key={j}>
+              <div className="skeleton" style={{ height: 12, width: j === 0 ? "80%" : "50%" }} />
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /** Badge do programa, com a cor do protótipo por código. */
 export function ProgramBadge({ program }: { program: string }) {
   const variant =

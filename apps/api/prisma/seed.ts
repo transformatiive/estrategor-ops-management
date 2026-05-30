@@ -18,12 +18,12 @@ const PLACEHOLDER_HASH = "PLACEHOLDER_DEFINIR_NO_EPICO_A";
 
 const USERS = [
   { fullName: "Joana Sequeira", email: "joana@estrategor.pt", initials: "JS", color: "green", role: "ADMIN" as const },
-  { fullName: "Tiago Ferreira", email: "tiago@estrategor.pt", initials: "TF", color: "blue", role: "PADRAO" as const },
-  { fullName: "Miguel Alves", email: "miguel@estrategor.pt", initials: "MA", color: "orange", role: "PADRAO" as const },
-  { fullName: "Diana Ribeiro", email: "diana@estrategor.pt", initials: "DM", color: "orange", role: "PADRAO" as const },
-  { fullName: "Maria Pinto", email: "maria@estrategor.pt", initials: "MP", color: "teal", role: "PADRAO" as const },
-  { fullName: "Jerónimo Rocha", email: "jeronimo@estrategor.pt", initials: "JR", color: "purple", role: "PADRAO" as const },
-  { fullName: "Nuno Sousa", email: "nuno@estrategor.pt", initials: "NS", color: "teal", role: "PADRAO" as const },
+  { fullName: "Tiago Ferreira", email: "tiago@estrategor.pt", initials: "TF", color: "blue", role: "GESTOR" as const },
+  { fullName: "Miguel Alves", email: "miguel@estrategor.pt", initials: "MA", color: "orange", role: "GESTOR" as const },
+  { fullName: "Diana Ribeiro", email: "diana@estrategor.pt", initials: "DM", color: "orange", role: "CONSULTOR" as const },
+  { fullName: "Maria Pinto", email: "maria@estrategor.pt", initials: "MP", color: "teal", role: "CONSULTOR" as const },
+  { fullName: "Jerónimo Rocha", email: "jeronimo@estrategor.pt", initials: "JR", color: "purple", role: "GESTOR" as const },
+  { fullName: "Nuno Sousa", email: "nuno@estrategor.pt", initials: "NS", color: "teal", role: "CONSULTOR" as const },
 ];
 
 const PROGRAMS: { code: ProgramCode; name: string }[] = [
@@ -32,6 +32,12 @@ const PROGRAMS: { code: ProgramCode; name: string }[] = [
   { code: "SIFIDE", name: "Sistema de Incentivos Fiscais à I&D Empresarial" },
   { code: "FORMACAO", name: "Formação Financiada" },
 ];
+
+interface SeedMilestone {
+  name: string;
+  date?: string;
+  status: "FEITO" | "ATIVO" | "POR_FAZER";
+}
 
 interface SeedProject {
   code: string;
@@ -45,16 +51,103 @@ interface SeedProject {
   nextAction?: string;
   progress: number;
   responsibles: string[]; // iniciais
+  milestones?: SeedMilestone[];
+}
+
+// Timeline genérica da máquina de estados (spec §8), usada quando o projeto não
+// tem uma timeline específica do protótipo.
+function genericMilestones(
+  state: SeedProject["state"],
+): SeedMilestone[] {
+  const order = ["A0", "A1", "A2", "A3", "A4", "B0", "B1", "B2"];
+  const names: Record<string, string> = {
+    A0: "Diagnóstico A0",
+    A1: "Recolha de documentos",
+    A2: "Preparação da candidatura",
+    A3: "Revisão",
+    A4: "Submissão",
+    B0: "Arranque",
+    B1: "Execução",
+    B2: "Encerramento",
+  };
+  const idx = order.indexOf(state);
+  return order.map((s, i) => ({
+    name: names[s]!,
+    status: i < idx ? "FEITO" : i === idx ? "ATIVO" : "POR_FAZER",
+  }));
 }
 
 const PROJECTS: SeedProject[] = [
-  { code: "PT2030-2024-0182", title: "DIRSIL — Transformação Digital", clientName: "DIRSIL, S.A.", nif: "PT2030-2024-0182", program: "PT2030", state: "B1", investment: 1850000, incentive: 925000, nextAction: "02 Jun 2026 — Pedido Pagamento #3", progress: 62, responsibles: ["TF", "JS"] },
-  { code: "PT2030-2024-0095", title: "GEPACK — Eficiência Energética", clientName: "GEPACK Embalagens, Lda", nif: "PT2030-2024-0095", program: "PT2030", state: "B1", investment: 620000, incentive: 310000, nextAction: "10 Jun 2026 — Relatório Intercalar", progress: 38, responsibles: ["MA"] },
-  { code: "PT2030-2023-0410", title: "Lingote Indústria — Inovação", clientName: "Lingote Indústria, S.A.", program: "PT2030", state: "B2", nextAction: "30 Jun 2026 — Encerramento Administrativo", progress: 91, responsibles: ["JS"] },
-  { code: "RFAI-2023-0341", title: "KEMI — I&D Aplicado 2023", clientName: "KEMI Portugal, S.A.", nif: "RFAI-2023-0341", program: "RFAI", state: "B0", investment: 1200000, incentive: 360000, nextAction: "15 Jul 2026 — Mapa de Investimento Final", progress: 80, responsibles: ["JR", "NS"] },
-  { code: "PT2030-2024-0233", title: "STRIX — Automação Produção", clientName: "STRIX Componentes, Lda", program: "PT2030", state: "B1", nextAction: "20 Set 2026", progress: 55, responsibles: ["TF"] },
-  { code: "PT2030-2025-0011", title: "Borges & Irmãos — Internacionalização", clientName: "Borges & Irmãos, Lda", program: "PT2030", state: "A4", progress: 25, responsibles: ["JS"] },
-  { code: "FORM-2026-A9", title: "Formação STCP — Condução de Veículos", clientName: "STCP", program: "FORMACAO", state: "B1", nextAction: "15 Jun 2026 — Dossier Técnico Pedagógico", progress: 70, responsibles: ["MP", "DM"] },
+  // ── PT2030 — distribuídos pelas colunas do kanban (§8) ──
+  {
+    code: "PT2030-2024-0182", title: "DIRSIL — Transformação Digital", clientName: "DIRSIL, S.A.", nif: "PT2030-2024-0182",
+    program: "PT2030", state: "B1", investment: 1850000, incentive: 925000,
+    nextAction: "02 Jun 2026 — Pedido Pagamento #3", progress: 62, responsibles: ["TF", "JS"],
+    milestones: [
+      { name: "Candidatura submetida", date: "Mar 2024", status: "FEITO" },
+      { name: "Aprovação comunicada", date: "Set 2024", status: "FEITO" },
+      { name: "Pedido Pagamento #1", date: "Dez 2024", status: "FEITO" },
+      { name: "Pedido Pagamento #2", date: "Mar 2025", status: "FEITO" },
+      { name: "Pedido Pagamento #3", date: "02 Jun 2026", status: "ATIVO" },
+      { name: "Encerramento", date: "Dez 2026", status: "POR_FAZER" },
+    ],
+  },
+  {
+    code: "PT2030-2024-0095", title: "GEPACK — Eficiência Energética", clientName: "GEPACK Embalagens, Lda", nif: "PT2030-2024-0095",
+    program: "PT2030", state: "B1", investment: 620000, incentive: 310000,
+    nextAction: "10 Jun 2026 — Relatório Intercalar", progress: 38, responsibles: ["MA"],
+    milestones: [
+      { name: "Candidatura submetida", date: "Jun 2024", status: "FEITO" },
+      { name: "Aprovação comunicada", date: "Nov 2024", status: "FEITO" },
+      { name: "Relatório Intercalar", date: "10 Jun 2026", status: "ATIVO" },
+      { name: "Encerramento", date: "2027", status: "POR_FAZER" },
+    ],
+  },
+  {
+    code: "PT2030-2023-0410", title: "Lingote Indústria — Inovação", clientName: "Lingote Indústria, S.A.",
+    program: "PT2030", state: "B2", nextAction: "30 Jun 2026 — Encerramento Administrativo", progress: 91, responsibles: ["JS"],
+    milestones: [
+      { name: "Candidatura submetida", date: "Fev 2023", status: "FEITO" },
+      { name: "Aprovação comunicada", date: "Jul 2023", status: "FEITO" },
+      { name: "Execução concluída", date: "Abr 2026", status: "FEITO" },
+      { name: "Encerramento Administrativo", date: "30 Jun 2026", status: "ATIVO" },
+    ],
+  },
+  {
+    code: "PT2030-2024-0233", title: "STRIX — Automação Produção", clientName: "STRIX Componentes, Lda",
+    program: "PT2030", state: "B0", nextAction: "Arranque da execução", progress: 30, responsibles: ["TF"],
+  },
+  {
+    code: "PT2030-2025-0011", title: "Borges & Irmãos — Internacionalização", clientName: "Borges & Irmãos, Lda",
+    program: "PT2030", state: "A1", nextAction: "Recolha de documentos ao cliente", progress: 18, responsibles: ["JS"],
+  },
+  {
+    code: "PT2030-2025-0044", title: "FERTERRA — Inovação Produtiva", clientName: "FERTERRA Agro, Lda",
+    program: "PT2030", state: "A0", nextAction: "Diagnóstico A0", progress: 5, responsibles: ["TF"],
+  },
+  {
+    code: "PT2030-2025-0052", title: "NOVAMAQ — Capacidade Produtiva", clientName: "NOVAMAQ Máquinas, S.A.",
+    program: "PT2030", state: "A2", nextAction: "Preparação da memória descritiva", progress: 40, responsibles: ["MA"],
+  },
+  {
+    code: "PT2030-2024-0301", title: "TecnoLub — Eficiência de Processos", clientName: "TecnoLub, Lda",
+    program: "PT2030", state: "A4", nextAction: "Aguarda decisão", progress: 60, responsibles: ["NS"],
+  },
+  {
+    code: "PT2030-2024-0118", title: "METALGEST — Digitalização Fabril", clientName: "METALGEST, S.A.",
+    program: "PT2030", state: "B1", nextAction: "Execução em curso", progress: 50, responsibles: ["JS"],
+  },
+  // ── RFAI / SIFIDE — benefícios fiscais (fora do kanban PT2030) ──
+  {
+    code: "RFAI-2023-0341", title: "KEMI — I&D Aplicado 2023", clientName: "KEMI Portugal, S.A.", nif: "RFAI-2023-0341",
+    program: "RFAI", state: "B0", investment: 1200000, incentive: 360000,
+    nextAction: "15 Jul 2026 — Mapa de Investimento Final", progress: 80, responsibles: ["JR", "NS"],
+  },
+  // ── Formação ──
+  {
+    code: "FORM-2026-A9", title: "Formação STCP — Condução de Veículos", clientName: "STCP",
+    program: "FORMACAO", state: "B1", nextAction: "15 Jun 2026 — Dossier Técnico Pedagógico", progress: 70, responsibles: ["MP", "DM"],
+  },
 ];
 
 async function main() {
@@ -66,6 +159,7 @@ async function main() {
   await prisma.document.deleteMany();
   await prisma.checklistItem.deleteMany();
   await prisma.stateTransition.deleteMany();
+  await prisma.milestone.deleteMany();
   await prisma.deadline.deleteMany();
   await prisma.task.deleteMany();
   await prisma.diagnostic.deleteMany();
@@ -134,6 +228,18 @@ async function main() {
             .map((userId) => ({ userId })),
         },
       },
+    });
+
+    // milestones (timeline do drawer) — específica do protótipo ou genérica do §8
+    const milestones = proj.milestones ?? genericMilestones(proj.state);
+    await prisma.milestone.createMany({
+      data: milestones.map((m, i) => ({
+        projectId: project.id,
+        name: m.name,
+        date: m.date ?? null,
+        status: m.status,
+        order: i,
+      })),
     });
 
     // checklist gerada a partir do programa (D-01)

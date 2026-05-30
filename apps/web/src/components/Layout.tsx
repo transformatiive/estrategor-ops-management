@@ -6,17 +6,22 @@ interface NavItem {
   chip?: { text: string; variant?: "warn" | "blue" };
 }
 
-const PRINCIPAL: NavItem[] = [
+const GERAL: NavItem[] = [
   { to: "/dashboard", label: "Dashboard" },
-  { to: "/projetos", label: "Projectos", chip: { text: "24" } },
-  { to: "/prazos", label: "Prazos", chip: { text: "3", variant: "warn" } },
+  { to: "/projetos", label: "Projectos" },
+  { to: "/prazos", label: "Prazos" },
   { to: "/tarefas", label: "Tarefas" },
 ];
 
 const PROGRAMAS: NavItem[] = [
-  { to: "/pt2030", label: "PT2030", chip: { text: "14", variant: "blue" } },
+  { to: "/pt2030", label: "PT2030", chip: { text: "PT", variant: "blue" } },
   { to: "/formacao", label: "Formação" },
   { to: "/fiscal", label: "Fiscal" },
+];
+
+const CONFIGURACAO: NavItem[] = [
+  { to: "/clientes", label: "Clientes" },
+  { to: "/definicoes", label: "Definições" },
 ];
 
 function NavSection({ title, items }: { title: string; items: NavItem[] }) {
@@ -61,9 +66,11 @@ export function Layout() {
 
       <div className="layout">
         <nav className="sidebar">
-          <NavSection title="Principal" items={PRINCIPAL} />
+          <NavSection title="Geral" items={GERAL} />
           <div className="sidebar-divider" />
           <NavSection title="Programas" items={PROGRAMAS} />
+          <div className="sidebar-divider" />
+          <NavSection title="Configuração" items={CONFIGURACAO} />
           <div className="sidebar-footer">
             <div className="sidebar-user">
               <div className="avatar-sm av-green">JS</div>

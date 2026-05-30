@@ -1,5 +1,6 @@
 import type {
   ChecklistStatus,
+  MilestoneStatus,
   ProgramCode,
   ProjectState,
   Role,
@@ -35,6 +36,32 @@ export interface ProjectListItemDTO {
   nextAction: string | null;
   progress: number;
   responsibles: { initials: string; color: string; fullName: string }[];
+}
+
+/** Marco da timeline de um projeto. */
+export interface MilestoneDTO {
+  id: string;
+  name: string;
+  date: string | null;
+  status: MilestoneStatus;
+}
+
+/** Detalhe de um projeto para o drawer e a página de projecto (B-01/B-04). */
+export interface ProjectDetailDTO {
+  id: string;
+  code: string;
+  title: string;
+  clientName: string;
+  clientNif: string | null;
+  program: ProgramCode | string;
+  programName: string;
+  state: ProjectState;
+  nextAction: string | null;
+  progress: number;
+  investmentTotal: string | null;
+  incentiveValue: string | null;
+  responsibles: { initials: string; color: string; fullName: string }[];
+  milestones: MilestoneDTO[];
 }
 
 /** Item da checklist documental de um projeto (B-04 / D-01). */
