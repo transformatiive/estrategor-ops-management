@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type {
   ChecklistItemDTO,
+  ProjectDetailDTO,
   ProjectListItemDTO,
 } from "@estrategor/shared";
 import { prisma } from "../db.js";
@@ -38,6 +39,50 @@ export async function projectRoutes(app: FastifyInstance) {
     }));
     return items;
   });
+
+  // B-01/B-04 — detalhe de um projeto (drawer + página de projecto): Resumo + Milestones
+  app.get<{ Params: { id: string } }>(
+    "/api/projects/:id",
+    async (req, reply) => {
+      const p = await prisma.project.findUnique({
+        where: { id: req.params.id },
+        include: {
+          client: true,
+          program: true,
+          responsibles: { include: { user: true } },
+          milestones: { orderBy: { order: "asc" } },
+        },
+      });
+      if (!p) return reply.code(404).send({ error: "Projeto não encontrado" });
+
+      const dto: ProjectDetailDTO = {
+        id: p.id,
+        code: p.code,
+        title: p.title,
+        clientName: p.client.name,
+        clientNif: p.client.nif,
+        program: p.program.code,
+        programName: p.program.name,
+        state: p.state,
+        nextAction: p.nextAction,
+        progress: p.progress,
+        investmentTotal: p.investmentTotal?.toString() ?? null,
+        incentiveValue: p.incentiveValue?.toString() ?? null,
+        responsibles: p.responsibles.map((r) => ({
+          initials: r.user.initials,
+          color: r.user.color,
+          fullName: r.user.fullName,
+        })),
+        milestones: p.milestones.map((m) => ({
+          id: m.id,
+          name: m.name,
+          date: m.date,
+          status: m.status,
+        })),
+      };
+      return dto;
+    },
+  );
 
   // B-04 (base) — checklist documental de um projeto
   app.get<{ Params: { id: string } }>(

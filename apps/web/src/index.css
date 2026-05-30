@@ -564,3 +564,274 @@ body {
   background: var(--border2);
   border-radius: 3px;
 }
+
+/* ── KANBAN ── */
+.kanban {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+.kanban-col {
+  min-width: 240px;
+  flex: 1;
+}
+.kanban-col-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px 8px 0 0;
+  border-bottom: none;
+}
+.kanban-col-title {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.kanban-count {
+  font-size: 11px;
+  color: var(--hint);
+  background: var(--surface2);
+  padding: 1px 7px;
+  border-radius: 10px;
+}
+.kanban-col-body {
+  border: 1px solid var(--border);
+  border-radius: 0 0 8px 8px;
+  overflow: hidden;
+  min-height: 60px;
+}
+.kanban-card {
+  background: var(--surface);
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+.kanban-card:last-child {
+  border-bottom: none;
+}
+.kanban-card:hover {
+  background: var(--bg);
+}
+.kc-title {
+  font-size: 12.5px;
+  font-weight: 500;
+  margin-bottom: 5px;
+}
+.kc-client {
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.kc-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* ── TABS ── */
+.tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 20px;
+  overflow-x: auto;
+}
+.tab {
+  padding: 9px 16px;
+  font-size: 12.5px;
+  color: var(--muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  white-space: nowrap;
+  background: none;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  font-family: inherit;
+}
+.tab:hover {
+  color: var(--text);
+}
+.tab.active {
+  color: var(--accent2);
+  font-weight: 500;
+  border-bottom-color: var(--accent);
+}
+
+/* ── DETAIL DRAWER ── */
+.detail-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.2);
+  z-index: 200;
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-end;
+}
+.detail-panel {
+  width: 500px;
+  max-width: 92vw;
+  height: 100%;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+.dp-header {
+  padding: 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.dp-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.dp-client {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.dp-close {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+  background: transparent;
+}
+.dp-close:hover {
+  background: var(--bg);
+}
+.dp-body {
+  padding: 20px;
+  flex: 1;
+}
+.dp-section {
+  margin-bottom: 20px;
+}
+.dp-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--hint);
+  margin-bottom: 10px;
+}
+.dp-field {
+  display: flex;
+  margin-bottom: 8px;
+}
+.dp-field-label {
+  font-size: 11.5px;
+  color: var(--muted);
+  width: 140px;
+  flex-shrink: 0;
+}
+.dp-field-value {
+  font-size: 12.5px;
+  flex: 1;
+}
+.dp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+}
+.milestone-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.milestone-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+}
+.milestone-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 11px;
+}
+.mi-done {
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+.mi-active {
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+.mi-todo {
+  background: var(--surface2);
+  color: var(--hint);
+}
+.milestone-name {
+  flex: 1;
+  font-size: 12.5px;
+  font-weight: 500;
+}
+.milestone-date {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* ── SKELETON / ESTADOS ── */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+.skeleton {
+  background: var(--surface2);
+  border-radius: 4px;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+.error-state {
+  text-align: center;
+  padding: 40px 24px;
+  color: var(--danger);
+}
+.error-state .btn {
+  margin-top: 12px;
+}
+
+/* ── PROJECT WORKSPACE PAGE ── */
+.project-page-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+.back-link {
+  font-size: 12.5px;
+  color: var(--muted);
+  cursor: pointer;
+  background: none;
+  border: none;
+  font-family: inherit;
+  padding: 0;
+}
+.back-link:hover {
+  color: var(--text);
+}

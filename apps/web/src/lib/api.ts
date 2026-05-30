@@ -1,6 +1,7 @@
 import type {
   ChecklistItemDTO,
   HealthDTO,
+  ProjectDetailDTO,
   ProjectListItemDTO,
 } from "@estrategor/shared";
 
@@ -17,6 +18,7 @@ async function get<T>(path: string): Promise<T> {
 export const api = {
   health: () => get<HealthDTO>("/health"),
   projects: () => get<ProjectListItemDTO[]>("/api/projects"),
+  project: (id: string) => get<ProjectDetailDTO>(`/api/projects/${id}`),
   checklist: (id: string) =>
     get<ChecklistItemDTO[]>(`/api/projects/${id}/checklist`),
 };

@@ -1,18 +1,20 @@
-import { useEffect, useState } from "react";
-import type { ProjectListItemDTO } from "@estrategor/shared";
+import { useState } from "react";
 import { api } from "../lib/api.js";
-import { Avatars, Progress, ProgramBadge, StateBadge } from "../components/ui.js";
+import { useAsync } from "../lib/useAsync.js";
+import {
+  Avatars,
+  EmptyState,
+  ErrorState,
+  Progress,
+  ProgramBadge,
+  StateBadge,
+  TableSkeleton,
+} from "../components/ui.js";
+import { ProjectDrawer } from "../components/ProjectDrawer.js";
 
 export function Projetos() {
-  const [projects, setProjects] = useState<ProjectListItemDTO[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    api
-      .projects()
-      .then(setProjects)
-      .catch((e) => setError(String(e)));
-  }, []);
+  const { data: projects, loading, error, reload } = useAsync(() => api.projects());
+  const [selected, setSelected] = useState<string | null>(null);
 
   return (
     <>
@@ -20,15 +22,19 @@ export function Projetos() {
         <div>
           <div className="page-title">Projectos</div>
           <div className="page-subtitle">
-            {projects ? `${projects.length} projectos` : "A carregar…"}
+            {projects ? `${projects.length} projectos` : " "}
           </div>
         </div>
         <button className="btn btn-primary">+ Novo projecto</button>
       </div>
 
-      {error && <div className="empty">Erro ao carregar projetos: {error}</div>}
+      {loading && <TableSkeleton />}
+      {error && <ErrorState error={error} onRetry={reload} />}
+      {projects && projects.length === 0 && (
+        <EmptyState message="Sem projectos ainda." />
+      )}
 
-      {projects && (
+      {projects && projects.length > 0 && (
         <div className="project-table">
           <div className="pt-head">
             <div className="pt-head-cell">Projecto / Cliente</div>
@@ -39,7 +45,7 @@ export function Projetos() {
             <div className="pt-head-cell">Equipa</div>
           </div>
           {projects.map((p) => (
-            <div className="pt-row" key={p.id}>
+            <div className="pt-row" key={p.id} onClick={() => setSelected(p.id)}>
               <div className="pt-cell">
                 <div className="proj-name">{p.title}</div>
                 <div className="proj-client">{p.clientName}</div>
@@ -61,6 +67,10 @@ export function Projetos() {
             </div>
           ))}
         </div>
+      )}
+
+      {selected && (
+        <ProjectDrawer id={selected} onClose={() => setSelected(null)} />
       )}
     </>
   );
