@@ -6,6 +6,7 @@
  * (argon2) é introduzido no Épico A; até lá o login ainda não está implementado.
  */
 import { PrismaClient } from "@prisma/client";
+import { hash } from "@node-rs/argon2";
 import {
   DOCUMENT_TAXONOMY,
   documentTypesForProgram,
@@ -14,7 +15,9 @@ import {
 
 const prisma = new PrismaClient();
 
-const PLACEHOLDER_HASH = "PLACEHOLDER_DEFINIR_NO_EPICO_A";
+// Palavra-passe de demonstração para todos os utilizadores do seed.
+// Em produção usa-se o bootstrap por ADMIN_EMAIL/ADMIN_PASSWORD (ver README).
+const DEMO_PASSWORD = process.env.SEED_DEMO_PASSWORD ?? "estrategor2026";
 
 const USERS = [
   { fullName: "Joana Sequeira", email: "joana@estrategor.pt", initials: "JS", color: "green", role: "ADMIN" as const },
@@ -153,6 +156,7 @@ const PROJECTS: SeedProject[] = [
 async function main() {
   console.log("→ Seed: limpar dados existentes…");
   // ordem respeita FKs
+  await prisma.session.deleteMany();
   await prisma.activityLog.deleteMany();
   await prisma.reminder.deleteMany();
   await prisma.collectionLink.deleteMany();
@@ -173,10 +177,11 @@ async function main() {
   await prisma.user.deleteMany();
 
   console.log("→ Seed: utilizadores…");
+  const demoHash = await hash(DEMO_PASSWORD);
   const usersByInitials = new Map<string, string>();
   for (const u of USERS) {
     const created = await prisma.user.create({
-      data: { ...u, passwordHash: PLACEHOLDER_HASH },
+      data: { ...u, email: u.email.toLowerCase(), passwordHash: demoHash },
     });
     usersByInitials.set(u.initials, created.id);
   }

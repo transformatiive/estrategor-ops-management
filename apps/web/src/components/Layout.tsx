@@ -1,4 +1,6 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { ROLE_LABELS } from "@estrategor/shared";
+import { useAuth } from "../lib/auth.js";
 
 interface NavItem {
   to: string;
@@ -19,11 +21,6 @@ const PROGRAMAS: NavItem[] = [
   { to: "/fiscal", label: "Fiscal" },
 ];
 
-const CONFIGURACAO: NavItem[] = [
-  { to: "/clientes", label: "Clientes" },
-  { to: "/definicoes", label: "Definições" },
-];
-
 function NavSection({ title, items }: { title: string; items: NavItem[] }) {
   return (
     <>
@@ -32,9 +29,7 @@ function NavSection({ title, items }: { title: string; items: NavItem[] }) {
         <NavLink
           key={it.to}
           to={it.to}
-          className={({ isActive }) =>
-            "sidebar-item" + (isActive ? " active" : "")
-          }
+          className={({ isActive }) => "sidebar-item" + (isActive ? " active" : "")}
         >
           {it.label}
           {it.chip && (
@@ -49,6 +44,20 @@ function NavSection({ title, items }: { title: string; items: NavItem[] }) {
 }
 
 export function Layout() {
+  const { user, canManageUsers, logout } = useAuth();
+  const navigate = useNavigate();
+
+  async function onLogout() {
+    await logout();
+    navigate("/login", { replace: true });
+  }
+
+  const configItems: NavItem[] = [
+    { to: "/clientes", label: "Clientes" },
+    ...(canManageUsers ? [{ to: "/utilizadores", label: "Utilizadores" }] : []),
+    { to: "/definicoes", label: "Definições" },
+  ];
+
   return (
     <>
       <div className="topbar">
@@ -57,10 +66,14 @@ export function Layout() {
         </div>
         <div className="topbar-search">Pesquisar projecto, cliente, referência…</div>
         <div className="topbar-right">
-          <div className="topbar-badge">⚠ 3 prazos próximos</div>
-          <div className="topbar-avatar" title="Joana Sequeira">
-            JS
-          </div>
+          {user && (
+            <div className="topbar-avatar" title={user.fullName}>
+              {user.initials}
+            </div>
+          )}
+          <button className="btn btn-ghost" onClick={onLogout}>
+            Sair
+          </button>
         </div>
       </div>
 
@@ -70,13 +83,13 @@ export function Layout() {
           <div className="sidebar-divider" />
           <NavSection title="Programas" items={PROGRAMAS} />
           <div className="sidebar-divider" />
-          <NavSection title="Configuração" items={CONFIGURACAO} />
+          <NavSection title="Configuração" items={configItems} />
           <div className="sidebar-footer">
             <div className="sidebar-user">
-              <div className="avatar-sm av-green">JS</div>
+              <div className={`avatar-sm av-${user?.color ?? "green"}`}>{user?.initials ?? "?"}</div>
               <div>
-                <div className="sidebar-user-name">Joana Sequeira</div>
-                <div className="sidebar-user-role">Gestora de Projecto</div>
+                <div className="sidebar-user-name">{user?.fullName ?? ""}</div>
+                <div className="sidebar-user-role">{user ? ROLE_LABELS[user.role] : ""}</div>
               </div>
             </div>
           </div>

@@ -17,6 +17,28 @@ export interface UserDTO {
   active: boolean;
 }
 
+/** Credenciais de login (TRNSF-934). */
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+/** Criação de utilizador (gestor/admin). */
+export interface CreateUserRequest {
+  fullName: string;
+  email: string;
+  role: Role;
+  password: string;
+}
+
+/** Edição de utilizador (campos opcionais). */
+export interface UpdateUserRequest {
+  fullName?: string;
+  email?: string;
+  role?: Role;
+  active?: boolean;
+}
+
 /** Resposta do endpoint de saúde (Fase 0). */
 export interface HealthDTO {
   status: "ok" | "degraded";

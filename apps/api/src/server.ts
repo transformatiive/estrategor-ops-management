@@ -1,9 +1,11 @@
 import { buildApp } from "./app.js";
 import { env } from "./env.js";
 import { prisma } from "./db.js";
+import { bootstrapAdmin } from "./auth/bootstrap.js";
 
 async function main() {
   const app = await buildApp();
+  await bootstrapAdmin(app.log);
 
   const close = async () => {
     app.log.info("A encerrar…");
