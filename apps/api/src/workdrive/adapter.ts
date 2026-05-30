@@ -42,6 +42,8 @@ export interface WorkDriveAdapter {
     content: Buffer,
     mimeType: string,
   ): Promise<UploadedFile>;
+  /** Move um ficheiro para outra pasta, renomeando (arquivo após validação — TRNSF-938). */
+  moveFile(fileId: string, toParentId: string, newName: string): Promise<UploadedFile>;
   /** ID da pasta-raiz onde as pastas de cliente/projecto são criadas. */
   rootFolderId(): string;
 }
