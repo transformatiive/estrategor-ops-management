@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync, renameSync, existsSync, copyFileSync, rmSync } from "node:fs";
+import { mkdirSync, writeFileSync, renameSync, existsSync, copyFileSync, rmSync, readFileSync } from "node:fs";
 import { randomBytes } from "node:crypto";
 import path from "node:path";
 import { env } from "../env.js";
@@ -44,6 +44,8 @@ export interface WorkDriveAdapter {
   ): Promise<UploadedFile>;
   /** Move um ficheiro para outra pasta, renomeando (arquivo após validação — TRNSF-938). */
   moveFile(fileId: string, toParentId: string, newName: string): Promise<UploadedFile>;
+  /** Descarrega o conteúdo de um ficheiro (para pré-visualização/validação). */
+  downloadFile(fileId: string): Promise<Buffer>;
   /** ID da pasta-raiz onde as pastas de cliente/projecto são criadas. */
   rootFolderId(): string;
 }
@@ -107,6 +109,12 @@ export class StubWorkDrive implements WorkDriveAdapter {
       writeFileSync(dest, Buffer.alloc(0));
     }
     return { workdriveId: relId, workdriveUrl: null };
+  }
+
+  async downloadFile(fileId: string): Promise<Buffer> {
+    const p = path.join(env.WORKDRIVE_STUB_DIR, fileId);
+    if (!existsSync(p)) throw new Error("FILE_NOT_FOUND");
+    return readFileSync(p);
   }
 }
 
@@ -251,6 +259,12 @@ export class ZohoWorkDrive implements WorkDriveAdapter {
     if (!moveRes.ok) throw new Error(`WorkDrive: mover ${fileId} falhou (${moveRes.status})`);
     const json = (await moveRes.json()) as { data?: { attributes?: { permalink?: string } } };
     return { workdriveId: fileId, workdriveUrl: json.data?.attributes?.permalink ?? null };
+  }
+
+  async downloadFile(fileId: string): Promise<Buffer> {
+    const res = await this.authedFetch(`/download/${fileId}`, { method: "GET" });
+    if (!res.ok) throw new Error(`WorkDrive: download ${fileId} falhou (${res.status})`);
+    return Buffer.from(await res.arrayBuffer());
   }
 }
 

@@ -192,6 +192,10 @@ function QueueRow({ doc, onChanged }: { doc: DocumentDTO; onChanged: () => void 
   }
 
   const pageInfo = doc.pageStart ? ` · pág. ${doc.pageStart}–${doc.pageEnd}` : "";
+  const pct = doc.confidenceScore !== null ? Math.round(doc.confidenceScore * 100) : null;
+  const low = doc.confidence === "BAIXA";
+  const proposedName =
+    DOCUMENT_TAXONOMY.find((d) => d.key === doc.proposedTypeKey)?.name ?? doc.proposedTypeName;
 
   return (
     <div className="card queue-card">
@@ -205,10 +209,28 @@ function QueueRow({ doc, onChanged }: { doc: DocumentDTO; onChanged: () => void 
             {pageInfo}
           </span>
         </span>
-        <span className={"badge " + (doc.confidence === "BAIXA" ? "badge-danger" : "badge-muted")}>
-          {doc.confidence === "BAIXA" ? "⚠ confiança baixa" : "IA"}
-          {doc.confidenceScore !== null ? ` ${(doc.confidenceScore * 100).toFixed(0)}%` : ""}
-        </span>
+        <a
+          className="btn btn-secondary queue-view"
+          href={api.documentFileUrl(doc.id)}
+          target="_blank"
+          rel="noreferrer"
+        >
+          Ver documento ↗
+        </a>
+      </div>
+
+      {/* Pré-validação: proposta da IA + confiança */}
+      <div className={"queue-ai " + (low ? "queue-ai-low" : "")}>
+        <span className="queue-ai-label">Proposta da IA:</span>{" "}
+        <b>{proposedName ?? "—"}</b>
+        {pct !== null && (
+          <span className={"badge " + (low ? "badge-danger" : "badge-green")} style={{ marginLeft: 8 }}>
+            {low ? "⚠ confiança baixa" : "confiança"} {pct}%
+          </span>
+        )}
+        {low && (
+          <div className="queue-ai-hint">Confirme o tipo e veja o documento antes de arquivar.</div>
+        )}
       </div>
 
       <div className="queue-actions">

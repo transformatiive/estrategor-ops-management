@@ -475,6 +475,28 @@ body {
   flex: 1;
   min-width: 180px;
 }
+.queue-view {
+  white-space: nowrap;
+  text-decoration: none;
+}
+.queue-ai {
+  background: var(--accent-bg);
+  border-radius: 7px;
+  padding: 8px 10px;
+  font-size: 12.5px;
+  margin-bottom: 10px;
+}
+.queue-ai-low {
+  background: var(--danger-bg);
+}
+.queue-ai-label {
+  color: var(--muted);
+}
+.queue-ai-hint {
+  font-size: 11.5px;
+  color: var(--danger);
+  margin-top: 4px;
+}
 
 /* ── DIAGNÓSTICO A0 ── */
 .cond-row {

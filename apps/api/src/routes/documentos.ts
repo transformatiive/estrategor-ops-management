@@ -9,6 +9,7 @@ import {
 import { prisma } from "../db.js";
 import { env } from "../env.js";
 import { requireAuth } from "../auth/guards.js";
+import { getWorkDrive } from "../workdrive/adapter.js";
 import { ingestDocument, validateDocument, rejectDocument } from "../ai/pipeline.js";
 
 const validateSchema = z.object({
@@ -76,6 +77,26 @@ export async function documentosRoutes(app: FastifyInstance) {
       archived: dtos.filter((d) => d.status === "arquivado"),
     };
     return dto;
+  });
+
+  // E — pré-visualizar o ficheiro de um documento (inline) antes de validar
+  app.get<{ Params: { docId: string } }>("/api/documents/:docId/file", async (req, reply) => {
+    const doc = await prisma.document.findUnique({ where: { id: req.params.docId } });
+    if (!doc) return reply.code(404).send({ error: "Documento não encontrado." });
+    if (!doc.workdriveFileId) return reply.code(404).send({ error: "Ficheiro indisponível." });
+    try {
+      const content = await getWorkDrive().downloadFile(doc.workdriveFileId);
+      reply.header("Content-Type", doc.mimeType ?? "application/octet-stream");
+      // inline para abrir no browser (PDF/imagem); nome legível para download
+      reply.header(
+        "Content-Disposition",
+        `inline; filename="${(doc.storedFilename ?? doc.originalFilename).replace(/"/g, "")}"`,
+      );
+      return reply.send(content);
+    } catch (e) {
+      app.log.error({ err: e }, "Falha ao obter ficheiro do documento");
+      return reply.code(502).send({ error: "Não foi possível obter o ficheiro." });
+    }
   });
 
   // E — upload manual de um documento (entra no pipeline de classificação)
