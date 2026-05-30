@@ -124,7 +124,6 @@ model Program {
   name        String
   projects    Project[]
   diagnostics Diagnostic[]
-  meritGrids  MeritGrid[]
   avisos      Aviso[]
 
   @@map("programs")
@@ -272,6 +271,7 @@ model Document {
   parts          Document[]      @relation("DocumentSplits")
 
   @@index([projectId])
+  @@index([collectionLinkId])
   @@map("documents")
 }
 
@@ -363,21 +363,31 @@ model Task {
 }
 
 // ─── Épico G — A0 Diagnóstico ────────────────────────────────────────────
+// Resultado do diagnóstico A0 de um projecto (condições de acesso + mérito).
 model Diagnostic {
-  id               String   @id @default(cuid())
-  projectId        String   @map("project_id")
-  programId        String   @map("program_id")
-  score            Int?
-  criteriaBreakdown Json?   @map("criteria_breakdown")
-  riskPoints       Json?    @map("risk_points")
-  decision         String?
-  decidedByUserId  String?  @map("decided_by_user_id")
-  reportUrl        String?  @map("report_url")
-  createdAt        DateTime @default(now()) @map("created_at")
+  id            String   @id @default(cuid())
+  projectId     String   @unique @map("project_id")
+  programId     String   @map("program_id")
+  // condições de acesso avaliadas: [{ key, label, status: PASSA|FALHA|NA, note }]
+  conditions    Json?
+  // selecção por subcritério + breakdown calculado do mérito
+  regiao        String? // região do investimento (resolve a matriz regional A.1)
+  meritInputs   Json?    @map("merit_inputs")
+  meritBreakdown Json?   @map("merit_breakdown")
+  mp            Decimal? @db.Decimal(5, 2)
+  meritGridId   String?  @map("merit_grid_id")
+  gridVersion   String?  @map("grid_version")
+  // ELEGIVEL | NAO_ELEGIVEL | A_REVER | SEM_GRELHA | POR_INICIAR
+  result        String   @default("POR_INICIAR")
+  eligible      Boolean?
+  decidedByUserId String? @map("decided_by_user_id")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  createdAt     DateTime @default(now()) @map("created_at")
 
-  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  program   Program @relation(fields: [programId], references: [id])
-  decidedBy User?   @relation(fields: [decidedByUserId], references: [id])
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  program   Program    @relation(fields: [programId], references: [id])
+  meritGrid MeritGrid? @relation(fields: [meritGridId], references: [id])
+  decidedBy User?      @relation(fields: [decidedByUserId], references: [id])
 
   @@index([projectId])
   @@map("diagnostics")
@@ -397,14 +407,29 @@ model Aviso {
   @@map("avisos")
 }
 
+// Grelha de mérito (TRNSF-941) — DADOS, nunca código. Identificada por
+// programa·medida·codigo_aviso·regiao·versao. `grid` guarda o JSON completo do
+// referencial (escala, fórmula, critérios/subcritérios). `accessConditions`
+// guarda as condições de acesso (§7.1) do aviso, também como dados.
 model MeritGrid {
-  id          String  @id @default(cuid())
-  programId   String  @map("program_id")
-  name        String
-  // pesos/critérios A/B/C/D (fórmula MP=0,2A+0,3B+0,1C+0,4D) + variantes regionais
-  criteria    Json
-  program     Program @relation(fields: [programId], references: [id])
+  id               String   @id @default(cuid())
+  programCode      String   @map("program_code")
+  measure          String
+  codigoAviso      String   @map("codigo_aviso")
+  regiao           String? // nulo quando o referencial não varia por região
+  versao           String
+  fonteUrl         String?  @map("fonte_url")
+  mpMinimo         Decimal? @map("mp_minimo") @db.Decimal(5, 2)
+  minimoPorCriterio Decimal? @map("minimo_por_criterio") @db.Decimal(5, 2)
+  formulaMp        String?  @map("formula_mp")
+  grid             Json
+  accessConditions Json?    @map("access_conditions")
+  extracted        Boolean  @default(true) // false = ainda só registo (a extrair)
+  createdAt        DateTime @default(now()) @map("created_at")
 
+  diagnostics Diagnostic[]
+
+  @@unique([programCode, measure, codigoAviso, regiao, versao])
   @@map("merit_grids")
 }
 

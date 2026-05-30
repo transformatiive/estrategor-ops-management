@@ -89,6 +89,6 @@ Deploy automático ao fazer merge em `main`; cada PR corre o
 - [x] **TRNSF‑934 · A — Acesso e Utilizadores:** login (sessão httpOnly server-side), gestão de utilizadores em Configuração, papéis gestor/consultor/admin com RBAC.
 - [x] **TRNSF‑936 · C — Pastas no WorkDrive:** provisionamento da árvore de pastas por projecto (adaptador real Zoho + stub), separador *Documentos*.
 - [x] **TRNSF‑937 · D — Recolha + Formulário:** separador *Recolha* (link único para N documentos), formulário público do cliente (sem login, upload de PDF/foto), ficheiros na subpasta WorkDrive correta com nome `{Cliente}_{Programa}_{Tipo}_{Data}`, estado por documento.
-- [ ] TRNSF‑940 · G — A0 Diagnóstico (+ TRNSF‑941 grelhas)
+- [x] **TRNSF‑940/941 · G — A0 Diagnóstico:** separador *Diagnóstico* (condições de acesso como dados por aviso + motor de mérito `GrelhaMerito` configurável), grelha real SICE Qualificação MPr‑2025‑2 semeada, matriz regional A.1, transição A0→Candidatura só com diagnóstico concluído.
 - [ ] TRNSF‑938 · E — Classificação/Divisão/Arquivo (IA)
 - [ ] TRNSF‑939 · F — Rastreio e Seguimento

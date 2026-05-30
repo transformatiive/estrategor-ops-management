@@ -8,7 +8,9 @@
 import { PrismaClient } from "@prisma/client";
 import { hash } from "@node-rs/argon2";
 import {
+  ACCESS_CONDITIONS_MPR_2025_9,
   DOCUMENT_TAXONOMY,
+  QUALIFICACAO_MPR_2025_2,
   buildFolderTree,
   documentTypesForProgram,
   type ProgramCode,
@@ -297,8 +299,29 @@ async function main() {
     });
   }
 
+  // ── Grelhas de mérito (TRNSF-941) ──
+  console.log("→ Seed: grelhas de mérito…");
+  const g = QUALIFICACAO_MPR_2025_2;
+  await prisma.meritGrid.create({
+    data: {
+      programCode: g.programa,
+      measure: g.medida,
+      codigoAviso: g.codigo_aviso,
+      regiao: g.regiao,
+      versao: g.versao,
+      fonteUrl: g.fonte_url,
+      mpMinimo: g.mp_minimo,
+      minimoPorCriterio: g.minimo_por_criterio,
+      formulaMp: g.formula_mp,
+      grid: g as object,
+      // condições de acesso (§7.1) — dados por aviso
+      accessConditions: ACCESS_CONDITIONS_MPR_2025_9 as object,
+      extracted: true,
+    },
+  });
+
   const count = await prisma.project.count();
-  console.log(`✓ Seed concluído: ${count} projetos, ${USERS.length} utilizadores.`);
+  console.log(`✓ Seed concluído: ${count} projetos, ${USERS.length} utilizadores, 1 grelha de mérito.`);
 }
 
 main()
