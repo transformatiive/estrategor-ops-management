@@ -9,14 +9,15 @@ export function generateToken(): string {
 }
 
 /**
- * Recebe um ficheiro entregue pelo cliente via link de recolha (TRNSF-937):
- * valida o token e o tipo pedido, e encaminha para o pipeline de classificação
- * (TRNSF-938) — o ficheiro fica na fila de validação (não é arquivado sem
- * confirmação humana). O tipo escolhido pelo cliente é candidato à classificação.
+ * Recebe um ficheiro entregue pelo cliente via link de recolha (TRNSF-937).
+ * O cliente carrega ficheiros sem indicar o tipo — a IA classifica (TRNSF-938)
+ * usando como candidatos os documentos pedidos neste link, e o ficheiro fica na
+ * fila de validação (nada é arquivado sem confirmação humana). Se `documentTypeKey`
+ * for fornecido (e válido), é usado como único candidato.
  */
 export async function ingestClientUpload(opts: {
   token: string;
-  documentTypeKey: string;
+  documentTypeKey?: string;
   originalFilename: string;
   content: Buffer;
   mimeType: string;
@@ -29,11 +30,16 @@ export async function ingestClientUpload(opts: {
     }
     throw new Error("LINK_EXPIRED");
   }
-  if (!link.requestedKeys.includes(opts.documentTypeKey)) {
-    throw new Error("TYPE_NOT_REQUESTED");
-  }
-  if (!DOCUMENT_TAXONOMY.some((d) => d.key === opts.documentTypeKey)) {
-    throw new Error("TYPE_UNKNOWN");
+
+  // candidatos para a classificação: o tipo indicado (se válido e pedido) ou
+  // todos os tipos pedidos neste link.
+  let candidateKeys: string[] | undefined;
+  if (opts.documentTypeKey) {
+    if (!link.requestedKeys.includes(opts.documentTypeKey)) throw new Error("TYPE_NOT_REQUESTED");
+    if (!DOCUMENT_TAXONOMY.some((d) => d.key === opts.documentTypeKey)) throw new Error("TYPE_UNKNOWN");
+    candidateKeys = [opts.documentTypeKey];
+  } else {
+    candidateKeys = link.requestedKeys.length > 0 ? link.requestedKeys : undefined;
   }
 
   const result = await ingestDocument({
@@ -43,7 +49,7 @@ export async function ingestClientUpload(opts: {
     mimeType: opts.mimeType,
     origin: "CLIENTE",
     collectionLinkId: link.id,
-    candidateKeys: [opts.documentTypeKey],
+    candidateKeys,
   });
 
   return { documentId: result.documentId, status: result.status };

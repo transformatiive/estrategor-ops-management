@@ -134,11 +134,12 @@ export const api = {
   // formulário público do cliente (sem login)
   publicCollection: (token: string) =>
     get<PublicCollectionDTO>(`/api/recolha/${token}`),
-  uploadDocument: async (token: string, typeKey: string, file: File) => {
+  uploadDocument: async (token: string, file: File, typeKey?: string) => {
     const form = new FormData();
     form.append("file", file);
+    const qs = typeKey ? `?type=${encodeURIComponent(typeKey)}` : "";
     const res = await fetch(
-      `${BASE}/api/recolha/${token}/upload?type=${encodeURIComponent(typeKey)}`,
+      `${BASE}/api/recolha/${token}/upload${qs}`,
       { method: "POST", body: form },
     );
     if (!res.ok) {
