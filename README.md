@@ -15,6 +15,17 @@ O spec completo da Semana 1 está em
 - **IA:** API Claude (leitura/visão/classificação). **Ficheiros:** Zoho WorkDrive.
 - **Alojamento + CI/CD:** Railway (deploy a partir de `main`).
 
+## Convenções de UI
+
+> **Mobile-responsive é obrigatório.** Toda a interface — actual e futura — deve
+> funcionar em telemóvel, não só em desktop. Ao adicionar funcionalidade nova:
+> - usar layouts flexíveis (flex/grid) que colapsam para 1 coluna em ecrãs estreitos;
+> - testar nos breakpoints `max-width: 1024px` (sidebar vira gaveta) e `max-width: 640px` (empilhar);
+> - tabelas em grid de N colunas devem reverter para cartões empilhados em mobile;
+> - alvos de toque ≥ 40px; sem overflow horizontal.
+>
+> As media queries genéricas estão no fim de `apps/web/src/index.css` (secção "RESPONSIVO").
+
 ## Estrutura (monorepo pnpm)
 
 ```

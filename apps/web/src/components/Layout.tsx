@@ -1,4 +1,5 @@
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { ROLE_LABELS } from "@estrategor/shared";
 import { useAuth } from "../lib/auth.js";
 
@@ -46,6 +47,9 @@ function NavSection({ title, items }: { title: string; items: NavItem[] }) {
 export function Layout() {
   const { user, canManageUsers, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  // sidebar como off-canvas em mobile; fecha ao navegar
+  const [menuOpen, setMenuOpen] = useState(false);
 
   async function onLogout() {
     await logout();
@@ -61,6 +65,13 @@ export function Layout() {
   return (
     <>
       <div className="topbar">
+        <button
+          className="topbar-burger"
+          aria-label="Menu"
+          onClick={() => setMenuOpen((o) => !o)}
+        >
+          ☰
+        </button>
         <div className="topbar-logo">
           Estrategor <span>/ Operacional</span>
         </div>
@@ -78,7 +89,9 @@ export function Layout() {
       </div>
 
       <div className="layout">
-        <nav className="sidebar">
+        {/* backdrop visível só quando o menu mobile está aberto */}
+        {menuOpen && <div className="sidebar-backdrop" onClick={() => setMenuOpen(false)} />}
+        <nav className={"sidebar" + (menuOpen ? " open" : "")} onClick={() => setMenuOpen(false)}>
           <NavSection title="Geral" items={GERAL} />
           <div className="sidebar-divider" />
           <NavSection title="Programas" items={PROGRAMAS} />
@@ -95,7 +108,7 @@ export function Layout() {
           </div>
         </nav>
 
-        <main className="main">
+        <main className="main" key={location.pathname}>
           <div className="content">
             <Outlet />
           </div>
