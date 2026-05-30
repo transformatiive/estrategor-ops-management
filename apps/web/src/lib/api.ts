@@ -103,6 +103,7 @@ export const api = {
   validateDocument: (docId: string, documentTypeKey: string) =>
     post<{ ok: boolean }>(`/api/documents/${docId}/validate`, { documentTypeKey }),
   rejectDocument: (docId: string) => post<{ ok: boolean }>(`/api/documents/${docId}/reject`),
+  documentFileUrl: (docId: string) => `${BASE}/api/documents/${docId}/file`,
   uploadManualDocument: async (projectId: string, file: File) => {
     const form = new FormData();
     form.append("file", file);
