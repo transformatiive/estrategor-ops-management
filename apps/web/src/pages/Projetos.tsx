@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api.js";
 import { useAsync } from "../lib/useAsync.js";
 import {
@@ -11,10 +12,13 @@ import {
   TableSkeleton,
 } from "../components/ui.js";
 import { ProjectDrawer } from "../components/ProjectDrawer.js";
+import { NewProjectModal } from "../components/NewProjectModal.js";
 
 export function Projetos() {
   const { data: projects, loading, error, reload } = useAsync(() => api.projects());
   const [selected, setSelected] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const navigate = useNavigate();
 
   return (
     <>
@@ -25,7 +29,9 @@ export function Projetos() {
             {projects ? `${projects.length} projectos` : " "}
           </div>
         </div>
-        <button className="btn btn-primary">+ Novo projecto</button>
+        <button className="btn btn-primary" onClick={() => setCreating(true)}>
+          + Novo projecto
+        </button>
       </div>
 
       {loading && <TableSkeleton />}
@@ -71,6 +77,23 @@ export function Projetos() {
 
       {selected && (
         <ProjectDrawer id={selected} onClose={() => setSelected(null)} />
+      )}
+
+      {creating && (
+        <NewProjectModal
+          onClose={() => setCreating(false)}
+          onCreated={(id, foldersError) => {
+            setCreating(false);
+            if (foldersError) {
+              // criado, mas pastas falharam — avisa e fica na lista para repetir no separador Documentos
+              alert(
+                `Projecto criado, mas a criação de pastas falhou:\n${foldersError}\n\nPode repetir no separador Documentos.`,
+              );
+              reload();
+            }
+            navigate(`/projetos/${id}`);
+          }}
+        />
       )}
     </>
   );

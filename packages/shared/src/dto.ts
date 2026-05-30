@@ -95,3 +95,32 @@ export interface ChecklistItemDTO {
   responsible: string | null;
   workdriveUrl: string | null;
 }
+
+/** Criação manual de um projecto (B-02). */
+export interface CreateProjectRequest {
+  title: string;
+  clientName: string;
+  clientNif?: string;
+  program: ProgramCode;
+  /** rótulo da medida/aviso (nomeia a pasta em 1-INCENTIVOS), opcional */
+  measureLabel?: string;
+  responsibleIds?: string[];
+}
+
+/** Pasta do WorkDrive associada a um projecto (TRNSF-936). */
+export interface FolderDTO {
+  id: string;
+  path: string;
+  name: string;
+  parentPath: string | null;
+  isRoot: boolean;
+  workdriveId: string | null;
+  workdriveUrl: string | null;
+}
+
+/** Estado das pastas de um projecto no separador Documentos. */
+export interface ProjectFoldersDTO {
+  provisioned: boolean;
+  rootFolderId: string | null;
+  folders: FolderDTO[];
+}

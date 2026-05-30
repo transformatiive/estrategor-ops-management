@@ -13,6 +13,16 @@ const schema = z.object({
   ADMIN_PASSWORD: z.string().min(8).optional(),
   // Validade da sessão (dias).
   SESSION_TTL_DAYS: z.coerce.number().default(7),
+  // Zoho WorkDrive (TRNSF-936). Sem estas variáveis, o adaptador corre em modo
+  // "stub" (gera IDs fake) — útil em dev/CI/demo sem credenciais Zoho.
+  WORKDRIVE_API_BASE: z.string().default("https://www.zohoapis.com/workdrive/api/v1"),
+  WORKDRIVE_ACCESS_TOKEN: z.string().optional(),
+  WORKDRIVE_REFRESH_TOKEN: z.string().optional(),
+  WORKDRIVE_CLIENT_ID: z.string().optional(),
+  WORKDRIVE_CLIENT_SECRET: z.string().optional(),
+  WORKDRIVE_OAUTH_BASE: z.string().default("https://accounts.zoho.com"),
+  // Pasta-raiz (team folder / workspace) onde as pastas de cliente são criadas.
+  WORKDRIVE_ROOT_FOLDER_ID: z.string().optional(),
 });
 
 export const env = schema.parse(process.env);

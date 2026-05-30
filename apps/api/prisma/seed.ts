@@ -9,6 +9,7 @@ import { PrismaClient } from "@prisma/client";
 import { hash } from "@node-rs/argon2";
 import {
   DOCUMENT_TAXONOMY,
+  buildFolderTree,
   documentTypesForProgram,
   type ProgramCode,
 } from "@estrategor/shared";
@@ -164,6 +165,7 @@ async function main() {
   await prisma.checklistItem.deleteMany();
   await prisma.stateTransition.deleteMany();
   await prisma.milestone.deleteMany();
+  await prisma.folder.deleteMany();
   await prisma.deadline.deleteMany();
   await prisma.task.deleteMany();
   await prisma.diagnostic.deleteMany();
@@ -215,6 +217,8 @@ async function main() {
       data: { name: proj.clientName, nif: proj.nif },
     });
     const programId = programByCode.get(proj.program)!;
+    const measureLabel =
+      proj.program === "PT2030" ? `SI nº ${proj.code.split("-").pop()}` : undefined;
     const project = await prisma.project.create({
       data: {
         code: proj.code,
@@ -225,6 +229,7 @@ async function main() {
         investmentTotal: proj.investment,
         incentiveValue: proj.incentive,
         nextAction: proj.nextAction,
+        measureLabel,
         progress: proj.progress,
         responsibles: {
           create: proj.responsibles
@@ -254,6 +259,31 @@ async function main() {
           projectId: project.id,
           documentTypeId: docTypeByKey.get(dt.key)!,
           status: "EM_FALTA",
+        },
+      });
+    }
+
+    // pastas WorkDrive (TRNSF-936) — IDs "stub" determinísticos para a demo
+    const rootName = `${proj.clientName} · ${proj.code}`;
+    await prisma.folder.create({
+      data: {
+        projectId: project.id,
+        path: "",
+        name: rootName,
+        parentPath: null,
+        isRoot: true,
+        workdriveId: `stub-root-${project.id}`,
+      },
+    });
+    for (const node of buildFolderTree(proj.program, measureLabel)) {
+      await prisma.folder.create({
+        data: {
+          projectId: project.id,
+          path: node.path,
+          name: node.name,
+          parentPath: node.parentPath,
+          isRoot: false,
+          workdriveId: `stub-${project.id}-${node.path}`.slice(0, 120),
         },
       });
     }

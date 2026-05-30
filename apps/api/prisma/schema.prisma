@@ -136,6 +136,7 @@ model Project {
   investmentTotal Decimal?     @map("investment_total") @db.Decimal(14, 2)
   incentiveValue  Decimal?     @map("incentive_value") @db.Decimal(14, 2)
   nextAction      String?      @map("next_action")
+  measureLabel    String?      @map("measure_label")
   progress        Int          @default(0)
   crmDealId       String?      @unique @map("crm_deal_id")
   createdAt       DateTime     @default(now()) @map("created_at")
@@ -151,6 +152,7 @@ model Project {
   reminders        Reminder[]
   deadlines        Deadline[]
   milestones       Milestone[]
+  folders          Folder[]
   tasks            Task[]
   diagnostics      Diagnostic[]
   activities       ActivityLog[]
@@ -158,6 +160,26 @@ model Project {
   @@index([clientId])
   @@index([programId])
   @@map("projects")
+}
+
+// Pasta provisionada no WorkDrive por projecto (TRNSF-936). `path` é o caminho
+// lógico relativo à raiz do projecto (ex.: "1-INCENTIVOS/Candidatura").
+model Folder {
+  id              String   @id @default(cuid())
+  projectId       String   @map("project_id")
+  path            String
+  name            String
+  workdriveId     String?  @map("workdrive_id")
+  workdriveUrl    String?  @map("workdrive_url")
+  parentPath      String?  @map("parent_path")
+  isRoot          Boolean  @default(false) @map("is_root")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, path])
+  @@index([projectId])
+  @@map("folders")
 }
 
 model ProjectResponsible {
