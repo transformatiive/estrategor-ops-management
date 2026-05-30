@@ -27,6 +27,10 @@ const schema = z.object({
   WORKDRIVE_STUB_DIR: z.string().default("/tmp/estrategor-workdrive"),
   // Limite de tamanho por ficheiro carregado pelo cliente (bytes). Default 25 MB.
   UPLOAD_MAX_BYTES: z.coerce.number().default(25 * 1024 * 1024),
+  // Classificação por IA (TRNSF-938). Sem chave → classificador stub determinístico.
+  OPENROUTER_API_KEY: z.string().optional(),
+  OPENROUTER_MODEL: z.string().default("anthropic/claude-3.5-sonnet"),
+  OPENROUTER_BASE: z.string().default("https://openrouter.ai/api/v1"),
 });
 
 export const env = schema.parse(process.env);

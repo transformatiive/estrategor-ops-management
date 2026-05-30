@@ -1,91 +1,237 @@
-import { useState } from "react";
-import type { FolderDTO } from "@estrategor/shared";
+import { useRef, useState } from "react";
+import {
+  DOCUMENT_TAXONOMY,
+  type DocumentDTO,
+  type FolderDTO,
+} from "@estrategor/shared";
 import { api, ApiError } from "../lib/api.js";
 import { useAsync } from "../lib/useAsync.js";
 import { ErrorState } from "./ui.js";
 
-/** Indenta o caminho lógico pela profundidade (nº de "/"). */
-function depth(path: string): number {
-  if (!path) return 0;
-  return path.split("/").length;
-}
-
-/** Separador Documentos (TRNSF-936): mostra a árvore de pastas do WorkDrive. */
+/**
+ * Separador Documentos: fila de validação da classificação por IA (TRNSF-938)
+ * + árvore de pastas do WorkDrive (TRNSF-936).
+ */
 export function DocumentsTab({ projectId }: { projectId: string }) {
-  const { data, loading, error, reload } = useAsync(
-    () => api.folders(projectId),
-    [projectId],
-  );
-  const [creating, setCreating] = useState(false);
-  const [createError, setCreateError] = useState<string | null>(null);
+  const folders = useAsync(() => api.folders(projectId), [projectId]);
+  const docs = useAsync(() => api.documents(projectId), [projectId]);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   async function createFolders() {
-    setCreating(true);
-    setCreateError(null);
+    setBusy(true);
+    setErr(null);
     try {
       await api.createFolders(projectId);
-      reload();
+      folders.reload();
     } catch (e) {
-      setCreateError(e instanceof ApiError ? e.message : "Erro ao criar pastas.");
+      setErr(e instanceof ApiError ? e.message : "Erro ao criar pastas.");
     } finally {
-      setCreating(false);
+      setBusy(false);
     }
   }
 
-  if (loading) return <p style={{ color: "var(--muted)" }}>A carregar pastas…</p>;
-  if (error) return <ErrorState error={error} onRetry={reload} />;
-  if (!data) return null;
-
-  // pasta-raiz + subpastas ordenadas
-  const root = data.folders.find((f) => f.isRoot);
-  const subfolders = data.folders
-    .filter((f) => !f.isRoot)
-    .sort((a, b) => a.path.localeCompare(b.path, "pt"));
-
-  if (!data.provisioned) {
-    return (
-      <div className="empty">
-        <p>Pastas por criar.</p>
-        <p style={{ fontSize: 12, margin: "4px 0 12px" }}>
-          Este projecto ainda não tem a estrutura de pastas no WorkDrive.
-        </p>
-        <button className="btn btn-primary" onClick={createFolders} disabled={creating}>
-          {creating ? "A criar pastas…" : "Criar pastas"}
-        </button>
-        {createError && <div className="login-error" style={{ marginTop: 12 }}>{createError}</div>}
-      </div>
-    );
+  async function uploadManual(file: File) {
+    setBusy(true);
+    setErr(null);
+    try {
+      await api.uploadManualDocument(projectId, file);
+      docs.reload();
+    } catch (e) {
+      setErr(e instanceof ApiError ? e.message : "Erro no upload.");
+    } finally {
+      setBusy(false);
+    }
   }
 
+  const fData = folders.data;
+  const dData = docs.data;
+
   return (
-    <div style={{ maxWidth: 640 }}>
+    <div style={{ maxWidth: 760 }}>
+      {/* ── Fila de validação (IA) ── */}
       <div className="section-header">
-        <div className="section-title">{root?.name ?? "Pastas do projecto"}</div>
-        <button className="btn btn-secondary" onClick={createFolders} disabled={creating}>
-          {creating ? "A repor…" : "Repor estrutura"}
-        </button>
+        <div className="section-title">Documentos — fila de validação</div>
+        <>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*,application/pdf"
+            style={{ display: "none" }}
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) uploadManual(f);
+              e.target.value = "";
+            }}
+          />
+          <button className="btn btn-primary" disabled={busy} onClick={() => fileRef.current?.click()}>
+            {busy ? "A processar…" : "+ Carregar documento"}
+          </button>
+        </>
       </div>
-      {createError && <div className="login-error" style={{ marginBottom: 12 }}>{createError}</div>}
-      <div className="card" style={{ padding: 0 }}>
-        {subfolders.map((f: FolderDTO) => (
-          <div
-            key={f.id}
-            className="folder-row"
-            style={{ paddingLeft: 16 + depth(f.path) * 18 }}
-          >
-            <span className="folder-icon">📁</span>
-            <span className="folder-name">{f.name}</span>
-            {f.workdriveUrl && (
-              <a className="folder-link" href={f.workdriveUrl} target="_blank" rel="noreferrer">
-                abrir ↗
-              </a>
-            )}
-          </div>
+
+      {err && <div className="login-error" style={{ marginBottom: 12 }}>{err}</div>}
+      {docs.error && <ErrorState error={docs.error} onRetry={docs.reload} />}
+
+      {dData && dData.queue.length === 0 && (
+        <div className="empty">
+          <p>Sem documentos a aguardar validação.</p>
+          <p style={{ fontSize: 12, marginTop: 4 }}>
+            Documentos entregues pelo cliente ou carregados manualmente aparecem aqui para revisão.
+          </p>
+        </div>
+      )}
+
+      {dData &&
+        dData.queue.map((d) => (
+          <QueueRow key={d.id} doc={d} onChanged={() => { docs.reload(); folders.reload(); }} />
         ))}
+
+      {/* ── Arquivados ── */}
+      {dData && dData.archived.length > 0 && (
+        <>
+          <div className="section-header" style={{ marginTop: 24 }}>
+            <div className="section-title">Arquivados</div>
+          </div>
+          <div className="project-table" style={{ borderRadius: 8 }}>
+            {dData.archived.map((d) => (
+              <div key={d.id} className="folder-row" style={{ justifyContent: "space-between" }}>
+                <span className="folder-name">
+                  ✓ {d.storedFilename ?? d.originalFilename}
+                  <span className="deadline-sub"> · {d.documentTypeName}</span>
+                </span>
+                {d.workdriveUrl && (
+                  <a className="folder-link" href={d.workdriveUrl} target="_blank" rel="noreferrer">
+                    abrir ↗
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* ── Pastas do WorkDrive (936) ── */}
+      <div className="section-header" style={{ marginTop: 24 }}>
+        <div className="section-title">Pastas do projecto (WorkDrive)</div>
+        {fData?.provisioned ? (
+          <button className="btn btn-secondary" onClick={createFolders} disabled={busy}>
+            Repor estrutura
+          </button>
+        ) : (
+          <button className="btn btn-primary" onClick={createFolders} disabled={busy}>
+            Criar pastas
+          </button>
+        )}
       </div>
-      <p style={{ fontSize: 11, color: "var(--hint)", marginTop: 8 }}>
-        Estrutura sincronizada com o Zoho WorkDrive.
-      </p>
+
+      {folders.loading && <p style={{ color: "var(--muted)" }}>A carregar pastas…</p>}
+      {folders.error && <ErrorState error={folders.error} onRetry={folders.reload} />}
+
+      {fData && !fData.provisioned && fData.folders.length === 0 && (
+        <div className="empty"><p>Pastas por criar.</p></div>
+      )}
+
+      {fData && fData.folders.length > 0 && (
+        <div className="project-table" style={{ borderRadius: 8 }}>
+          {[...fData.folders]
+            .sort((a, b) => a.path.localeCompare(b.path))
+            .map((f: FolderDTO) => (
+              <div key={f.id} className="folder-row">
+                <span className="folder-name" style={{ paddingLeft: pathDepth(f.path) * 16 }}>
+                  {f.isRoot ? "📁" : "📂"} {f.isRoot ? f.name : f.path.split("/").pop() ?? f.name}
+                </span>
+                {f.workdriveUrl && (
+                  <a className="folder-link" href={f.workdriveUrl} target="_blank" rel="noreferrer">
+                    abrir ↗
+                  </a>
+                )}
+              </div>
+            ))}
+        </div>
+      )}
     </div>
   );
+}
+
+/** Linha da fila de validação: proposta da IA + confirmar/corrigir/rejeitar. */
+function QueueRow({ doc, onChanged }: { doc: DocumentDTO; onChanged: () => void }) {
+  const [type, setType] = useState<string>(doc.proposedTypeKey ?? "");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function confirm() {
+    if (!type) {
+      setErr("Escolha o tipo de documento.");
+      return;
+    }
+    setBusy(true);
+    setErr(null);
+    try {
+      await api.validateDocument(doc.id, type);
+      onChanged();
+    } catch (e) {
+      setErr(e instanceof ApiError ? e.message : "Erro ao validar.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function reject() {
+    setBusy(true);
+    setErr(null);
+    try {
+      await api.rejectDocument(doc.id);
+      onChanged();
+    } catch (e) {
+      setErr(e instanceof ApiError ? e.message : "Erro ao rejeitar.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const pageInfo = doc.pageStart ? ` · pág. ${doc.pageStart}–${doc.pageEnd}` : "";
+
+  return (
+    <div className="card queue-card">
+      <div className="queue-head">
+        <span className="queue-file">
+          📄 {doc.originalFilename}
+          <span className="deadline-sub">
+            {" "}
+            · {doc.origin === "CLIENTE" ? "cliente" : "manual"}
+            {doc.parentDocumentId ? " · parte" : ""}
+            {pageInfo}
+          </span>
+        </span>
+        <span className={"badge " + (doc.confidence === "BAIXA" ? "badge-danger" : "badge-muted")}>
+          {doc.confidence === "BAIXA" ? "⚠ confiança baixa" : "IA"}
+          {doc.confidenceScore !== null ? ` ${(doc.confidenceScore * 100).toFixed(0)}%` : ""}
+        </span>
+      </div>
+
+      <div className="queue-actions">
+        <select className="login-input" value={type} onChange={(e) => setType(e.target.value)}>
+          <option value="">— tipo de documento —</option>
+          {DOCUMENT_TAXONOMY.map((d) => (
+            <option key={d.key} value={d.key}>
+              {d.name}
+            </option>
+          ))}
+        </select>
+        <button className="btn btn-primary" onClick={confirm} disabled={busy}>
+          {busy ? "…" : "Confirmar e arquivar"}
+        </button>
+        <button className="btn btn-secondary" onClick={reject} disabled={busy}>
+          Rejeitar
+        </button>
+      </div>
+      {err && <div className="login-error" style={{ marginTop: 8 }}>{err}</div>}
+    </div>
+  );
+}
+
+function pathDepth(path: string): number {
+  return path === "" ? 0 : path.split("/").length - 1;
 }

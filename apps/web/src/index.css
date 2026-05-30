@@ -438,6 +438,31 @@ body {
   color: var(--danger);
 }
 
+/* ── FILA DE VALIDAÇÃO (Documentos / IA) ── */
+.queue-card {
+  margin-bottom: 10px;
+}
+.queue-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.queue-file {
+  font-size: 13px;
+  font-weight: 500;
+}
+.queue-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.queue-actions .login-input {
+  flex: 1;
+  min-width: 180px;
+}
+
 /* ── DIAGNÓSTICO A0 ── */
 .cond-row {
   display: flex;

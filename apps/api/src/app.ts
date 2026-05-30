@@ -9,6 +9,7 @@ import { authRoutes } from "./routes/auth.js";
 import { userRoutes } from "./routes/users.js";
 import { recolhaRoutes } from "./routes/recolha.js";
 import { diagnosticoRoutes } from "./routes/diagnostico.js";
+import { documentosRoutes } from "./routes/documentos.js";
 import { registerStatic } from "./static.js";
 
 /** Constrói a instância Fastify com plugins e rotas registados. */
@@ -34,6 +35,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(projectRoutes);
   await app.register(recolhaRoutes);
   await app.register(diagnosticoRoutes);
+  await app.register(documentosRoutes);
 
   // SPA (serviço único): serve apps/web/dist + fallback para index.html.
   await registerStatic(app);
