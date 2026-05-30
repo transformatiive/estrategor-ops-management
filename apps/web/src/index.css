@@ -85,6 +85,9 @@ body {
   display: none;
 }
 .topbar-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -94,6 +97,11 @@ body {
   border-right: 1px solid var(--border);
   margin-right: 16px;
   white-space: nowrap;
+}
+.topbar-logo-img {
+  height: 22px;
+  width: auto;
+  display: block;
 }
 .topbar-logo span {
   font-weight: 300;
