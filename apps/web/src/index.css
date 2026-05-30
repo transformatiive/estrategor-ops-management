@@ -433,6 +433,71 @@ body {
   background: var(--purple-bg);
   color: var(--purple);
 }
+.badge-danger {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+/* ── RECOLHA (formulário público do cliente) ── */
+.recolha-screen {
+  min-height: 100vh;
+  background: var(--bg);
+  display: flex;
+  justify-content: center;
+  padding: 24px 16px;
+  overflow-y: auto;
+}
+.recolha-card {
+  width: 540px;
+  max-width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 28px;
+  align-self: flex-start;
+}
+.recolha-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 14px 0 2px;
+}
+.recolha-done {
+  background: var(--accent-bg);
+  color: var(--accent2);
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 13px;
+  margin: 16px 0;
+}
+.recolha-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 18px;
+}
+.recolha-item {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.recolha-item-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.recolha-item-name {
+  font-size: 13px;
+  font-weight: 500;
+}
+.recolha-foot {
+  font-size: 11px;
+  color: var(--hint);
+  margin-top: 20px;
+  text-align: center;
+}
 
 .progress-wrap {
   display: flex;

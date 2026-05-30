@@ -84,11 +84,11 @@ Deploy automático ao fazer merge em `main`; cada PR corre o
 
 ## Estado (Semana 1)
 
-- [x] **Fase 0 — Fundação:** monorepo, API + `/health`, schema Prisma + seed, SPA shell, CI, Railway.
-- [ ] Épico A — Acesso e Utilizadores
-- [ ] Épico B — Base da Aplicação
-- [ ] Épico C — Pastas WorkDrive
-- [ ] Épico D — Recolha + Formulário
-- [ ] Épico E — Classificação/Divisão/Arquivo (IA)
-- [ ] Épico F — Rastreio e Seguimento
-- [ ] Épico G — A0 Diagnóstico
+- [x] **Fundação:** monorepo, API + `/health`, schema Prisma + seed, SPA shell, CI, Railway (serviço único: a API serve a SPA).
+- [x] **TRNSF‑935 · B — Base da Aplicação:** dados reais (Postgres) na lista e kanban PT2030, drawer de detalhe, página de projecto com separadores.
+- [x] **TRNSF‑934 · A — Acesso e Utilizadores:** login (sessão httpOnly server-side), gestão de utilizadores em Configuração, papéis gestor/consultor/admin com RBAC.
+- [x] **TRNSF‑936 · C — Pastas no WorkDrive:** provisionamento da árvore de pastas por projecto (adaptador real Zoho + stub), separador *Documentos*.
+- [x] **TRNSF‑937 · D — Recolha + Formulário:** separador *Recolha* (link único para N documentos), formulário público do cliente (sem login, upload de PDF/foto), ficheiros na subpasta WorkDrive correta com nome `{Cliente}_{Programa}_{Tipo}_{Data}`, estado por documento.
+- [ ] TRNSF‑940 · G — A0 Diagnóstico (+ TRNSF‑941 grelhas)
+- [ ] TRNSF‑938 · E — Classificação/Divisão/Arquivo (IA)
+- [ ] TRNSF‑939 · F — Rastreio e Seguimento

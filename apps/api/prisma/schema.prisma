@@ -59,6 +59,11 @@ enum CollectionLinkStatus {
   EXPIRADO
 }
 
+enum DocumentOrigin {
+  CLIENTE
+  MANUAL
+}
+
 // ─── Épico A — Acesso e Utilizadores ─────────────────────────────────────
 model User {
   id           String   @id @default(cuid())
@@ -242,43 +247,54 @@ model ChecklistItem {
 }
 
 model Document {
-  id               String        @id @default(cuid())
-  projectId        String        @map("project_id")
-  checklistItemId  String?       @map("checklist_item_id")
-  documentTypeId   String?       @map("document_type_id")
-  originalFilename String        @map("original_filename")
-  storedFilename   String?       @map("stored_filename")
-  workdriveFileId  String?       @map("workdrive_file_id")
-  workdriveUrl     String?       @map("workdrive_url")
-  confidence       DocConfidence @default(ALTA)
-  parentDocumentId String?       @map("parent_document_id")
-  status           String        @default("recebido")
-  createdAt        DateTime      @default(now()) @map("created_at")
+  id               String         @id @default(cuid())
+  projectId        String         @map("project_id")
+  checklistItemId  String?        @map("checklist_item_id")
+  documentTypeId   String?        @map("document_type_id")
+  collectionLinkId String?        @map("collection_link_id")
+  originalFilename String         @map("original_filename")
+  storedFilename   String?        @map("stored_filename")
+  workdriveFileId  String?        @map("workdrive_file_id")
+  workdriveUrl     String?        @map("workdrive_url")
+  mimeType         String?        @map("mime_type")
+  sizeBytes        Int?           @map("size_bytes")
+  origin           DocumentOrigin @default(MANUAL)
+  confidence       DocConfidence  @default(ALTA)
+  parentDocumentId String?        @map("parent_document_id")
+  status           String         @default("recebido")
+  createdAt        DateTime       @default(now()) @map("created_at")
 
-  project       Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  checklistItem ChecklistItem? @relation(fields: [checklistItemId], references: [id])
-  documentType  DocumentType?  @relation(fields: [documentTypeId], references: [id])
-  parent        Document?      @relation("DocumentSplits", fields: [parentDocumentId], references: [id])
-  parts         Document[]     @relation("DocumentSplits")
+  project        Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  checklistItem  ChecklistItem?  @relation(fields: [checklistItemId], references: [id])
+  documentType   DocumentType?   @relation(fields: [documentTypeId], references: [id])
+  collectionLink CollectionLink? @relation(fields: [collectionLinkId], references: [id])
+  parent         Document?       @relation("DocumentSplits", fields: [parentDocumentId], references: [id])
+  parts          Document[]      @relation("DocumentSplits")
 
   @@index([projectId])
   @@map("documents")
 }
 
 // ─── Épico D/F — Recolha e Seguimento ────────────────────────────────────
+// Pedido de recolha (spec §4 PedidoRecolha): link único, multi-uso até expirar,
+// com os tipos de documento pedidos ao cliente (TRNSF-937).
 model CollectionLink {
-  id        String               @id @default(cuid())
-  projectId String               @map("project_id")
-  token     String               @unique
-  expiresAt DateTime             @map("expires_at")
-  usedAt    DateTime?            @map("used_at")
-  createdById String?            @map("created_by_id")
-  status    CollectionLinkStatus @default(ATIVO)
-  createdAt DateTime             @default(now()) @map("created_at")
+  id              String               @id @default(cuid())
+  projectId       String               @map("project_id")
+  token           String               @unique
+  requestedKeys   String[]             @default([]) @map("requested_keys") // keys de DocumentType pedidas
+  clientEmail     String?              @map("client_email")
+  message         String?
+  expiresAt       DateTime             @map("expires_at")
+  usedAt          DateTime?            @map("used_at")
+  createdById     String?              @map("created_by_id")
+  status          CollectionLinkStatus @default(ATIVO)
+  createdAt       DateTime             @default(now()) @map("created_at")
 
   project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
   createdBy User?      @relation(fields: [createdById], references: [id])
   reminders Reminder[]
+  documents Document[]
 
   @@index([projectId])
   @@map("collection_links")

@@ -1,11 +1,15 @@
 import type {
   ChecklistItemDTO,
+  CollectionRequestDTO,
+  CreateCollectionRequest,
   CreateProjectRequest,
   CreateUserRequest,
   HealthDTO,
+  ProjectCollectionDTO,
   ProjectDetailDTO,
   ProjectFoldersDTO,
   ProjectListItemDTO,
+  PublicCollectionDTO,
   UpdateUserRequest,
   UserDTO,
 } from "@estrategor/shared";
@@ -77,4 +81,32 @@ export const api = {
   // pastas WorkDrive (TRNSF-936)
   folders: (id: string) => get<ProjectFoldersDTO>(`/api/projects/${id}/folders`),
   createFolders: (id: string) => post<ProjectFoldersDTO>(`/api/projects/${id}/folders`),
+
+  // recolha ao cliente (TRNSF-937)
+  collections: (id: string) => get<ProjectCollectionDTO>(`/api/projects/${id}/collections`),
+  createCollection: (id: string, data: CreateCollectionRequest) =>
+    post<CollectionRequestDTO>(`/api/projects/${id}/collections`, data),
+
+  // formulário público do cliente (sem login)
+  publicCollection: (token: string) =>
+    get<PublicCollectionDTO>(`/api/recolha/${token}`),
+  uploadDocument: async (token: string, typeKey: string, file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch(
+      `${BASE}/api/recolha/${token}/upload?type=${encodeURIComponent(typeKey)}`,
+      { method: "POST", body: form },
+    );
+    if (!res.ok) {
+      let msg = `${res.status}`;
+      try {
+        const b = (await res.json()) as { error?: string };
+        if (b?.error) msg = b.error;
+      } catch {
+        /* não-JSON */
+      }
+      throw new ApiError(res.status, msg);
+    }
+    return (await res.json()) as { ok: boolean; storedFilename: string };
+  },
 };

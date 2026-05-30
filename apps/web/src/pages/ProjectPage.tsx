@@ -4,13 +4,14 @@ import { api } from "../lib/api.js";
 import { useAsync } from "../lib/useAsync.js";
 import { Avatars, ErrorState, Progress, ProgramBadge, StateBadge } from "../components/ui.js";
 import { DocumentsTab } from "../components/DocumentsTab.js";
+import { RecolhaTab } from "../components/RecolhaTab.js";
 
-// Separadores da página de projecto. Os blocos C–G preenchem-nos nos tickets seguintes.
+// Separadores da página de projecto. Os blocos restantes preenchem-nos nos tickets seguintes.
 const TABS = [
   { key: "resumo", label: "Resumo" },
   { key: "milestones", label: "Milestones" },
   { key: "diagnostico", label: "Diagnóstico", ticket: "TRNSF-940 (G)" },
-  { key: "recolha", label: "Recolha", ticket: "TRNSF-937 (D)" },
+  { key: "recolha", label: "Recolha" },
   { key: "documentos", label: "Documentos", ticket: "TRNSF-938 (E)" },
   { key: "seguimento", label: "Checklist & Seguimento", ticket: "TRNSF-939 (F)" },
 ] as const;
@@ -107,10 +108,11 @@ export function ProjectPage() {
       )}
 
       {tab === "documentos" && <DocumentsTab projectId={id} />}
+      {tab === "recolha" && <RecolhaTab projectId={id} />}
 
-      {/* Separadores dos blocos D/G/F: ainda por implementar */}
+      {/* Separadores dos blocos G/F: ainda por implementar */}
       {TABS.filter(
-        (t) => !["resumo", "milestones", "documentos"].includes(t.key),
+        (t) => !["resumo", "milestones", "documentos", "recolha"].includes(t.key),
       ).map(
         (t) =>
           tab === t.key && (
