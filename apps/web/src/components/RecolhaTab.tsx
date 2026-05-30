@@ -81,7 +81,7 @@ export function RecolhaTab({ projectId }: { projectId: string }) {
           <p className="login-sub" style={{ marginTop: 0 }}>
             Escolha os documentos a pedir ao cliente:
           </p>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+          <div className="recolha-doc-grid">
             {DOCUMENT_TAXONOMY.map((d) => (
               <label key={d.key} style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 12.5 }}>
                 <input
