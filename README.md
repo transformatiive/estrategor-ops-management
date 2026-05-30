@@ -69,15 +69,18 @@ nenhum gestor/admin activo, esse utilizador é criado/promovido no arranque.
 
 ## Deploy (Railway)
 
-Três serviços no mesmo projeto Railway:
+**Serviço único** no projeto Railway (a API serve também a SPA):
 
 1. **PostgreSQL** — plugin gerido; injeta `DATABASE_URL`.
-2. **api** — usa o [`railway.json`](./railway.json) da raiz: build corre `prisma generate`,
-   o arranque corre `prisma migrate deploy` e inicia o servidor; health-check em `/health`.
-3. **web** — usa [`apps/web/railway.json`](./apps/web/railway.json): build do Vite + `preview`.
+2. **app** — usa o [`railway.json`](./railway.json) da raiz. O build corre `prisma generate`
+   e o build da SPA (`apps/web/dist`); o arranque corre `prisma migrate deploy` e inicia o
+   servidor Fastify, que serve `/api/*`, `/health` **e** os ficheiros estáticos da SPA
+   (com fallback para `index.html` nas rotas do React Router). Health-check em `/health`.
 
-Variáveis de ambiente: ver [`.env.example`](./.env.example). Deploy automático ao fazer
-merge em `main`; cada PR corre o [CI](./.github/workflows/ci.yml) (typecheck, testes, build).
+Como API e SPA partilham origem, o frontend usa caminhos relativos (`VITE_API_URL` vazio)
+e não há CORS entre domínios. Variáveis de ambiente: ver [`.env.example`](./.env.example).
+Deploy automático ao fazer merge em `main`; cada PR corre o
+[CI](./.github/workflows/ci.yml) (typecheck, testes, build).
 
 ## Estado (Semana 1)
 

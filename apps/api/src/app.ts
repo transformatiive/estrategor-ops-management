@@ -6,6 +6,7 @@ import { healthRoutes } from "./routes/health.js";
 import { projectRoutes } from "./routes/projects.js";
 import { authRoutes } from "./routes/auth.js";
 import { userRoutes } from "./routes/users.js";
+import { registerStatic } from "./static.js";
 
 /** Constrói a instância Fastify com plugins e rotas registados. */
 export async function buildApp(): Promise<FastifyInstance> {
@@ -25,6 +26,9 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(authRoutes);
   await app.register(userRoutes);
   await app.register(projectRoutes);
+
+  // SPA (serviço único): serve apps/web/dist + fallback para index.html.
+  await registerStatic(app);
 
   return app;
 }
