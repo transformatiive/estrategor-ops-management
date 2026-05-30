@@ -114,15 +114,69 @@ export const DOCUMENT_TAXONOMY: DocumentTypeDef[] = [
 ];
 
 /**
- * Estrutura de pastas padrão no WorkDrive (spec C-01) — proposta para validação,
- * baseada nos ~538 ficheiros reais. Cada projeto recria esta árvore (C-02).
+ * Estrutura de pastas no WorkDrive por projecto (spec §6, v2026-05-30). A raiz é
+ * a pasta do projecto; a subárvore depende do `programa`. Caminhos com prefixos
+ * numéricos para ordenação estável.
+ *
+ * ```
+ * 0-ELEMENTOS/
+ * 1-INCENTIVOS/{SI <medida> nº xxxx}/{Candidatura, Submissão, Análise..., Termo de Aceitação, Execução}
+ * 2-BF/{RFAI, SIFIDE}
+ * 3-FORMAÇÃO/
+ * ```
  */
-export const WORKDRIVE_FOLDER_TREE: Record<string, string[]> = {
-  ELEMENTOS: [],
-  INCENTIVOS: ["Candidatura", "Submissão", "Análise", "TA", "Execução"],
-  BF: [],
-  FORMAÇÃO: [],
-};
+export interface FolderNode {
+  /** caminho lógico relativo à raiz do projecto, ex.: "1-INCENTIVOS/Candidatura" */
+  path: string;
+  /** nome da pasta (último segmento) */
+  name: string;
+  /** caminho do pai, ou null para os nós de topo */
+  parentPath: string | null;
+}
+
+const INCENTIVOS_SUB = [
+  "Candidatura",
+  "Submissão",
+  "Análise + Pedido de Elementos + Decisão",
+  "Termo de Aceitação",
+  "Execução",
+];
+
+/**
+ * Constrói a lista achatada (pai antes dos filhos) da árvore de pastas para um
+ * projecto, conforme o programa. `measureLabel` nomeia a pasta da medida dentro
+ * de 1-INCENTIVOS (ex.: "SI Qualificação nº 0182"); se ausente, usa um genérico.
+ */
+export function buildFolderTree(
+  program: ProgramCode,
+  measureLabel?: string,
+): FolderNode[] {
+  const nodes: FolderNode[] = [];
+  const add = (path: string, parentPath: string | null) =>
+    nodes.push({ path, name: path.split("/").pop()!, parentPath });
+
+  // 0-ELEMENTOS — sempre
+  add("0-ELEMENTOS", null);
+
+  if (program === "PT2030") {
+    add("1-INCENTIVOS", null);
+    const measure = measureLabel?.trim() || "SI nº —";
+    const base = `1-INCENTIVOS/${measure}`;
+    add(base, "1-INCENTIVOS");
+    for (const sub of INCENTIVOS_SUB) add(`${base}/${sub}`, base);
+  }
+
+  if (program === "RFAI" || program === "SIFIDE") {
+    add("2-BF", null);
+    add(`2-BF/${program}`, "2-BF");
+  }
+
+  if (program === "FORMACAO") {
+    add("3-FORMAÇÃO", null);
+  }
+
+  return nodes;
+}
 
 /** Devolve os tipos de documento aplicáveis a um dado programa. */
 export function documentTypesForProgram(program: ProgramCode): DocumentTypeDef[] {

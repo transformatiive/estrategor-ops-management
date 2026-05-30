@@ -164,6 +164,7 @@ async function main() {
   await prisma.checklistItem.deleteMany();
   await prisma.stateTransition.deleteMany();
   await prisma.milestone.deleteMany();
+  await prisma.folder.deleteMany();
   await prisma.deadline.deleteMany();
   await prisma.task.deleteMany();
   await prisma.diagnostic.deleteMany();
@@ -254,6 +255,33 @@ async function main() {
           projectId: project.id,
           documentTypeId: docTypeByKey.get(dt.key)!,
           status: "EM_FALTA",
+        },
+      });
+    }
+
+    // pastas WorkDrive (TRNSF-936) — IDs "stub" determinísticos para a demo
+    const rootName = `${proj.clientName} · ${proj.code}`;
+    await prisma.folder.create({
+      data: {
+        projectId: project.id,
+        path: "",
+        name: rootName,
+        parentPath: null,
+        isRoot: true,
+        workdriveId: `stub-root-${project.id}`,
+      },
+    });
+    const measureLabel =
+      proj.program === "PT2030" ? `SI nº ${proj.code.split("-").pop()}` : undefined;
+    for (const node of buildFolderTree(proj.program, measureLabel)) {
+      await prisma.folder.create({
+        data: {
+          projectId: project.id,
+          path: node.path,
+          name: node.name,
+          parentPath: node.parentPath,
+          isRoot: false,
+          workdriveId: `stub-${project.id}-${node.path}`.slice(0, 120),
         },
       });
     }

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../lib/api.js";
 import { useAsync } from "../lib/useAsync.js";
 import { Avatars, ErrorState, Progress, ProgramBadge, StateBadge } from "../components/ui.js";
+import { DocumentsTab } from "../components/DocumentsTab.js";
 
 // Separadores da página de projecto. Os blocos C–G preenchem-nos nos tickets seguintes.
 const TABS = [
@@ -10,7 +11,7 @@ const TABS = [
   { key: "milestones", label: "Milestones" },
   { key: "diagnostico", label: "Diagnóstico", ticket: "TRNSF-940 (G)" },
   { key: "recolha", label: "Recolha", ticket: "TRNSF-937 (D)" },
-  { key: "documentos", label: "Documentos", ticket: "TRNSF-936 / 938 (C/E)" },
+  { key: "documentos", label: "Documentos", ticket: "TRNSF-938 (E)" },
   { key: "seguimento", label: "Checklist & Seguimento", ticket: "TRNSF-939 (F)" },
 ] as const;
 
@@ -105,15 +106,21 @@ export function ProjectPage() {
         </div>
       )}
 
-      {/* Separadores dos blocos C–G: ainda por implementar */}
-      {TABS.filter((t) => t.key !== "resumo" && t.key !== "milestones").map(
+      {tab === "documentos" && <DocumentsTab projectId={id} />}
+
+      {/* Separadores dos blocos D/G/F: ainda por implementar */}
+      {TABS.filter(
+        (t) => !["resumo", "milestones", "documentos"].includes(t.key),
+      ).map(
         (t) =>
           tab === t.key && (
             <div className="empty" key={t.key}>
               <p>
                 <b>{t.label}</b> — por implementar.
               </p>
-              <p style={{ fontSize: 12, marginTop: 4 }}>{t.ticket}</p>
+              <p style={{ fontSize: 12, marginTop: 4 }}>
+                {"ticket" in t ? t.ticket : ""}
+              </p>
             </div>
           ),
       )}

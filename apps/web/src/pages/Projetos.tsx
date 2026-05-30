@@ -72,6 +72,23 @@ export function Projetos() {
       {selected && (
         <ProjectDrawer id={selected} onClose={() => setSelected(null)} />
       )}
+
+      {creating && (
+        <NewProjectModal
+          onClose={() => setCreating(false)}
+          onCreated={(id, foldersError) => {
+            setCreating(false);
+            if (foldersError) {
+              // criado, mas pastas falharam — avisa e fica na lista para repetir no separador Documentos
+              alert(
+                `Projecto criado, mas a criação de pastas falhou:\n${foldersError}\n\nPode repetir no separador Documentos.`,
+              );
+              reload();
+            }
+            navigate(`/projetos/${id}`);
+          }}
+        />
+      )}
     </>
   );
 }

@@ -1,8 +1,10 @@
 import type {
   ChecklistItemDTO,
+  CreateProjectRequest,
   CreateUserRequest,
   HealthDTO,
   ProjectDetailDTO,
+  ProjectFoldersDTO,
   ProjectListItemDTO,
   UpdateUserRequest,
   UserDTO,
@@ -69,4 +71,10 @@ export const api = {
   projects: () => get<ProjectListItemDTO[]>("/api/projects"),
   project: (id: string) => get<ProjectDetailDTO>(`/api/projects/${id}`),
   checklist: (id: string) => get<ChecklistItemDTO[]>(`/api/projects/${id}/checklist`),
+  createProject: (data: CreateProjectRequest) =>
+    post<{ id: string; code: string; foldersError: string | null }>("/api/projects", data),
+
+  // pastas WorkDrive (TRNSF-936)
+  folders: (id: string) => get<ProjectFoldersDTO>(`/api/projects/${id}/folders`),
+  createFolders: (id: string) => post<ProjectFoldersDTO>(`/api/projects/${id}/folders`),
 };
