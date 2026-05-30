@@ -73,7 +73,12 @@ export function Layout() {
           ☰
         </button>
         <div className="topbar-logo">
-          Estrategor <span>/ Operacional</span>
+          <img
+            className="topbar-logo-img"
+            src="https://estrategor.pt/wp-content/uploads/2026/01/logo_estrategor_cores-1024x191.png"
+            alt="Estrategor"
+          />
+          <span>/ Operacional</span>
         </div>
         <div className="topbar-search">Pesquisar projecto, cliente, referência…</div>
         <div className="topbar-right">
