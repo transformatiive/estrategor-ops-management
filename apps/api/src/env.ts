@@ -8,6 +8,9 @@ const schema = z.object({
   SESSION_SECRET: z.string().min(1).default("dev-only-change-me"),
   N8N_CALLBACK_TOKEN: z.string().min(1).default("dev-only-change-me"),
   WEB_ORIGIN: z.string().default("http://localhost:5173"),
+  // URL base público da app (para links de recolha em emails/cron, onde não há
+  // request). Se vazio, os links gerados na app derivam do próprio pedido.
+  PUBLIC_BASE_URL: z.string().optional(),
   // Bootstrap do primeiro gestor/admin (TRNSF-934). Em produção definir no Railway.
   ADMIN_EMAIL: z.string().email().optional(),
   ADMIN_PASSWORD: z.string().min(8).optional(),

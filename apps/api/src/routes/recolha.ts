@@ -10,6 +10,7 @@ import {
 import { prisma } from "../db.js";
 import { env } from "../env.js";
 import { requireAuth } from "../auth/guards.js";
+import { baseUrlFromRequest } from "../lib/baseUrl.js";
 import { generateToken, ingestClientUpload } from "../recolha/service.js";
 import { scheduleFirstReminder } from "../seguimento/service.js";
 
@@ -24,12 +25,12 @@ function nameOf(key: string): string {
   return DOCUMENT_TAXONOMY.find((d) => d.key === key)?.name ?? key;
 }
 
-function publicUrl(token: string): string {
-  return `${env.WEB_ORIGIN.replace(/\/$/, "")}/recolha/${token}`;
+function publicUrl(baseUrl: string, token: string): string {
+  return `${baseUrl}/recolha/${token}`;
 }
 
 /** Constrói o DTO de um pedido de recolha cruzando os tipos pedidos com a checklist. */
-async function toRequestDTO(linkId: string): Promise<CollectionRequestDTO | null> {
+async function toRequestDTO(linkId: string, baseUrl: string): Promise<CollectionRequestDTO | null> {
   const link = await prisma.collectionLink.findUnique({
     where: { id: linkId },
     include: { project: true, documents: { include: { documentType: true, proposedType: true } } },
@@ -63,7 +64,7 @@ async function toRequestDTO(linkId: string): Promise<CollectionRequestDTO | null
   return {
     id: link.id,
     token: link.token,
-    url: publicUrl(link.token),
+    url: publicUrl(baseUrl, link.token),
     status: link.status,
     clientEmail: link.clientEmail,
     expiresAt: link.expiresAt.toISOString(),
@@ -117,7 +118,7 @@ export async function recolhaRoutes(app: FastifyInstance) {
       });
       // agenda a 1.ª ronda de lembrete (§9), se houver email do cliente
       await scheduleFirstReminder(link.id);
-      return reply.code(201).send(await toRequestDTO(link.id));
+      return reply.code(201).send(await toRequestDTO(link.id, baseUrlFromRequest(req)));
     },
   );
 
@@ -132,7 +133,8 @@ export async function recolhaRoutes(app: FastifyInstance) {
         where: { projectId: req.params.id },
         orderBy: { createdAt: "desc" },
       });
-      const requests = (await Promise.all(links.map((l) => toRequestDTO(l.id)))).filter(
+      const baseUrl = baseUrlFromRequest(req);
+      const requests = (await Promise.all(links.map((l) => toRequestDTO(l.id, baseUrl)))).filter(
         (r): r is CollectionRequestDTO => r !== null,
       );
       const dto: ProjectCollectionDTO = { requests };
