@@ -48,9 +48,10 @@ async function toRequestDTO(linkId: string, baseUrl: string): Promise<Collection
   const items: CollectionItemDTO[] = link.requestedKeys.map((key) => {
     const dt = docTypes.find((d) => d.key === key);
     const ci = dt ? checklist.find((c) => c.documentTypeId === dt.id) : undefined;
-    const doc = link.documents.find(
-      (d) => d.documentType?.key === key || d.proposedType?.key === key,
-    );
+    // mostra o documento validado (tipo confirmado); só na ausência, o proposto
+    const doc =
+      link.documents.find((d) => d.documentType?.key === key) ??
+      link.documents.find((d) => d.proposedType?.key === key);
     return {
       documentTypeKey: key,
       documentTypeName: nameOf(key),
@@ -148,9 +149,21 @@ export async function recolhaRoutes(app: FastifyInstance) {
   app.get<{ Params: { token: string } }>("/api/recolha/:token", async (req, reply) => {
     const link = await prisma.collectionLink.findUnique({
       where: { token: req.params.token },
-      include: { project: { include: { client: true, program: true } }, documents: { include: { documentType: true, proposedType: true } } },
+      include: { project: { include: { client: true, program: true } } },
     });
     if (!link) return reply.code(404).send({ error: "Ligação inválida." });
+
+    // "Entregue" = documento validado/arquivado pelo consultor (checklist RECEBIDO),
+    // NÃO a proposta da IA por validar. Evita marcar entregue sem confirmação humana.
+    const docTypes = await prisma.documentType.findMany({
+      where: { key: { in: link.requestedKeys } },
+    });
+    const checklist = await prisma.checklistItem.findMany({
+      where: { projectId: link.projectId, documentTypeId: { in: docTypes.map((d) => d.id) } },
+    });
+    const receivedTypeIds = new Set(
+      checklist.filter((c) => c.status === "RECEBIDO").map((c) => c.documentTypeId),
+    );
 
     const expired = link.status === "EXPIRADO" || link.expiresAt < new Date();
     const status = expired ? "EXPIRADO" : link.status;
@@ -160,13 +173,14 @@ export async function recolhaRoutes(app: FastifyInstance) {
       programCode: link.project.program.code,
       status,
       expiresAt: link.expiresAt.toISOString(),
-      items: link.requestedKeys.map((key) => ({
-        documentTypeKey: key,
-        documentTypeName: nameOf(key),
-        delivered: link.documents.some(
-          (d) => d.documentType?.key === key || d.proposedType?.key === key,
-        ),
-      })),
+      items: link.requestedKeys.map((key) => {
+        const dt = docTypes.find((d) => d.key === key);
+        return {
+          documentTypeKey: key,
+          documentTypeName: nameOf(key),
+          delivered: dt ? receivedTypeIds.has(dt.id) : false,
+        };
+      }),
     };
     return dto;
   });
