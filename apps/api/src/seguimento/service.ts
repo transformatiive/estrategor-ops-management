@@ -5,15 +5,17 @@ import {
   reminderEmail,
 } from "@estrategor/shared";
 import { prisma } from "../db.js";
-import { env } from "../env.js";
+import { baseUrlFromEnv } from "../lib/baseUrl.js";
 import { getEmail } from "../email/adapter.js";
 
 function nameOf(key: string): string {
   return DOCUMENT_TAXONOMY.find((d) => d.key === key)?.name ?? key;
 }
 
+// Os lembretes correm sem pedido HTTP (cron); o URL vem de PUBLIC_BASE_URL
+// (ou WEB_ORIGIN como fallback).
 function publicLink(token: string): string {
-  return `${env.WEB_ORIGIN.replace(/\/$/, "")}/recolha/${token}`;
+  return `${baseUrlFromEnv()}/recolha/${token}`;
 }
 
 /** Documentos pedidos ainda em falta (checklist EM_FALTA) de um pedido de recolha. */
