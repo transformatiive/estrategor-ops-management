@@ -9,6 +9,7 @@ import { PrismaClient } from "@prisma/client";
 import { hash } from "@node-rs/argon2";
 import {
   DOCUMENT_TAXONOMY,
+  buildFolderTree,
   documentTypesForProgram,
   type ProgramCode,
 } from "@estrategor/shared";
