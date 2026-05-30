@@ -9,6 +9,7 @@ import { getWorkDrive } from "../workdrive/adapter.js";
 import { provisionProjectFolders } from "../workdrive/provision.js";
 import { classifyDocument } from "./classifier.js";
 import { countPages, extractPages } from "./pdf.js";
+import { cancelPendingReminders } from "../seguimento/service.js";
 
 function extOf(name: string): string | undefined {
   return name.includes(".") ? name.split(".").pop() : undefined;
@@ -245,6 +246,8 @@ export async function validateDocument(
           where: { id: link.id },
           data: { status: "USADO", usedAt: new Date() },
         });
+        // recolha completa → cancela lembretes pendentes (§9 / TRNSF-939)
+        await cancelPendingReminders(link.id);
       }
     }
   }

@@ -4,6 +4,7 @@ import { Dashboard } from "./pages/Dashboard.js";
 import { Projetos } from "./pages/Projetos.js";
 import { ProjectPage } from "./pages/ProjectPage.js";
 import { Pt2030 } from "./pages/Pt2030.js";
+import { Prazos } from "./pages/Prazos.js";
 import { Utilizadores } from "./pages/Utilizadores.js";
 import { Login } from "./pages/Login.js";
 import { RecolhaPublica } from "./pages/RecolhaPublica.js";
@@ -39,7 +40,7 @@ export function App() {
           <Route path="/projetos" element={<Projetos />} />
           <Route path="/projetos/:id" element={<ProjectPage />} />
           <Route path="/pt2030" element={<Pt2030 />} />
-          <Route path="/prazos" element={<Placeholder title="Prazos e Milestones" epic="TRNSF-939 (F)" />} />
+          <Route path="/prazos" element={<Prazos />} />
           <Route path="/tarefas" element={<Placeholder title="Tarefas" epic="Tarefas" />} />
           <Route path="/formacao" element={<Placeholder title="Formação Financiada" epic="Formação" />} />
           <Route path="/fiscal" element={<Placeholder title="Fiscal — RFAI / SIFIDE" epic="Fiscal" />} />

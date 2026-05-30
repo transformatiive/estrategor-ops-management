@@ -1,0 +1,164 @@
+import type { FastifyInstance } from "fastify";
+import {
+  DOCUMENT_TAXONOMY,
+  daysBetween,
+  documentTypesForProgram,
+  type FollowupDTO,
+  type ProjectTrackingDTO,
+  type ReminderState,
+  type TrackingItemDTO,
+  type UrgentDeadlineDTO,
+} from "@estrategor/shared";
+
+type ProgramParam = Parameters<typeof documentTypesForProgram>[0];
+import { prisma } from "../db.js";
+import { env } from "../env.js";
+import { requireAuth } from "../auth/guards.js";
+import { processDueReminders } from "../seguimento/service.js";
+
+function nameOf(key: string): string {
+  return DOCUMENT_TAXONOMY.find((d) => d.key === key)?.name ?? key;
+}
+
+export async function seguimentoRoutes(app: FastifyInstance) {
+  // ── Cron protegido por token (Railway cron / n8n) — NÃO exige sessão ──
+  app.post("/api/cron/reminders", async (req, reply) => {
+    const auth = req.headers.authorization ?? "";
+    const token = auth.startsWith("Bearer ") ? auth.slice(7) : (req.headers["x-cron-token"] as string | undefined);
+    if (token !== env.CRON_TOKEN) {
+      return reply.code(401).send({ error: "Token de cron inválido." });
+    }
+    const result = await processDueReminders();
+    return { ok: true, ...result };
+  });
+
+  // ── Endpoints com sessão ──
+  app.register(async (priv) => {
+    priv.addHook("preHandler", requireAuth);
+
+    // F-01 — checklist verde/vermelho + estado dos lembretes do projecto
+    priv.get<{ Params: { id: string } }>("/api/projects/:id/tracking", async (req, reply) => {
+      const project = await prisma.project.findUnique({
+        where: { id: req.params.id },
+        include: { program: true },
+      });
+      if (!project) return reply.code(404).send({ error: "Projeto não encontrado." });
+
+      // tipos aplicáveis ao programa (taxonomia §6) + checklist do projecto
+      const applicable = documentTypesForProgram(
+        project.program.code as ProgramParam,
+      ).map((d) => d.key);
+      const docTypes = await prisma.documentType.findMany({ where: { key: { in: applicable } } });
+      const items = await prisma.checklistItem.findMany({
+        where: { projectId: project.id, documentTypeId: { in: docTypes.map((t) => t.id) } },
+        include: { documents: true },
+      });
+      const byType = new Map(items.map((i) => [i.documentTypeId, i]));
+
+      const tracking: TrackingItemDTO[] = docTypes.map((dt) => {
+        const it = byType.get(dt.id);
+        const doc = it?.documents.find((d) => d.status === "arquivado") ?? it?.documents[0];
+        const status = it?.status ?? "EM_FALTA";
+        return {
+          documentTypeKey: dt.key,
+          documentTypeName: dt.name,
+          status,
+          delivered: status === "RECEBIDO",
+          documentId: doc?.id ?? null,
+          workdriveUrl: doc?.workdriveUrl ?? null,
+        };
+      });
+
+      // pedidos de recolha + estado dos lembretes
+      const links = await prisma.collectionLink.findMany({
+        where: { projectId: project.id },
+        include: { reminders: { orderBy: { attemptNo: "asc" } } },
+        orderBy: { createdAt: "desc" },
+      });
+      const receivedKeys = new Set(
+        tracking.filter((t) => t.delivered).map((t) => t.documentTypeKey),
+      );
+      const followups: FollowupDTO[] = links.map((l) => ({
+        collectionLinkId: l.id,
+        status: l.status,
+        clientEmail: l.clientEmail,
+        missing: l.requestedKeys.filter((k) => !receivedKeys.has(k)).map(nameOf),
+        reminders: l.reminders.map((r) => ({
+          round: r.attemptNo,
+          scheduledFor: r.scheduledFor.toISOString(),
+          sentAt: r.sentAt?.toISOString() ?? null,
+          state: r.status as ReminderState,
+        })),
+      }));
+
+      const delivered = tracking.filter((t) => t.delivered).length;
+      const dto: ProjectTrackingDTO = {
+        items: tracking,
+        total: tracking.length,
+        delivered,
+        complete: tracking.length > 0 && delivered === tracking.length,
+        followups,
+      };
+      return dto;
+    });
+
+    // F-04/F — prazos urgentes (dashboard + vista Prazos): deadlines + recolhas em atraso
+    priv.get("/api/deadlines/urgent", async () => {
+      const now = new Date();
+      const out: UrgentDeadlineDTO[] = [];
+
+      // (a) deadlines do projeto
+      const deadlines = await prisma.deadline.findMany({
+        where: { status: { not: "completado" } },
+        include: { project: { include: { client: true } } },
+        orderBy: { dueDate: "asc" },
+      });
+      for (const d of deadlines) {
+        const overdue = daysBetween(d.dueDate, now);
+        const upcoming = daysBetween(now, d.dueDate);
+        const isPast = d.dueDate < now;
+        out.push({
+          kind: "deadline",
+          projectId: d.projectId,
+          projectTitle: d.project.title,
+          clientName: d.project.client.name,
+          label: d.label,
+          dueDate: d.dueDate.toISOString(),
+          daysOverdue: isPast ? overdue : -upcoming,
+          severity: isPast ? "atrasado" : upcoming <= 7 ? "urgente" : "proximo",
+        });
+      }
+
+      // (b) recolhas com lembretes enviados/escalados e ainda em falta
+      const escalated = await prisma.reminder.findMany({
+        where: { status: { in: ["ENVIADO", "ESCALADO"] } },
+        include: {
+          collectionLink: true,
+          project: { include: { client: true } },
+        },
+        orderBy: { sentAt: "desc" },
+      });
+      const seen = new Set<string>();
+      for (const r of escalated) {
+        if (!r.collectionLink || r.collectionLink.status === "USADO") continue;
+        if (seen.has(r.collectionLinkId ?? "")) continue;
+        seen.add(r.collectionLinkId ?? "");
+        const daysSince = r.sentAt ? daysBetween(r.sentAt, now) : 0;
+        out.push({
+          kind: "recolha",
+          projectId: r.projectId,
+          projectTitle: r.project.title,
+          clientName: r.project.client.name,
+          label: `Recolha pendente (ronda ${r.attemptNo})`,
+          dueDate: r.sentAt?.toISOString() ?? null,
+          daysOverdue: daysSince,
+          severity: r.status === "ESCALADO" ? "atrasado" : "urgente",
+        });
+      }
+
+      // mais atrasados primeiro
+      out.sort((a, b) => b.daysOverdue - a.daysOverdue);
+      return out;
+    });
+  });
+}

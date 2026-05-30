@@ -31,6 +31,14 @@ const schema = z.object({
   OPENROUTER_API_KEY: z.string().optional(),
   OPENROUTER_MODEL: z.string().default("anthropic/claude-3.5-sonnet"),
   OPENROUTER_BASE: z.string().default("https://openrouter.ai/api/v1"),
+  // Email de seguimento (TRNSF-939). Sem SMTP_* → adaptador stub (regista, não envia).
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().optional(),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  SMTP_FROM: z.string().default("Estrategor <nao-responder@estrategor.pt>"),
+  // Token que protege o endpoint de cron dos lembretes (Railway cron / n8n).
+  CRON_TOKEN: z.string().min(1).default("dev-only-change-me"),
 });
 
 export const env = schema.parse(process.env);

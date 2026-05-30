@@ -61,6 +61,11 @@ export function Dashboard() {
       </div>
 
       <div className="section-header">
+        <div className="section-title">🔴 Prazos urgentes</div>
+      </div>
+      <UrgentDeadlines />
+
+      <div className="section-header" style={{ marginTop: 20 }}>
         <div className="section-title">Projectos em execução</div>
       </div>
 
@@ -104,5 +109,37 @@ export function Dashboard() {
 
       {selected && <ProjectDrawer id={selected} onClose={() => setSelected(null)} />}
     </>
+  );
+}
+
+/** Bloco "🔴 Prazos urgentes" do dashboard (TRNSF-939). */
+function UrgentDeadlines() {
+  const { data, loading } = useAsync(() => api.urgentDeadlines());
+  if (loading) return <p style={{ color: "var(--muted)" }}>A carregar prazos…</p>;
+  const list = (data ?? []).slice(0, 6);
+  if (list.length === 0) {
+    return <div className="empty" style={{ padding: 20 }}><p>Sem prazos urgentes.</p></div>;
+  }
+  return (
+    <div className="card" style={{ padding: 0 }}>
+      {list.map((d, i) => (
+        <div key={i} className="deadline-item" style={{ padding: "10px 14px" }}>
+          <span
+            className={
+              "badge " +
+              (d.severity === "atrasado" ? "badge-danger" : d.severity === "urgente" ? "badge-warning" : "badge-muted")
+            }
+          >
+            {d.daysOverdue > 0 ? `${d.daysOverdue}d` : `em ${-d.daysOverdue}d`}
+          </span>
+          <div className="deadline-label" style={{ marginLeft: 10 }}>
+            {d.label}
+            <div className="deadline-sub">
+              {d.projectTitle} · {d.kind === "recolha" ? "recolha" : "prazo"}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
