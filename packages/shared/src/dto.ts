@@ -176,3 +176,65 @@ export interface PublicCollectionDTO {
     delivered: boolean;
   }[];
 }
+
+// ─── A0 Diagnóstico (TRNSF-940/941) ──────────────────────────────────────
+
+export type ConditionStatus = "PASSA" | "FALHA" | "NA";
+export type DiagnosticResult =
+  | "POR_INICIAR"
+  | "EM_PREENCHIMENTO"
+  | "ELEGIVEL"
+  | "NAO_ELEGIVEL"
+  | "A_REVER"
+  | "SEM_GRELHA";
+
+export interface ConditionStateDTO {
+  key: string;
+  label: string;
+  status: ConditionStatus;
+  note?: string;
+}
+
+/** Grelha aplicável a um projecto/aviso (ou indicação de ausência). */
+export interface MeritGridSummaryDTO {
+  id: string;
+  measure: string;
+  codigoAviso: string;
+  regiao: string | null;
+  versao: string;
+  fonteUrl: string | null;
+  mpMinimo: number | null;
+  minimoPorCriterio: number | null;
+  formulaMp: string | null;
+}
+
+/** Estado do separador Diagnóstico de um projecto. */
+export interface DiagnosticDTO {
+  projectId: string;
+  programCode: string;
+  result: DiagnosticResult;
+  eligible: boolean | null;
+  mp: number | null;
+  gridVersion: string | null;
+  // região do investimento (resolve a matriz regional A.1); regiões disponíveis na grelha
+  regiao: string | null;
+  availableRegions: string[];
+  // condições de acesso (dados do aviso) com o estado escolhido
+  conditions: ConditionStateDTO[];
+  // grelha de mérito disponível (ou null → "Grelha não configurada")
+  grid: MeritGridSummaryDTO | null;
+  // estrutura da grelha para o ecrã (critérios/subcritérios/opções)
+  gridData: unknown | null;
+  // selecções do consultor por subcritério
+  meritSelection: Record<string, number>;
+  // breakdown calculado (null enquanto incompleto)
+  meritBreakdown: unknown | null;
+  updatedAt: string | null;
+}
+
+/** Pedido para guardar/atualizar o diagnóstico. */
+export interface SaveDiagnosticRequest {
+  conditions?: ConditionStateDTO[];
+  meritSelection?: Record<string, number>;
+  regiao?: string | null;
+}

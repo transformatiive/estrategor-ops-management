@@ -4,12 +4,14 @@ import type {
   CreateCollectionRequest,
   CreateProjectRequest,
   CreateUserRequest,
+  DiagnosticDTO,
   HealthDTO,
   ProjectCollectionDTO,
   ProjectDetailDTO,
   ProjectFoldersDTO,
   ProjectListItemDTO,
   PublicCollectionDTO,
+  SaveDiagnosticRequest,
   UpdateUserRequest,
   UserDTO,
 } from "@estrategor/shared";
@@ -53,6 +55,8 @@ const post = <T>(path: string, body?: unknown) =>
   request<T>(path, { method: "POST", body: body ? JSON.stringify(body) : undefined });
 const patch = <T>(path: string, body: unknown) =>
   request<T>(path, { method: "PATCH", body: JSON.stringify(body) });
+const put = <T>(path: string, body: unknown) =>
+  request<T>(path, { method: "PUT", body: JSON.stringify(body) });
 
 export const api = {
   health: () => get<HealthDTO>("/health"),
@@ -86,6 +90,13 @@ export const api = {
   collections: (id: string) => get<ProjectCollectionDTO>(`/api/projects/${id}/collections`),
   createCollection: (id: string, data: CreateCollectionRequest) =>
     post<CollectionRequestDTO>(`/api/projects/${id}/collections`, data),
+
+  // diagnóstico A0 (TRNSF-940)
+  diagnostic: (id: string) => get<DiagnosticDTO>(`/api/projects/${id}/diagnostic`),
+  saveDiagnostic: (id: string, data: SaveDiagnosticRequest) =>
+    put<DiagnosticDTO>(`/api/projects/${id}/diagnostic`, data),
+  advanceDiagnostic: (id: string) =>
+    post<{ ok: boolean; state: string }>(`/api/projects/${id}/diagnostic/advance`),
 
   // formulário público do cliente (sem login)
   publicCollection: (token: string) =>
