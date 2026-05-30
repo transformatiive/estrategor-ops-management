@@ -8,6 +8,7 @@ import type {
   HealthDTO,
   ProjectCollectionDTO,
   ProjectDetailDTO,
+  ProjectDocumentsDTO,
   ProjectFoldersDTO,
   ProjectListItemDTO,
   PublicCollectionDTO,
@@ -90,6 +91,32 @@ export const api = {
   collections: (id: string) => get<ProjectCollectionDTO>(`/api/projects/${id}/collections`),
   createCollection: (id: string, data: CreateCollectionRequest) =>
     post<CollectionRequestDTO>(`/api/projects/${id}/collections`, data),
+
+  // documentos / classificação IA (TRNSF-938)
+  documents: (id: string) => get<ProjectDocumentsDTO>(`/api/projects/${id}/documents`),
+  validateDocument: (docId: string, documentTypeKey: string) =>
+    post<{ ok: boolean }>(`/api/documents/${docId}/validate`, { documentTypeKey }),
+  rejectDocument: (docId: string) => post<{ ok: boolean }>(`/api/documents/${docId}/reject`),
+  uploadManualDocument: async (projectId: string, file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch(`${BASE}/api/projects/${projectId}/documents`, {
+      method: "POST",
+      body: form,
+      credentials: "include",
+    });
+    if (!res.ok) {
+      let msg = `${res.status}`;
+      try {
+        const b = (await res.json()) as { error?: string };
+        if (b?.error) msg = b.error;
+      } catch {
+        /* não-JSON */
+      }
+      throw new ApiError(res.status, msg);
+    }
+    return (await res.json()) as { ok: boolean; documentId: string; status: string };
+  },
 
   // diagnóstico A0 (TRNSF-940)
   diagnostic: (id: string) => get<DiagnosticDTO>(`/api/projects/${id}/diagnostic`),

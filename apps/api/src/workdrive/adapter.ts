@@ -1,4 +1,5 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync, renameSync, existsSync, copyFileSync, rmSync } from "node:fs";
+import { randomBytes } from "node:crypto";
 import path from "node:path";
 import { env } from "../env.js";
 
@@ -78,11 +79,32 @@ export class StubWorkDrive implements WorkDriveAdapter {
     fileName: string,
     content: Buffer,
   ): Promise<UploadedFile> {
-    const dir = path.join(env.WORKDRIVE_STUB_DIR, parentId);
-    mkdirSync(dir, { recursive: true });
-    const dest = path.join(dir, fileName);
+    // id = caminho relativo (parentId/uniq-fileName) para que moveFile o localize.
+    const uniq = `${randomBytes(4).toString("hex")}-${fileName}`;
+    const relId = `${parentId}/${uniq}`;
+    const dest = path.join(env.WORKDRIVE_STUB_DIR, relId);
+    mkdirSync(path.dirname(dest), { recursive: true });
     writeFileSync(dest, content);
-    return { workdriveId: `stub-file-${parentId}-${fileName}`.slice(0, 160), workdriveUrl: null };
+    return { workdriveId: relId, workdriveUrl: null };
+  }
+
+  async moveFile(fileId: string, toParentId: string, newName: string): Promise<UploadedFile> {
+    const src = path.join(env.WORKDRIVE_STUB_DIR, fileId);
+    const relId = `${toParentId}/${newName}`;
+    const dest = path.join(env.WORKDRIVE_STUB_DIR, relId);
+    mkdirSync(path.dirname(dest), { recursive: true });
+    if (existsSync(src)) {
+      try {
+        renameSync(src, dest);
+      } catch {
+        copyFileSync(src, dest);
+        rmSync(src, { force: true });
+      }
+    } else {
+      // origem ausente (ex.: já movida) — cria um marcador vazio para idempotência
+      writeFileSync(dest, Buffer.alloc(0));
+    }
+    return { workdriveId: relId, workdriveUrl: null };
   }
 }
 
@@ -208,6 +230,25 @@ export class ZohoWorkDrive implements WorkDriveAdapter {
     const id = attr?.resource_id;
     if (!id) throw new Error(`WorkDrive: resposta sem resource_id ao carregar "${fileName}".`);
     return { workdriveId: id, workdriveUrl: attr?.permalink ?? null };
+  }
+
+  async moveFile(fileId: string, toParentId: string, newName: string): Promise<UploadedFile> {
+    // renomeia
+    const renameRes = await this.authedFetch(`/files/${fileId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ data: { attributes: { name: newName }, type: "files" } }),
+    });
+    if (!renameRes.ok) throw new Error(`WorkDrive: renomear ${fileId} falhou (${renameRes.status})`);
+    // move para a pasta-alvo
+    const moveRes = await this.authedFetch(`/files/${fileId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ data: { attributes: { parent_id: toParentId }, type: "files" } }),
+    });
+    if (!moveRes.ok) throw new Error(`WorkDrive: mover ${fileId} falhou (${moveRes.status})`);
+    const json = (await moveRes.json()) as { data?: { attributes?: { permalink?: string } } };
+    return { workdriveId: fileId, workdriveUrl: json.data?.attributes?.permalink ?? null };
   }
 }
 

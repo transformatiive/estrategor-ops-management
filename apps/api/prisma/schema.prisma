@@ -85,6 +85,7 @@ model User {
   diagnostics      Diagnostic[]
   activities       ActivityLog[]
   sessions         Session[]
+  validatedDocuments Document[]        @relation("ValidatedDocuments")
 
   @@map("users")
 }
@@ -222,6 +223,7 @@ model DocumentType {
   hasExpiry    Boolean         @default(false) @map("has_expiry")
   checklist    ChecklistItem[]
   documents    Document[]
+  proposedFor  Document[]      @relation("ProposedType")
 
   @@map("document_types")
 }
@@ -250,6 +252,7 @@ model Document {
   projectId        String         @map("project_id")
   checklistItemId  String?        @map("checklist_item_id")
   documentTypeId   String?        @map("document_type_id")
+  proposedTypeId   String?        @map("proposed_type_id")
   collectionLinkId String?        @map("collection_link_id")
   originalFilename String         @map("original_filename")
   storedFilename   String?        @map("stored_filename")
@@ -259,19 +262,27 @@ model Document {
   sizeBytes        Int?           @map("size_bytes")
   origin           DocumentOrigin @default(MANUAL)
   confidence       DocConfidence  @default(ALTA)
+  confidenceScore  Float?         @map("confidence_score")
+  pageStart        Int?           @map("page_start")
+  pageEnd          Int?           @map("page_end")
   parentDocumentId String?        @map("parent_document_id")
-  status           String         @default("recebido")
+  status           String         @default("em_analise")
+  validatedById    String?        @map("validated_by_id")
+  validatedAt      DateTime?      @map("validated_at")
   createdAt        DateTime       @default(now()) @map("created_at")
 
   project        Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
   checklistItem  ChecklistItem?  @relation(fields: [checklistItemId], references: [id])
   documentType   DocumentType?   @relation(fields: [documentTypeId], references: [id])
+  proposedType   DocumentType?   @relation("ProposedType", fields: [proposedTypeId], references: [id])
   collectionLink CollectionLink? @relation(fields: [collectionLinkId], references: [id])
+  validatedBy    User?           @relation("ValidatedDocuments", fields: [validatedById], references: [id])
   parent         Document?       @relation("DocumentSplits", fields: [parentDocumentId], references: [id])
   parts          Document[]      @relation("DocumentSplits")
 
   @@index([projectId])
   @@index([collectionLinkId])
+  @@index([status])
   @@map("documents")
 }
 

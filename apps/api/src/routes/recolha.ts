@@ -31,7 +31,7 @@ function publicUrl(token: string): string {
 async function toRequestDTO(linkId: string): Promise<CollectionRequestDTO | null> {
   const link = await prisma.collectionLink.findUnique({
     where: { id: linkId },
-    include: { project: true, documents: { include: { documentType: true } } },
+    include: { project: true, documents: { include: { documentType: true, proposedType: true } } },
   });
   if (!link) return null;
 
@@ -46,7 +46,9 @@ async function toRequestDTO(linkId: string): Promise<CollectionRequestDTO | null
   const items: CollectionItemDTO[] = link.requestedKeys.map((key) => {
     const dt = docTypes.find((d) => d.key === key);
     const ci = dt ? checklist.find((c) => c.documentTypeId === dt.id) : undefined;
-    const doc = link.documents.find((d) => d.documentType?.key === key);
+    const doc = link.documents.find(
+      (d) => d.documentType?.key === key || d.proposedType?.key === key,
+    );
     return {
       documentTypeKey: key,
       documentTypeName: nameOf(key),
@@ -141,7 +143,7 @@ export async function recolhaRoutes(app: FastifyInstance) {
   app.get<{ Params: { token: string } }>("/api/recolha/:token", async (req, reply) => {
     const link = await prisma.collectionLink.findUnique({
       where: { token: req.params.token },
-      include: { project: { include: { client: true, program: true } }, documents: { include: { documentType: true } } },
+      include: { project: { include: { client: true, program: true } }, documents: { include: { documentType: true, proposedType: true } } },
     });
     if (!link) return reply.code(404).send({ error: "Ligação inválida." });
 
@@ -156,7 +158,9 @@ export async function recolhaRoutes(app: FastifyInstance) {
       items: link.requestedKeys.map((key) => ({
         documentTypeKey: key,
         documentTypeName: nameOf(key),
-        delivered: link.documents.some((d) => d.documentType?.key === key),
+        delivered: link.documents.some(
+          (d) => d.documentType?.key === key || d.proposedType?.key === key,
+        ),
       })),
     };
     return dto;
@@ -195,6 +199,7 @@ export async function recolhaRoutes(app: FastifyInstance) {
         LINK_EXPIRED: [410, "Ligação expirada."],
         TYPE_NOT_REQUESTED: [400, "Documento não solicitado neste pedido."],
         TYPE_UNKNOWN: [400, "Tipo de documento desconhecido."],
+        PROJECT_NOT_FOUND: [404, "Projecto não encontrado."],
         FOLDER_NOT_READY: [502, "Pasta do WorkDrive indisponível."],
       };
       const [code, message] = map[msg] ?? [500, "Falha no upload."];
