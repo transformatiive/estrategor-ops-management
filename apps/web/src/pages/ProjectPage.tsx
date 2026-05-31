@@ -8,6 +8,7 @@ import { RecolhaTab } from "../components/RecolhaTab.js";
 import { DiagnosticoTab } from "../components/DiagnosticoTab.js";
 import { SeguimentoTab } from "../components/SeguimentoTab.js";
 import { CandidaturaTab } from "../components/CandidaturaTab.js";
+import { ExtracaoTab } from "../components/ExtracaoTab.js";
 
 // Separadores da página de projecto.
 const TABS = [
@@ -15,6 +16,7 @@ const TABS = [
   { key: "milestones", label: "Milestones" },
   { key: "diagnostico", label: "Diagnóstico" },
   { key: "candidatura", label: "Candidatura" },
+  { key: "extracao", label: "Extração" },
   { key: "recolha", label: "Recolha" },
   { key: "documentos", label: "Documentos" },
   { key: "seguimento", label: "Checklist & Seguimento" },
@@ -112,6 +114,7 @@ export function ProjectPage() {
       )}
 
       {tab === "candidatura" && <CandidaturaTab projectId={id} />}
+      {tab === "extracao" && <ExtracaoTab projectId={id} />}
       {tab === "documentos" && <DocumentsTab projectId={id} />}
       {tab === "recolha" && <RecolhaTab projectId={id} />}
       {tab === "diagnostico" && <DiagnosticoTab projectId={id} onAdvanced={reload} />}
