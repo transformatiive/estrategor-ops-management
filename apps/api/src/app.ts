@@ -19,6 +19,7 @@ import { financeiroRoutes } from "./routes/financeiro.js";
 import { investimentosRoutes } from "./routes/investimentos.js";
 import { verificacaoRoutes } from "./routes/verificacao.js";
 import { tipologiasRoutes } from "./routes/tipologias.js";
+import { atividadesRoutes } from "./routes/atividades.js";
 import { registerStatic } from "./static.js";
 
 /** Constrói a instância Fastify com plugins e rotas registados. */
@@ -54,6 +55,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(investimentosRoutes);
   await app.register(verificacaoRoutes);
   await app.register(tipologiasRoutes);
+  await app.register(atividadesRoutes);
 
   // SPA (serviço único): serve apps/web/dist + fallback para index.html.
   await registerStatic(app);

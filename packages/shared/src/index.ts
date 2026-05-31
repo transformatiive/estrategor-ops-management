@@ -13,3 +13,4 @@ export * from "./financeiro.js";
 export * from "./investimentos.js";
 export * from "./verificacao.js";
 export * from "./tipologias.js";
+export * from "./atividades.js";
