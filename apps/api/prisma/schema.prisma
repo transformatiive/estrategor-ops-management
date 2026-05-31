@@ -537,3 +537,96 @@ model CandField {
   @@index([candidaturaId, section])
   @@map("cand_fields")
 }
+
+// ─── Catálogos / Rulebook (TRNSF-953) ────────────────────────────────────
+// Listas de referência e regras como DADOS (não código). Lidas pelas secções,
+// checklist e extração. Tabelas simples e versionáveis; trocar um catálogo não
+// exige alterar código.
+
+model CatalogoCae {
+  codigo     String @id
+  designacao String
+
+  @@map("catalogo_cae")
+}
+
+model CatalogoGeo {
+  id              String  @id @default(cuid())
+  nuts2           String
+  nuts3           String
+  concelho        String
+  freguesia       String?
+  baixaDensidade  Boolean @default(false) @map("baixa_densidade")
+  regiaoPrograma  String? @map("regiao_programa")
+
+  @@index([nuts2])
+  @@index([concelho])
+  @@map("catalogo_geo")
+}
+
+model CatalogoPais {
+  codigo String @id
+  nome   String
+
+  @@map("catalogo_pais")
+}
+
+model CatalogoRubricaSnc {
+  id         String  @id @default(cuid())
+  tipo       String // balanco | dr | financiamento
+  codigo     String
+  designacao String
+  vidaUtil   Int?    @map("vida_util")
+
+  @@unique([tipo, codigo])
+  @@index([tipo])
+  @@map("catalogo_rubrica_snc")
+}
+
+model CatalogoCategoriaCusto {
+  id         String     @id @default(cuid())
+  familia    CandFamily
+  codigo     String
+  designacao String
+
+  @@unique([familia, codigo])
+  @@map("catalogo_categoria_custo")
+}
+
+model CatalogoIndicador {
+  codigo     String  @id
+  designacao String
+  unidade    String?
+  dominio    String?
+
+  @@map("catalogo_indicador")
+}
+
+model CatalogoDominioIntl {
+  numero     Int    @id
+  designacao String
+
+  @@map("catalogo_dominio_intl")
+}
+
+model CatalogoTipoDocumento {
+  codigo           String @id
+  designacao       String
+  subpastaWorkdrive String @map("subpasta_workdrive")
+
+  @@map("catalogo_tipo_documento")
+}
+
+model CatalogoAnexo {
+  id          String     @id @default(cuid())
+  familia     CandFamily
+  nivel       String // transversal | tipologia | condicional
+  codigo      String
+  designacao  String
+  condicao    String?
+  obrigatorio Boolean    @default(true)
+
+  @@unique([familia, codigo])
+  @@index([familia, nivel])
+  @@map("catalogo_anexo")
+}

@@ -14,8 +14,16 @@
 import { PrismaClient } from "@prisma/client";
 import {
   ACCESS_CONDITIONS_MPR_2025_9,
+  ANEXOS,
+  CAE_AMOSTRA,
+  CATEGORIAS_CUSTO,
+  CONCELHOS_AMOSTRA,
   DOCUMENT_TAXONOMY,
+  DOMINIOS_INTL,
+  INDICADORES,
+  PAISES,
   QUALIFICACAO_MPR_2025_2,
+  RUBRICAS_SNC,
   type ProgramCode,
 } from "@estrategor/shared";
 
@@ -94,11 +102,80 @@ export async function seedReference(): Promise<void> {
     await prisma.meritGrid.create({ data: gridData });
   }
 
+  // ── Catálogos / Rulebook (TRNSF-953) — idempotente ──
+  console.log("→ Referência: catálogos (rulebook)…");
+  for (const c of CAE_AMOSTRA) {
+    await prisma.catalogoCae.upsert({ where: { codigo: c.codigo }, update: { designacao: c.designacao }, create: c });
+  }
+  for (const p of PAISES) {
+    await prisma.catalogoPais.upsert({ where: { codigo: p.codigo }, update: { nome: p.nome }, create: p });
+  }
+  for (const g of CONCELHOS_AMOSTRA) {
+    const existing = await prisma.catalogoGeo.findFirst({
+      where: { nuts2: g.nuts2, nuts3: g.nuts3, concelho: g.concelho, freguesia: null },
+    });
+    const data = {
+      nuts2: g.nuts2,
+      nuts3: g.nuts3,
+      concelho: g.concelho,
+      freguesia: null,
+      baixaDensidade: g.baixaDensidade,
+      regiaoPrograma: g.nuts2,
+    };
+    if (existing) await prisma.catalogoGeo.update({ where: { id: existing.id }, data });
+    else await prisma.catalogoGeo.create({ data });
+  }
+  for (const r of RUBRICAS_SNC) {
+    await prisma.catalogoRubricaSnc.upsert({
+      where: { tipo_codigo: { tipo: r.tipo, codigo: r.codigo } },
+      update: { designacao: r.designacao, vidaUtil: r.vidaUtil ?? null },
+      create: { tipo: r.tipo, codigo: r.codigo, designacao: r.designacao, vidaUtil: r.vidaUtil ?? null },
+    });
+  }
+  for (const c of CATEGORIAS_CUSTO) {
+    await prisma.catalogoCategoriaCusto.upsert({
+      where: { familia_codigo: { familia: c.familia, codigo: c.codigo } },
+      update: { designacao: c.designacao },
+      create: c,
+    });
+  }
+  for (const i of INDICADORES) {
+    await prisma.catalogoIndicador.upsert({
+      where: { codigo: i.codigo },
+      update: { designacao: i.designacao, unidade: i.unidade ?? null, dominio: i.dominio ?? null },
+      create: { codigo: i.codigo, designacao: i.designacao, unidade: i.unidade ?? null, dominio: i.dominio ?? null },
+    });
+  }
+  for (const d of DOMINIOS_INTL) {
+    await prisma.catalogoDominioIntl.upsert({ where: { numero: d.numero }, update: { designacao: d.designacao }, create: d });
+  }
+  // tipos de documento: deriva do mesmo catálogo da taxonomia (937/938)
+  for (const dt of DOCUMENT_TAXONOMY) {
+    await prisma.catalogoTipoDocumento.upsert({
+      where: { codigo: dt.key },
+      update: { designacao: dt.name, subpastaWorkdrive: dt.targetFolder },
+      create: { codigo: dt.key, designacao: dt.name, subpastaWorkdrive: dt.targetFolder },
+    });
+  }
+  for (const a of ANEXOS) {
+    await prisma.catalogoAnexo.upsert({
+      where: { familia_codigo: { familia: a.familia, codigo: a.codigo } },
+      update: { nivel: a.nivel, designacao: a.designacao, condicao: a.condicao ?? null, obrigatorio: a.obrigatorio },
+      create: { familia: a.familia, nivel: a.nivel, codigo: a.codigo, designacao: a.designacao, condicao: a.condicao ?? null, obrigatorio: a.obrigatorio },
+    });
+  }
+
   const programs = await prisma.program.count();
   const docTypes = await prisma.documentType.count();
   const grids = await prisma.meritGrid.count();
+  const cae = await prisma.catalogoCae.count();
+  const geo = await prisma.catalogoGeo.count();
+  const indic = await prisma.catalogoIndicador.count();
   console.log(
     `✓ Referência: ${programs} programas, ${docTypes} tipos de documento, ${grids} grelha(s) de mérito.`,
+  );
+  console.log(
+    `✓ Catálogos: ${cae} CAE, ${geo} concelhos, ${indic} indicadores, ${PAISES.length} países, ${RUBRICAS_SNC.length} rubricas SNC, ${CATEGORIAS_CUSTO.length} categorias custo, ${DOMINIOS_INTL.length} domínios intl, ${ANEXOS.length} anexos.`,
   );
 }
 
