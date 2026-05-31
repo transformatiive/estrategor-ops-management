@@ -10,6 +10,7 @@ import { provisionProjectFolders } from "../workdrive/provision.js";
 import { classifyDocument } from "./classifier.js";
 import { countPages, extractPages } from "./pdf.js";
 import { cancelPendingReminders } from "../seguimento/service.js";
+import { runExtractionForDocument } from "../extraction/engine.js";
 
 function extOf(name: string): string | undefined {
   return name.includes(".") ? name.split(".").pop() : undefined;
@@ -250,6 +251,15 @@ export async function validateDocument(
         await cancelPendingReminders(link.id);
       }
     }
+  }
+
+  // TRNSF-952 — assim que o documento é arquivado, se houver candidatura e o tipo
+  // tiver extractor, dispara a extração de dados (determinístico → fallback IA).
+  // Best-effort: nunca bloqueia o arquivo do documento.
+  try {
+    await runExtractionForDocument(doc.id);
+  } catch (e) {
+    console.warn(`[extracao] falha ao extrair do documento ${doc.id}:`, e instanceof Error ? e.message : e);
   }
 }
 

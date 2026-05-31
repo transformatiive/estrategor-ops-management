@@ -88,6 +88,13 @@ enum FieldState {
   corrigido
 }
 
+// Método de extração de dados (TRNSF-952): determinístico = lido por código a
+// partir de ficheiros estruturados; ia = extraído por modelo de linguagem.
+enum ExtractMethod {
+  deterministico
+  ia
+}
+
 enum DocumentOrigin {
   CLIENTE
   MANUAL
@@ -115,6 +122,7 @@ model User {
   activities       ActivityLog[]
   sessions         Session[]
   validatedDocuments Document[]        @relation("ValidatedDocuments")
+  validatedExtracoes Extracao[]        @relation("ValidatedExtracoes")
 
   @@map("users")
 }
@@ -310,6 +318,7 @@ model Document {
   validatedBy    User?           @relation("ValidatedDocuments", fields: [validatedById], references: [id])
   parent         Document?       @relation("DocumentSplits", fields: [parentDocumentId], references: [id])
   parts          Document[]      @relation("DocumentSplits")
+  extracao       Extracao?
 
   @@index([projectId])
   @@index([collectionLinkId])
@@ -504,8 +513,9 @@ model Candidatura {
   createdAt       DateTime   @default(now()) @map("created_at")
   updatedAt       DateTime   @updatedAt @map("updated_at")
 
-  project Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  fields  CandField[]
+  project    Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  fields     CandField[]
+  extracoes  Extracao[]
 
   @@map("candidaturas")
 }
@@ -536,6 +546,36 @@ model CandField {
   @@index([candidaturaId])
   @@index([candidaturaId, section])
   @@map("cand_fields")
+}
+
+// ─── Extração de dados (TRNSF-952) ───────────────────────────────────────
+// Ponte entre os documentos arquivados (TRNSF-938) e os campos da candidatura
+// (TRNSF-942). Uma extração por documento; os campos extraídos ficam em
+// `campos_extraidos` (JSON) e entram na fila de validação. Só ao confirmar é
+// que são escritos nos CandField com origem='extraido'.
+model Extracao {
+  id              String        @id @default(cuid())
+  documentId      String        @unique @map("document_id")
+  candidaturaId   String        @map("candidatura_id")
+  tipoDocumento   String        @map("tipo_documento")
+  metodo          ExtractMethod
+  // confiança global (0..1); null nos determinísticos (leitura exata)
+  confianca       Float?
+  // [{ section, key, label, value, confianca }]
+  camposExtraidos Json          @map("campos_extraidos")
+  // nota do extractor (ex.: "IA indisponível", "sem estrutura reconhecida")
+  nota            String?
+  estado          FieldState    @default(por_validar)
+  validatedById   String?       @map("validated_by_id")
+  validatedAt     DateTime?     @map("validated_at")
+  createdAt       DateTime      @default(now()) @map("created_at")
+
+  document    Document    @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  candidatura Candidatura @relation(fields: [candidaturaId], references: [id], onDelete: Cascade)
+  validatedBy User?       @relation("ValidatedExtracoes", fields: [validatedById], references: [id])
+
+  @@index([candidaturaId])
+  @@map("extracoes")
 }
 
 // ─── Catálogos / Rulebook (TRNSF-953) ────────────────────────────────────

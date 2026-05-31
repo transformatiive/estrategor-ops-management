@@ -8,6 +8,8 @@ import type {
   CreateUserRequest,
   DiagnosticDTO,
   HealthDTO,
+  ProjectExtracoesDTO,
+  ValidateExtracaoRequest,
   ProjectCollectionDTO,
   ProjectDetailDTO,
   ProjectDocumentsDTO,
@@ -147,6 +149,14 @@ export const api = {
   ) => patch<CandidaturaDTO>(`/api/projects/${id}/candidatura/field`, body),
   candidaturaStage: (id: string, to: "A3" | "A2") =>
     post<{ ok: boolean; stage: string }>(`/api/projects/${id}/candidatura/stage`, { to }),
+
+  // motor de extração de dados (TRNSF-952)
+  extracoes: (id: string) => get<ProjectExtracoesDTO>(`/api/projects/${id}/extracoes`),
+  runExtracoes: (id: string) =>
+    post<{ ok: boolean; processados: number }>(`/api/projects/${id}/extracoes/run`),
+  validateExtracao: (eid: string, body: ValidateExtracaoRequest) =>
+    post<{ ok: boolean }>(`/api/extracoes/${eid}/validate`, body),
+  rejectExtracao: (eid: string) => post<{ ok: boolean }>(`/api/extracoes/${eid}/reject`),
 
   // formulário público do cliente (sem login)
   publicCollection: (token: string) =>
