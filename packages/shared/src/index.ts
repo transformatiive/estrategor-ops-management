@@ -17,3 +17,4 @@ export * from "./atividades.js";
 export * from "./inovacao_extra.js";
 export * from "./inovacao_cond.js";
 export * from "./intake_inovacao.js";
+export * from "./intl_acoes.js";

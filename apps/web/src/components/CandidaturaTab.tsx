@@ -22,6 +22,7 @@ import { TipologiasPanel } from "./TipologiasPanel.js";
 import { AtividadesPanel } from "./AtividadesPanel.js";
 import { InovacaoExtraPanel } from "./InovacaoExtraPanel.js";
 import { InovacaoCondPanel } from "./InovacaoCondPanel.js";
+import { IntlAcoesPanel } from "./IntlAcoesPanel.js";
 
 type CandResponse = CandidaturaDTO | { candidatura: null; familyChosen: CandFamily | null };
 
@@ -135,6 +136,11 @@ export function CandidaturaTab({ projectId }: { projectId: string }) {
           <InovacaoExtraPanel projectId={projectId} onChanged={reload} />
           <InovacaoCondPanel projectId={projectId} onChanged={reload} />
         </>
+      )}
+
+      {/* Secções específicas da Família B — Internacionalização */}
+      {cand.family === "internacionalizacao" && (
+        <IntlAcoesPanel projectId={projectId} onChanged={reload} />
       )}
 
       {/* Componente financeira (TRNSF-944) */}
