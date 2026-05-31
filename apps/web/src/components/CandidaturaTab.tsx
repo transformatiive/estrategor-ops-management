@@ -17,6 +17,7 @@ import { GeracaoPanel } from "./GeracaoPanel.js";
 import { FinanceiroPanel } from "./FinanceiroPanel.js";
 import { CustosPanel } from "./CustosPanel.js";
 import { VerificadorPanel } from "./VerificadorPanel.js";
+import { ExportPanel } from "./ExportPanel.js";
 import { TipologiasPanel } from "./TipologiasPanel.js";
 import { AtividadesPanel } from "./AtividadesPanel.js";
 import { InovacaoExtraPanel } from "./InovacaoExtraPanel.js";
@@ -144,6 +145,9 @@ export function CandidaturaTab({ projectId }: { projectId: string }) {
 
       {/* Verificador + Mérito (TRNSF-946) */}
       <VerificadorPanel projectId={projectId} />
+
+      {/* Exportação estruturada (TRNSF-954) */}
+      <ExportPanel projectId={projectId} />
 
       {/* Geração IA dos campos de texto (TRNSF-943) */}
       <GeracaoPanel projectId={projectId} onChanged={reload} />
