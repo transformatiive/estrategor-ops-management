@@ -36,6 +36,18 @@ async function eixoFormulario(projectId: string, candidaturaId: string): Promise
       }
     }
   }
+  // TRNSF-957 — se houver indicadores RPA, a fundamentação RPA é obrigatória
+  const indField = await prisma.candField.findUnique({
+    where: { candidaturaId_section_key: { candidaturaId, section: "indicadores", key: "linhas" } },
+  });
+  const codigos = Array.isArray(indField?.value) ? (indField!.value as { codigo: string }[]).map((i) => i.codigo) : [];
+  if (codigos.some((c) => c.toUpperCase().startsWith("RPA"))) {
+    const rpaField = ger?.campos.find((c) => c.docType === "fundamentacao_indicadores_rpa");
+    if (rpaField && rpaField.estado === null) {
+      nc.push({ eixo: "formulario", gravidade: "erro", mensagem: "Há indicadores RPA — a fundamentação dos indicadores RPA é obrigatória.", seccao: "indicadores" });
+    }
+  }
+
   // anexos obrigatórios da família (confirmação manual — não verificável por upload aqui)
   const cand = await prisma.candidatura.findUnique({ where: { id: candidaturaId } });
   if (cand) {

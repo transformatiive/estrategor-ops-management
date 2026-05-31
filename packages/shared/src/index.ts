@@ -14,3 +14,4 @@ export * from "./investimentos.js";
 export * from "./verificacao.js";
 export * from "./tipologias.js";
 export * from "./atividades.js";
+export * from "./inovacao_extra.js";

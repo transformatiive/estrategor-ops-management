@@ -19,6 +19,7 @@ import { CustosPanel } from "./CustosPanel.js";
 import { VerificadorPanel } from "./VerificadorPanel.js";
 import { TipologiasPanel } from "./TipologiasPanel.js";
 import { AtividadesPanel } from "./AtividadesPanel.js";
+import { InovacaoExtraPanel } from "./InovacaoExtraPanel.js";
 
 type CandResponse = CandidaturaDTO | { candidatura: null; familyChosen: CandFamily | null };
 
@@ -129,6 +130,7 @@ export function CandidaturaTab({ projectId }: { projectId: string }) {
         <>
           <TipologiasPanel projectId={projectId} onChanged={reload} />
           <AtividadesPanel projectId={projectId} onChanged={reload} />
+          <InovacaoExtraPanel projectId={projectId} onChanged={reload} />
         </>
       )}
 
