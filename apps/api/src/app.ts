@@ -30,6 +30,7 @@ import { dashboardRoutes } from "./routes/dashboard.js";
 import { deadlinesRoutes } from "./routes/deadlines.js";
 import { clientRoutes } from "./routes/clients.js";
 import { teamRoutes } from "./routes/team.js";
+import { searchRoutes } from "./routes/search.js";
 import { registerStatic } from "./static.js";
 
 /** Constrói a instância Fastify com plugins e rotas registados. */
@@ -62,6 +63,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(deadlinesRoutes);
   await app.register(clientRoutes);
   await app.register(teamRoutes);
+  await app.register(searchRoutes);
   await app.register(extracaoRoutes);
   await app.register(geracaoRoutes);
   await app.register(financeiroRoutes);

@@ -109,14 +109,37 @@ body {
 }
 .topbar-search {
   flex: 1;
-  max-width: 320px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 6px 10px;
-  color: var(--hint);
-  font-size: 12px;
+  max-width: 380px;
+  position: relative;
 }
+
+/* Pesquisa global (topbar) */
+.gsearch { position: relative; display: flex; align-items: center; width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 0 10px; }
+.gsearch:focus-within { border-color: var(--accent, #2563eb); }
+.gsearch-icon { color: var(--hint); margin-right: 6px; font-size: 15px; }
+.gsearch-input { flex: 1; border: none; background: none; outline: none; padding: 7px 0; font-size: 13px; color: var(--text, #1e293b); }
+.gsearch-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  min-width: 320px;
+  max-height: 440px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.14);
+  z-index: 60;
+  padding: 6px;
+}
+.gsearch-empty { padding: 14px; color: var(--muted); font-size: 13px; text-align: center; }
+.gsearch-group-head { display: flex; align-items: center; gap: 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); padding: 8px 8px 4px; font-weight: 700; }
+.gsearch-gicon { font-size: 13px; }
+.gsearch-item { display: block; width: 100%; text-align: left; border: none; background: none; padding: 7px 8px; border-radius: 6px; cursor: pointer; }
+.gsearch-item:hover { background: var(--surface-2, #f1f5f9); }
+.gsearch-item-title { font-size: 13px; color: var(--text, #1e293b); font-weight: 600; }
+.gsearch-item-sub { font-size: 12px; color: var(--muted); }
 .topbar-right {
   margin-left: auto;
   display: flex;
