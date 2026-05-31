@@ -14,6 +14,7 @@ import {
 } from "@estrategor/shared";
 import { prisma } from "../db.js";
 import { requireAuth } from "../auth/guards.js";
+import { versionGeneratedEdit } from "../generation/engine.js";
 
 const startSchema = z.object({
   family: z.enum(["inovacao_produtiva", "internacionalizacao", "qualificacao"]),
@@ -201,6 +202,14 @@ export async function candidaturaRoutes(app: FastifyInstance) {
         : { state: "validado" as const, updatedById: req.user!.id };
 
     await prisma.candField.update({ where: { id: field.id }, data });
+
+    // TRNSF-943 — editar um campo gerado versiona a edição (estado corrigido)
+    if (parsed.data.action === "corrigir" && field.origin === "gerado") {
+      const novo = parsed.data.value;
+      if (typeof novo === "string") {
+        await versionGeneratedEdit(cand.id, parsed.data.section, parsed.data.key, novo, req.user!.id);
+      }
+    }
     return buildDTO(cand.id);
   });
 

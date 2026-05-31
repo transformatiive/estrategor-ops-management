@@ -6,7 +6,9 @@ import type {
   CreateCollectionRequest,
   CreateProjectRequest,
   CreateUserRequest,
+  CandidaturaGeracaoDTO,
   DiagnosticDTO,
+  GeneratedFieldDTO,
   HealthDTO,
   ProjectExtracoesDTO,
   ValidateExtracaoRequest,
@@ -157,6 +159,11 @@ export const api = {
   validateExtracao: (eid: string, body: ValidateExtracaoRequest) =>
     post<{ ok: boolean }>(`/api/extracoes/${eid}/validate`, body),
   rejectExtracao: (eid: string) => post<{ ok: boolean }>(`/api/extracoes/${eid}/reject`),
+
+  // geração IA dos campos de texto (TRNSF-943)
+  geracao: (id: string) => get<CandidaturaGeracaoDTO>(`/api/projects/${id}/candidatura/geracao`),
+  gerarMinuta: (id: string, docType: string) =>
+    post<GeneratedFieldDTO>(`/api/projects/${id}/candidatura/gerar`, { docType }),
 
   // formulário público do cliente (sem login)
   publicCollection: (token: string) =>
