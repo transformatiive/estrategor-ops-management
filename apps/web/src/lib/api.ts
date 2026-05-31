@@ -23,6 +23,8 @@ import type {
   InovacaoCondDTO,
   DescricaoFisicaDados,
   NovaSubstituicaoLinha,
+  IntakeInovacaoDTO,
+  IntakeInovacaoAnswers,
   ProjectExtracoesDTO,
   ValidateExtracaoRequest,
   ProjectCollectionDTO,
@@ -236,6 +238,11 @@ export const api = {
     request<InovacaoCondDTO>(`/api/projects/${id}/candidatura/substituicao/${sid}`, { method: "DELETE" }),
   updateDescricaoFisica: (id: string, dados: DescricaoFisicaDados) =>
     patch<InovacaoCondDTO>(`/api/projects/${id}/candidatura/descricao-fisica`, dados),
+
+  // intake diferenciado Inovação no formulário público (TRNSF-959)
+  intakeInovacao: (token: string) => get<IntakeInovacaoDTO>(`/api/recolha/${token}/intake`),
+  submitIntakeInovacao: (token: string, answers: IntakeInovacaoAnswers) =>
+    post<{ ok: boolean }>(`/api/recolha/${token}/intake`, answers),
 
   // formulário público do cliente (sem login)
   publicCollection: (token: string) =>
