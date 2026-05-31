@@ -4,7 +4,9 @@ import { teseDoDia, type DashboardDTO } from "@estrategor/shared";
 import { api } from "../lib/api.js";
 import { useAsync } from "../lib/useAsync.js";
 import { ErrorState, TableSkeleton } from "../components/ui.js";
+import { Dropdown } from "../components/Dropdown.js";
 import { useAuth } from "../lib/auth.js";
+import type { AssignableUserDTO } from "@estrategor/shared";
 
 /**
  * Dashboard de Trabalho (TRNSF-964): painel por ação — "o que tenho de fazer
@@ -19,6 +21,8 @@ export function Dashboard() {
     () => api.dashboard(consultor || undefined),
     [consultor],
   );
+  // lista de utilizadores (tabela de utilizadores) para o filtro de equipa
+  const { data: team } = useAsync<AssignableUserDTO[]>(() => api.assignableUsers());
   const firstName = user?.fullName.split(/\s+/)[0] ?? "";
 
   if (error) return <ErrorState error={error} onRetry={reload} />;
@@ -33,11 +37,14 @@ export function Dashboard() {
           <div className="page-title">Bom dia, {firstName} 👋</div>
           <div className="page-subtitle">{data ? teseDoDia(data) : "A carregar o teu dia…"}</div>
         </div>
-        {data?.isGestor && data.consultores && (
-          <select className="login-input" style={{ maxWidth: 220 }} value={consultor} onChange={(e) => setConsultor(e.target.value)}>
-            <option value="">Toda a equipa</option>
-            {data.consultores.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
-          </select>
+        {data?.isGestor && (
+          <Dropdown
+            style={{ maxWidth: 220 }}
+            value={consultor}
+            onChange={setConsultor}
+            allLabel="Toda a equipa"
+            options={(team ?? []).map((u) => ({ value: u.id, label: u.fullName }))}
+          />
         )}
       </div>
 

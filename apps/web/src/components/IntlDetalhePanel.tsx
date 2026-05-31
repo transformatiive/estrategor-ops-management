@@ -3,6 +3,7 @@ import type { IntlDetalheDTO, NovaIntlDeslocacao, NovoIntlCusto, NovoIntlRh } fr
 import { api, ApiError } from "../lib/api.js";
 import { useAsync } from "../lib/useAsync.js";
 import { ErrorState } from "./ui.js";
+import { Dropdown } from "./Dropdown.js";
 
 const eur = (n: number | null) => (n == null ? "—" : n.toLocaleString("pt-PT", { maximumFractionDigits: 0 }) + " €");
 
@@ -64,12 +65,8 @@ export function IntlDetalhePanel({ projectId, onChanged }: { projectId: string; 
           </div>
           {!semAcoes && (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
-              <select className="login-input" style={{ flex: "2 1 160px" }} value={custo.acaoId} onChange={(e) => setCusto({ ...custo, acaoId: e.target.value })}>
-                <option value="">Ação…</option>{data.acoes.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}
-              </select>
-              <select className="login-input" style={{ flex: "1 1 130px" }} value={custo.rubrica} onChange={(e) => setCusto({ ...custo, rubrica: e.target.value })}>
-                <option value="">Rubrica…</option>{data.rubricas.map((r) => <option key={r.codigo} value={r.codigo}>{r.designacao}</option>)}
-              </select>
+              <Dropdown block style={{ flex: "2 1 160px" }} value={custo.acaoId} onChange={(v) => setCusto({ ...custo, acaoId: v })} placeholder="Ação…" options={data.acoes.map((a) => ({ value: a.id, label: a.label }))} />
+              <Dropdown block style={{ flex: "1 1 130px" }} value={custo.rubrica} onChange={(v) => setCusto({ ...custo, rubrica: v })} placeholder="Rubrica…" options={data.rubricas.map((r) => ({ value: r.codigo, label: r.designacao }))} />
               <input className="login-input" style={{ flex: "1 1 90px" }} type="number" placeholder="Montante" value={custo.montante ?? ""} onChange={(e) => setCusto({ ...custo, montante: e.target.value === "" ? null : Number(e.target.value) })} />
               <input className="login-input" style={{ flex: "0 1 70px" }} type="number" placeholder="Ano" value={custo.ano ?? ""} onChange={(e) => setCusto({ ...custo, ano: e.target.value === "" ? null : Number(e.target.value) })} />
               <button className="btn btn-primary" disabled={busy || !custo.acaoId || !custo.rubrica} onClick={() => run(async () => { await api.addIntlCusto(projectId, custo); setCusto({ acaoId: "", rubrica: "", montante: null, ano: null }); })}>+ Custo</button>
@@ -93,9 +90,7 @@ export function IntlDetalhePanel({ projectId, onChanged }: { projectId: string; 
           </div>
           {!semAcoes && (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
-              <select className="login-input" style={{ flex: "2 1 140px" }} value={desl.acaoId} onChange={(e) => setDesl({ ...desl, acaoId: e.target.value })}>
-                <option value="">Ação…</option>{data.acoes.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}
-              </select>
+              <Dropdown block style={{ flex: "2 1 140px" }} value={desl.acaoId} onChange={(v) => setDesl({ ...desl, acaoId: v })} placeholder="Ação…" options={data.acoes.map((a) => ({ value: a.id, label: a.label }))} />
               <input className="login-input" style={{ flex: "1 1 100px" }} placeholder="Pessoa" value={desl.pessoa} onChange={(e) => setDesl({ ...desl, pessoa: e.target.value })} />
               <input className="login-input" style={{ flex: "1 1 90px" }} placeholder="Destino" value={desl.destino ?? ""} onChange={(e) => setDesl({ ...desl, destino: e.target.value })} />
               <input className="login-input" style={{ flex: "0 1 60px" }} type="number" placeholder="Dias" value={desl.dias ?? ""} onChange={(e) => setDesl({ ...desl, dias: e.target.value === "" ? null : Number(e.target.value) })} />

@@ -3,6 +3,7 @@ import type { TipologiaTipo, TipologiasDTO } from "@estrategor/shared";
 import { api, ApiError } from "../lib/api.js";
 import { useAsync } from "../lib/useAsync.js";
 import { ErrorState } from "./ui.js";
+import { Dropdown } from "./Dropdown.js";
 
 /** Inovação — Tipologias de investimento (TRNSF-955, A.10). Só família A. */
 export function TipologiasPanel({ projectId, onChanged }: { projectId: string; onChanged: () => void }) {
@@ -71,10 +72,7 @@ export function TipologiasPanel({ projectId, onChanged }: { projectId: string; o
           ))}
 
           <div style={{ display: "flex", gap: 8, marginTop: 10, alignItems: "center" }}>
-            <select className="login-input" style={{ flex: "1 1 260px" }} value={novo} onChange={(e) => setNovo(e.target.value as TipologiaTipo)}>
-              <option value="">Adicionar tipologia…</option>
-              {data.disponiveis.map((d) => <option key={d.tipo} value={d.tipo}>{d.label}</option>)}
-            </select>
+            <Dropdown block style={{ flex: "1 1 260px" }} value={novo} onChange={(v) => setNovo(v as TipologiaTipo)} placeholder="Adicionar tipologia…" options={data.disponiveis.map((d) => ({ value: d.tipo, label: d.label }))} />
             <button className="btn btn-primary" disabled={busy || !novo} onClick={() => run(async () => { await api.addTipologia(projectId, novo as TipologiaTipo); setNovo(""); })}>Adicionar</button>
           </div>
           <p className="deadline-sub" style={{ marginTop: 6 }}>A fundamentação de cada tipologia gera-se no painel "Minutas de texto".</p>

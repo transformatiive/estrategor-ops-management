@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { IntakeInovacaoAnswers, IntakeInovacaoDTO, TipologiaTipo } from "@estrategor/shared";
 import { api, ApiError } from "../lib/api.js";
 import { useAsync } from "../lib/useAsync.js";
+import { Dropdown } from "./Dropdown.js";
 
 /**
  * Ramo Inovação do formulário ao cliente (TRNSF-959). Aparece quando o projeto
@@ -43,10 +44,7 @@ export function IntakeInovacao({ token }: { token: string }) {
           {ans.intencoes.map((it, i) => (
             <div key={i} style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 6 }}>
               <input className="login-input" style={{ flex: "2 1 140px" }} placeholder="Designação" value={it.designacao} onChange={(e) => { const n = [...ans.intencoes]; n[i] = { ...it, designacao: e.target.value }; set({ intencoes: n }); }} />
-              <select className="login-input" style={{ flex: "1 1 120px" }} value={it.categoria} onChange={(e) => { const n = [...ans.intencoes]; n[i] = { ...it, categoria: e.target.value }; set({ intencoes: n }); }}>
-                <option value="">Categoria…</option>
-                {data.categorias.map((c) => <option key={c.codigo} value={c.codigo}>{c.designacao}</option>)}
-              </select>
+              <Dropdown block style={{ flex: "1 1 120px" }} value={it.categoria} onChange={(v) => { const n = [...ans.intencoes]; n[i] = { ...it, categoria: v }; set({ intencoes: n }); }} placeholder="Categoria…" options={data.categorias.map((c) => ({ value: c.codigo, label: c.designacao }))} />
               <input className="login-input" style={{ flex: "1 1 90px" }} type="number" placeholder="Montante €" value={it.montante ?? ""} onChange={(e) => { const n = [...ans.intencoes]; n[i] = { ...it, montante: e.target.value === "" ? null : Number(e.target.value) }; set({ intencoes: n }); }} />
               <input className="login-input" style={{ flex: "0 1 80px" }} type="number" placeholder="Ano" value={it.ano ?? ""} onChange={(e) => { const n = [...ans.intencoes]; n[i] = { ...it, ano: e.target.value === "" ? null : Number(e.target.value) }; set({ intencoes: n }); }} />
               <button className="back-link" onClick={() => set({ intencoes: ans.intencoes.filter((_, k) => k !== i) })}>×</button>

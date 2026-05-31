@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { IntakeIntlAnswers, IntakeIntlDTO } from "@estrategor/shared";
 import { api, ApiError } from "../lib/api.js";
 import { useAsync } from "../lib/useAsync.js";
+import { Dropdown } from "./Dropdown.js";
 
 /**
  * Ramo Internacionalização do formulário ao cliente (TRNSF-962). Aparece quando
@@ -40,9 +41,7 @@ export function IntakeIntl({ token }: { token: string }) {
           {ans.acoes.map((it, i) => (
             <div key={i} style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 6 }}>
               <input className="login-input" style={{ flex: "2 1 140px" }} placeholder="Designação (feira/evento)" value={it.designacao} onChange={(e) => { const n = [...ans.acoes]; n[i] = { ...it, designacao: e.target.value }; set({ acoes: n }); }} />
-              <select className="login-input" style={{ flex: "1 1 160px" }} value={it.dominio} onChange={(e) => { const n = [...ans.acoes]; n[i] = { ...it, dominio: Number(e.target.value) }; set({ acoes: n }); }}>
-                {data.dominios.map((d) => <option key={d.numero} value={d.numero}>{d.numero}. {d.designacao}</option>)}
-              </select>
+              <Dropdown block style={{ flex: "1 1 160px" }} value={String(it.dominio)} onChange={(v) => { const n = [...ans.acoes]; n[i] = { ...it, dominio: Number(v) }; set({ acoes: n }); }} options={data.dominios.map((d) => ({ value: String(d.numero), label: `${d.numero}. ${d.designacao}` }))} />
               <input className="login-input" style={{ flex: "1 1 100px" }} placeholder="Mercado/País" value={it.mercadoPais ?? ""} onChange={(e) => { const n = [...ans.acoes]; n[i] = { ...it, mercadoPais: e.target.value }; set({ acoes: n }); }} />
               <input className="login-input" style={{ flex: "0 1 80px" }} type="number" placeholder="Ano" value={it.ano ?? ""} onChange={(e) => { const n = [...ans.acoes]; n[i] = { ...it, ano: e.target.value === "" ? null : Number(e.target.value) }; set({ acoes: n }); }} />
               <button className="back-link" onClick={() => set({ acoes: ans.acoes.filter((_, k) => k !== i) })}>×</button>

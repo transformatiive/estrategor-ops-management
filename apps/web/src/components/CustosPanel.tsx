@@ -3,6 +3,7 @@ import type { InvestimentosDTO, NovaInvestimentoLinha, ResumoExecutivoDTO } from
 import { api, ApiError } from "../lib/api.js";
 import { useAsync } from "../lib/useAsync.js";
 import { ErrorState } from "./ui.js";
+import { Dropdown } from "./Dropdown.js";
 
 const eur = (n: number | null) => (n == null ? "—" : n.toLocaleString("pt-PT", { maximumFractionDigits: 0 }) + " €");
 
@@ -97,10 +98,7 @@ export function CustosPanel({ projectId, onChanged }: { projectId: string; onCha
           {/* nova linha */}
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10, alignItems: "center" }}>
             <input className="login-input" style={{ flex: "2 1 160px" }} placeholder="Designação" value={nova.designacao} onChange={(e) => setNova({ ...nova, designacao: e.target.value })} />
-            <select className="login-input" style={{ flex: "1 1 140px" }} value={nova.categoria} onChange={(e) => setNova({ ...nova, categoria: e.target.value })}>
-              <option value="">Categoria…</option>
-              {data.categorias.map((c) => <option key={c.codigo} value={c.codigo}>{c.designacao}</option>)}
-            </select>
+            <Dropdown block style={{ flex: "1 1 140px" }} value={nova.categoria} onChange={(v) => setNova({ ...nova, categoria: v })} placeholder="Categoria…" options={data.categorias.map((c) => ({ value: c.codigo, label: c.designacao }))} />
             <input className="login-input" style={{ flex: "1 1 90px" }} placeholder="aaaa-mm" value={nova.dataAquisicao ?? ""} onChange={(e) => setNova({ ...nova, dataAquisicao: e.target.value })} />
             <input className="login-input" style={{ flex: "1 1 100px" }} type="number" placeholder="Elegível €" value={nova.elegivel || ""} onChange={(e) => setNova({ ...nova, elegivel: Number(e.target.value) })} />
             <label style={{ display: "flex", alignItems: "center", gap: 4 }}>
