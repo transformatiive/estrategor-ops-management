@@ -13,6 +13,7 @@ import { requireAuth } from "../auth/guards.js";
 import { baseUrlFromRequest } from "../lib/baseUrl.js";
 import { generateToken, ingestClientUpload } from "../recolha/service.js";
 import { scheduleFirstReminder } from "../seguimento/service.js";
+import { buildIntakeInovacaoDTO, submitIntakeInovacao } from "../familiaA/intakeInovacao.js";
 
 const createSchema = z.object({
   documentTypeKeys: z.array(z.string()).min(1, "Escolha pelo menos um documento."),
@@ -225,4 +226,29 @@ export async function recolhaRoutes(app: FastifyInstance) {
     }
     },
   );
+
+  // ── Intake diferenciado da família Inovação (TRNSF-959) — público ──
+
+  app.get<{ Params: { token: string } }>("/api/recolha/:token/intake", async (req, reply) => {
+    const dto = await buildIntakeInovacaoDTO(req.params.token);
+    if (!dto) return reply.code(404).send({ error: "Ligação inválida." });
+    return dto;
+  });
+
+  app.post<{ Params: { token: string } }>("/api/recolha/:token/intake", async (req, reply) => {
+    const parsed = intakeSchema.safeParse(req.body);
+    if (!parsed.success) return reply.code(400).send({ error: "Dados inválidos." });
+    const ok = await submitIntakeInovacao(req.params.token, parsed.data);
+    if (!ok) return reply.code(409).send({ error: "O ramo Inovação não se aplica a esta candidatura." });
+    return { ok: true };
+  });
 }
+
+const intakeSchema = z.object({
+  intencoes: z
+    .array(z.object({ designacao: z.string(), categoria: z.string(), montante: z.number().nullable(), ano: z.number().nullable() }))
+    .default([]),
+  tipologias: z.array(z.enum(["novo_estab", "aumento_capacidade", "diversificacao", "alteracao_processo"])).default([]),
+  indicadoresMeta: z.object({ emprego: z.number().nullable(), volumeNegocios: z.number().nullable(), capacidade: z.number().nullable() }),
+  contexto: z.object({ motivacao: z.string().nullable(), mercadoAlvo: z.string().nullable() }),
+});
