@@ -201,6 +201,11 @@ export const api = {
   verificacao: (id: string) => get<VerificacaoDTO>(`/api/projects/${id}/candidatura/verificacao`),
   verificar: (id: string) => post<VerificacaoDTO>(`/api/projects/${id}/candidatura/verificacao`),
 
+  // exportação estruturada (TRNSF-954)
+  exportStatus: (id: string) =>
+    get<{ porValidar: number; placeholders: number; mpPrevisto: number | null; avisos: string[] }>(`/api/projects/${id}/candidatura/export/status`),
+  exportUrl: (id: string, format: "xlsx" | "docx" | "pdf") => `${BASE}/api/projects/${id}/candidatura/export/${format}`,
+
   // Família A — tipologias de investimento (TRNSF-955)
   tipologias: (id: string) => get<TipologiasDTO>(`/api/projects/${id}/candidatura/tipologias`),
   addTipologia: (id: string, tipo: TipologiaTipo, dados?: Record<string, string | number | null>) =>
