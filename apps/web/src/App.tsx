@@ -5,6 +5,8 @@ import { Projetos } from "./pages/Projetos.js";
 import { ProjectPage } from "./pages/ProjectPage.js";
 import { Pt2030 } from "./pages/Pt2030.js";
 import { Prazos } from "./pages/Prazos.js";
+import { Clientes } from "./pages/Clientes.js";
+import { ClienteDetalhe } from "./pages/ClienteDetalhe.js";
 import { Utilizadores } from "./pages/Utilizadores.js";
 import { Login } from "./pages/Login.js";
 import { RecolhaPublica } from "./pages/RecolhaPublica.js";
@@ -44,7 +46,8 @@ export function App() {
           <Route path="/tarefas" element={<Placeholder title="Tarefas" epic="Tarefas" />} />
           <Route path="/formacao" element={<Placeholder title="Formação Financiada" epic="Formação" />} />
           <Route path="/fiscal" element={<Placeholder title="Fiscal — RFAI / SIFIDE" epic="Fiscal" />} />
-          <Route path="/clientes" element={<Placeholder title="Clientes" epic="Configuração" />} />
+          <Route path="/clientes" element={<Clientes />} />
+          <Route path="/clientes/:id" element={<ClienteDetalhe />} />
           <Route path="/definicoes" element={<Placeholder title="Definições" epic="Configuração" />} />
           <Route element={<RequireManager />}>
             <Route path="/utilizadores" element={<Utilizadores />} />

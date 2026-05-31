@@ -49,6 +49,8 @@ import type {
   UrgentDeadlineDTO,
   DeadlineDTO,
   NovoDeadline,
+  ClientListItemDTO,
+  ClientDetailDTO,
   UserDTO,
 } from "@estrategor/shared";
 
@@ -130,6 +132,10 @@ export const api = {
   // rastreio e seguimento (TRNSF-939)
   tracking: (id: string) => get<ProjectTrackingDTO>(`/api/projects/${id}/tracking`),
   urgentDeadlines: () => get<UrgentDeadlineDTO[]>("/api/deadlines/urgent"),
+
+  // clientes (Configuração)
+  clients: () => get<ClientListItemDTO[]>("/api/clients"),
+  client: (id: string) => get<ClientDetailDTO>(`/api/clients/${id}`),
 
   // prazos do projeto (CRUD)
   deadlines: (id: string) => get<DeadlineDTO[]>(`/api/projects/${id}/deadlines`),
