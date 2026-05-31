@@ -31,19 +31,21 @@ export async function consultarEmpresas(nif: string): Promise<EmpresasResult> {
     const rec = (records[clean] ?? Object.values(records)[0]) as Record<string, unknown> | undefined;
     if (!rec) return { estado: "falhou", ...VAZIO, bruto: json };
 
-    const activity = rec.activity as Record<string, unknown> | undefined;
-    const contacts = rec.contacts as Record<string, unknown> | undefined;
+    // Esquema real nif.pt: cae (string), activity (descrição), structure.{nature,capital},
+    // geo.{region=distrito, county=concelho, parish}.
+    const structure = rec.structure as Record<string, unknown> | undefined;
+    const geo = rec.geo as Record<string, unknown> | undefined;
     const str = (v: unknown): string | null => (typeof v === "string" && v.trim() ? v.trim() : null);
     const num = (v: unknown): number | null => (typeof v === "number" ? v : typeof v === "string" && v.trim() ? Number(v.replace(/[^\d.,]/g, "").replace(",", ".")) || null : null);
 
     return {
       estado: "ok",
-      cae: str(activity?.cae) ?? str(rec.cae),
-      caeDescricao: str(activity?.title) ?? str(rec.activity),
-      naturezaJuridica: str(rec.structure) ?? str(rec.natureza),
-      capitalSocial: num(rec.capital),
-      concelho: str(contacts?.municipality) ?? str(rec.concelho),
-      distrito: str(contacts?.district) ?? str(rec.distrito),
+      cae: str(rec.cae),
+      caeDescricao: str(rec.activity),
+      naturezaJuridica: str(structure?.nature),
+      capitalSocial: num(structure?.capital),
+      concelho: str(geo?.county),
+      distrito: str(geo?.region),
       bruto: json,
     };
   } catch (e) {

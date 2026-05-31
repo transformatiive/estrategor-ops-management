@@ -36,9 +36,9 @@ const schema = z.object({
   // Diretório local onde o adaptador stub guarda os ficheiros carregados (dev/CI).
   WORKDRIVE_STUB_DIR: z.string().default("/tmp/estrategor-workdrive"),
   // Pré-diagnóstico (TRNSF-967). Sem chave → a faixa fica "sem_chave" (graciosa).
-  // VIES não precisa de chave. Perplexity Sonar (faixa C) e nif.pt (faixa B):
-  PERPLEXITY_API_KEY: z.string().optional(),
-  PERPLEXITY_BASE: z.string().default("https://api.perplexity.ai"),
+  // VIES não precisa de chave. Sonar corre via OpenRouter (mesma chave) com um
+  // modelo Perplexity; nif.pt (faixa B) precisa da sua própria chave:
+  OPENROUTER_MODEL_SONAR: z.string().default("perplexity/sonar"),
   NIF_PT_API_KEY: z.string().optional(),
   NIF_PT_BASE: z.string().default("https://www.nif.pt"),
   VIES_BASE: z.string().default("https://ec.europa.eu/taxation_customs/vies/rest-api"),
