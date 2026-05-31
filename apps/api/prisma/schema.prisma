@@ -518,6 +518,7 @@ model Candidatura {
   fields          CandField[]
   extracoes       Extracao[]
   generatedFields GeneratedField[]
+  verificacoes    Verificacao[]
 
   @@map("candidaturas")
 }
@@ -608,6 +609,26 @@ model GeneratedField {
   @@index([candidaturaId])
   @@index([candidaturaId, docType])
   @@map("generated_documents")
+}
+
+// ─── Verificador + Mérito (TRNSF-946) ────────────────────────────────────
+// Resultado da verificação da candidatura nos três eixos (formulário, mérito,
+// coerência) + o mérito previsto (MP) calculado deterministicamente a partir da
+// grelha (TRNSF-941). Histórico: uma linha por execução de "Verificar".
+model Verificacao {
+  id               String      @id @default(cuid())
+  candidaturaId    String      @map("candidatura_id")
+  // conforme | nao_conforme | sem_grelha
+  resultado        String
+  naoConformidades Json        @map("nao_conformidades")
+  mpPrevisto       Float?      @map("mp_previsto")
+  mpPorCriterio    Json?       @map("mp_por_criterio")
+  criadoEm         DateTime    @default(now()) @map("criado_em")
+
+  candidatura Candidatura @relation(fields: [candidaturaId], references: [id], onDelete: Cascade)
+
+  @@index([candidaturaId])
+  @@map("verificacoes")
 }
 
 // ─── Catálogos / Rulebook (TRNSF-953) ────────────────────────────────────

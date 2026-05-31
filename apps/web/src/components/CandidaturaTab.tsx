@@ -16,6 +16,7 @@ import { ErrorState } from "./ui.js";
 import { GeracaoPanel } from "./GeracaoPanel.js";
 import { FinanceiroPanel } from "./FinanceiroPanel.js";
 import { CustosPanel } from "./CustosPanel.js";
+import { VerificadorPanel } from "./VerificadorPanel.js";
 
 type CandResponse = CandidaturaDTO | { candidatura: null; familyChosen: CandFamily | null };
 
@@ -126,6 +127,9 @@ export function CandidaturaTab({ projectId }: { projectId: string }) {
 
       {/* Custos / Investimentos + Resumo Executivo (TRNSF-945) */}
       <CustosPanel projectId={projectId} onChanged={reload} />
+
+      {/* Verificador + Mérito (TRNSF-946) */}
+      <VerificadorPanel projectId={projectId} />
 
       {/* Geração IA dos campos de texto (TRNSF-943) */}
       <GeracaoPanel projectId={projectId} onChanged={reload} />
