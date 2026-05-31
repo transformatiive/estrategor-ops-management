@@ -51,6 +51,7 @@ import type {
   NovoDeadline,
   ClientListItemDTO,
   ClientDetailDTO,
+  AssignableUserDTO,
   UserDTO,
 } from "@estrategor/shared";
 
@@ -136,6 +137,9 @@ export const api = {
   // clientes (Configuração)
   clients: () => get<ClientListItemDTO[]>("/api/clients"),
   client: (id: string) => get<ClientDetailDTO>(`/api/clients/${id}`),
+
+  // utilizadores atribuíveis como responsável (qualquer sessão)
+  assignableUsers: () => get<AssignableUserDTO[]>("/api/team/assignable"),
 
   // prazos do projeto (CRUD)
   deadlines: (id: string) => get<DeadlineDTO[]>(`/api/projects/${id}/deadlines`),

@@ -17,6 +17,13 @@ export interface UserDTO {
   active: boolean;
 }
 
+/** Utilizador atribuível como responsável de projeto (seletor na criação). */
+export interface AssignableUserDTO {
+  id: string;
+  fullName: string;
+  role: Role;
+}
+
 /** Credenciais de login (TRNSF-934). */
 export interface LoginRequest {
   email: string;

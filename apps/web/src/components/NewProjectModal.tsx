@@ -1,6 +1,7 @@
-import { useState, type FormEvent } from "react";
-import { PROGRAM_CODES, type ProgramCode } from "@estrategor/shared";
+import { useEffect, useState, type FormEvent } from "react";
+import { PROGRAM_CODES, type AssignableUserDTO, type ProgramCode } from "@estrategor/shared";
 import { api, ApiError } from "../lib/api.js";
+import { useAuth } from "../lib/auth.js";
 
 const PROGRAM_LABELS: Record<ProgramCode, string> = {
   PT2030: "PT2030",
@@ -26,11 +27,26 @@ export function NewProjectModal({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  const { user } = useAuth();
+  const [team, setTeam] = useState<AssignableUserDTO[]>([]);
+  const [responsavel, setResponsavel] = useState<string>(user?.id ?? "");
+  useEffect(() => {
+    api.assignableUsers().then((list) => {
+      setTeam(list);
+      // default: o utilizador atual; senão o primeiro
+      setResponsavel((cur) => cur || user?.id || list[0]?.id || "");
+    }).catch(() => {});
+  }, [user?.id]);
+
   async function submit(e: FormEvent) {
     e.preventDefault();
     setError(null);
     if (!title.trim() || !clientName.trim()) {
       setError("Título e cliente são obrigatórios.");
+      return;
+    }
+    if (!responsavel) {
+      setError("Indique o consultor responsável.");
       return;
     }
     setBusy(true);
@@ -41,6 +57,7 @@ export function NewProjectModal({
         clientNif: clientNif.trim() || undefined,
         program,
         measureLabel: program === "PT2030" ? measureLabel.trim() || undefined : undefined,
+        responsibleIds: [responsavel],
       });
       onCreated(res.id, res.foldersError);
     } catch (err) {
@@ -68,6 +85,16 @@ export function NewProjectModal({
 
         <label className="login-label">NIF (opcional)</label>
         <input className="login-input" value={clientNif} onChange={(e) => setClientNif(e.target.value)} />
+
+        <label className="login-label">Consultor responsável</label>
+        <select className="login-input" value={responsavel} onChange={(e) => setResponsavel(e.target.value)}>
+          {team.length === 0 && <option value="">—</option>}
+          {team.map((u) => (
+            <option key={u.id} value={u.id}>
+              {u.fullName}{u.id === user?.id ? " (eu)" : ""}
+            </option>
+          ))}
+        </select>
 
         <label className="login-label">Programa</label>
         <select
