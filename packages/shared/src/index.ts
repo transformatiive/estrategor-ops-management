@@ -19,3 +19,4 @@ export * from "./inovacao_cond.js";
 export * from "./intake_inovacao.js";
 export * from "./intl_acoes.js";
 export * from "./intl_detalhe.js";
+export * from "./intake_intl.js";

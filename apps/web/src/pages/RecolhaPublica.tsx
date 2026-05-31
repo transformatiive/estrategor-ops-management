@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { api, ApiError } from "../lib/api.js";
 import { useAsync } from "../lib/useAsync.js";
 import { IntakeInovacao } from "../components/IntakeInovacao.js";
+import { IntakeIntl } from "../components/IntakeIntl.js";
 
 interface UploadState {
   name: string;
@@ -169,8 +170,9 @@ export function RecolhaPublica() {
           </>
         )}
 
-        {/* Ramo Inovação (TRNSF-959) — aparece se a candidatura for Inovação */}
+        {/* Ramos de intake por família — aparecem conforme a candidatura */}
         {!expired && <IntakeInovacao token={token} />}
+        {!expired && <IntakeIntl token={token} />}
 
         <p className="recolha-foot">
           Os seus documentos são enviados de forma segura para a Estrategor.

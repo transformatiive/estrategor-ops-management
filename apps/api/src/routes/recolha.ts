@@ -14,6 +14,7 @@ import { baseUrlFromRequest } from "../lib/baseUrl.js";
 import { generateToken, ingestClientUpload } from "../recolha/service.js";
 import { scheduleFirstReminder } from "../seguimento/service.js";
 import { buildIntakeInovacaoDTO, submitIntakeInovacao } from "../familiaA/intakeInovacao.js";
+import { buildIntakeIntlDTO, submitIntakeIntl } from "../familiaB/intakeIntl.js";
 
 const createSchema = z.object({
   documentTypeKeys: z.array(z.string()).min(1, "Escolha pelo menos um documento."),
@@ -242,7 +243,31 @@ export async function recolhaRoutes(app: FastifyInstance) {
     if (!ok) return reply.code(409).send({ error: "O ramo Inovação não se aplica a esta candidatura." });
     return { ok: true };
   });
+
+  // ── Intake diferenciado da família Internacionalização (TRNSF-962) — público ──
+
+  app.get<{ Params: { token: string } }>("/api/recolha/:token/intake-intl", async (req, reply) => {
+    const dto = await buildIntakeIntlDTO(req.params.token);
+    if (!dto) return reply.code(404).send({ error: "Ligação inválida." });
+    return dto;
+  });
+
+  app.post<{ Params: { token: string } }>("/api/recolha/:token/intake-intl", async (req, reply) => {
+    const parsed = intakeIntlSchema.safeParse(req.body);
+    if (!parsed.success) return reply.code(400).send({ error: "Dados inválidos." });
+    const ok = await submitIntakeIntl(req.params.token, parsed.data);
+    if (!ok) return reply.code(409).send({ error: "O ramo Internacionalização não se aplica a esta candidatura." });
+    return { ok: true };
+  });
 }
+
+const intakeIntlSchema = z.object({
+  acoes: z.array(z.object({ designacao: z.string(), dominio: z.number().int(), mercadoPais: z.string().nullable(), ano: z.number().nullable() })).default([]),
+  mercadosAlvo: z.array(z.string()).default([]),
+  rh: z.array(z.object({ funcao: z.string(), custo: z.number().nullable(), periodo: z.string().nullable() })).default([]),
+  certificacoes: z.array(z.string()).default([]),
+  contexto: z.object({ estrategia: z.string().nullable() }),
+});
 
 const intakeSchema = z.object({
   intencoes: z

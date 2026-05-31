@@ -25,6 +25,8 @@ import type {
   NovaSubstituicaoLinha,
   IntakeInovacaoDTO,
   IntakeInovacaoAnswers,
+  IntakeIntlDTO,
+  IntakeIntlAnswers,
   IntlAcoesDTO,
   NovaIntlAcao,
   IntlDetalheDTO,
@@ -254,6 +256,11 @@ export const api = {
   intakeInovacao: (token: string) => get<IntakeInovacaoDTO>(`/api/recolha/${token}/intake`),
   submitIntakeInovacao: (token: string, answers: IntakeInovacaoAnswers) =>
     post<{ ok: boolean }>(`/api/recolha/${token}/intake`, answers),
+
+  // intake diferenciado Internacionalização (TRNSF-962)
+  intakeIntl: (token: string) => get<IntakeIntlDTO>(`/api/recolha/${token}/intake-intl`),
+  submitIntakeIntl: (token: string, answers: IntakeIntlAnswers) =>
+    post<{ ok: boolean }>(`/api/recolha/${token}/intake-intl`, answers),
 
   // Família B — ações de internacionalização (TRNSF-960)
   intlAcoes: (id: string) => get<IntlAcoesDTO>(`/api/projects/${id}/candidatura/intl-acoes`),
