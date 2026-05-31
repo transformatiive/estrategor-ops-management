@@ -17,6 +17,7 @@ import type {
   VerificacaoDTO,
   TipologiasDTO,
   TipologiaTipo,
+  AtividadesIndicadoresDTO,
   ProjectExtracoesDTO,
   ValidateExtracaoRequest,
   ProjectCollectionDTO,
@@ -201,6 +202,21 @@ export const api = {
     patch<TipologiasDTO>(`/api/projects/${id}/candidatura/tipologias/${tid}`, { dados }),
   deleteTipologia: (id: string, tid: string) =>
     request<TipologiasDTO>(`/api/projects/${id}/candidatura/tipologias/${tid}`, { method: "DELETE" }),
+
+  // Família A — atividades de inovação + indicadores (TRNSF-956)
+  atividades: (id: string) => get<AtividadesIndicadoresDTO>(`/api/projects/${id}/candidatura/atividades`),
+  addAtividade: (id: string, designacao: string) =>
+    post<AtividadesIndicadoresDTO>(`/api/projects/${id}/candidatura/atividades`, { designacao }),
+  deleteAtividade: (id: string, aid: string) =>
+    request<AtividadesIndicadoresDTO>(`/api/projects/${id}/candidatura/atividades/${aid}`, { method: "DELETE" }),
+  addIndicador: (id: string, codigo: string) =>
+    post<AtividadesIndicadoresDTO>(`/api/projects/${id}/candidatura/indicadores`, { codigo }),
+  updateIndicador: (id: string, iid: string, valorPre: number | null, valorMeta: number | null) =>
+    patch<AtividadesIndicadoresDTO>(`/api/projects/${id}/candidatura/indicadores/${iid}`, { valorPre, valorMeta }),
+  deleteIndicador: (id: string, iid: string) =>
+    request<AtividadesIndicadoresDTO>(`/api/projects/${id}/candidatura/indicadores/${iid}`, { method: "DELETE" }),
+  sugerirIndicadores: (id: string) =>
+    post<AtividadesIndicadoresDTO & { adicionados: number }>(`/api/projects/${id}/candidatura/indicadores/sugerir`),
 
   // formulário público do cliente (sem login)
   publicCollection: (token: string) =>

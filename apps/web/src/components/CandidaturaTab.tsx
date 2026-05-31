@@ -18,6 +18,7 @@ import { FinanceiroPanel } from "./FinanceiroPanel.js";
 import { CustosPanel } from "./CustosPanel.js";
 import { VerificadorPanel } from "./VerificadorPanel.js";
 import { TipologiasPanel } from "./TipologiasPanel.js";
+import { AtividadesPanel } from "./AtividadesPanel.js";
 
 type CandResponse = CandidaturaDTO | { candidatura: null; familyChosen: CandFamily | null };
 
@@ -125,7 +126,10 @@ export function CandidaturaTab({ projectId }: { projectId: string }) {
 
       {/* Secções específicas da Família A — Inovação Produtiva */}
       {cand.family === "inovacao_produtiva" && (
-        <TipologiasPanel projectId={projectId} onChanged={reload} />
+        <>
+          <TipologiasPanel projectId={projectId} onChanged={reload} />
+          <AtividadesPanel projectId={projectId} onChanged={reload} />
+        </>
       )}
 
       {/* Componente financeira (TRNSF-944) */}
