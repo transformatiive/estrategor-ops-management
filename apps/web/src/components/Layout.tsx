@@ -16,12 +16,6 @@ const GERAL: NavItem[] = [
   { to: "/tarefas", label: "Tarefas" },
 ];
 
-const PROGRAMAS: NavItem[] = [
-  { to: "/pt2030", label: "PT2030", chip: { text: "PT", variant: "blue" } },
-  { to: "/formacao", label: "Formação" },
-  { to: "/fiscal", label: "Fiscal" },
-];
-
 function NavSection({ title, items }: { title: string; items: NavItem[] }) {
   return (
     <>
@@ -98,8 +92,6 @@ export function Layout() {
         {menuOpen && <div className="sidebar-backdrop" onClick={() => setMenuOpen(false)} />}
         <nav className={"sidebar" + (menuOpen ? " open" : "")} onClick={() => setMenuOpen(false)}>
           <NavSection title="Geral" items={GERAL} />
-          <div className="sidebar-divider" />
-          <NavSection title="Programas" items={PROGRAMAS} />
           <div className="sidebar-divider" />
           <NavSection title="Configuração" items={configItems} />
           <div className="sidebar-footer">
