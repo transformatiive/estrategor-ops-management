@@ -1307,6 +1307,60 @@ body {
   flex: 1;
 }
 
+/* Pipeline da página de projeto (TRNSF-963) */
+.pipeline {
+  margin: 8px 0 18px;
+}
+.pipeline-track {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+}
+.pl-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  padding: 8px 12px;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+  background: #fff;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  color: var(--text, #1e293b);
+}
+.pl-step:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+.pl-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--surface-2, #f1f5f9);
+  color: var(--muted, #64748b);
+  flex: 0 0 auto;
+}
+.pl-concluido .pl-badge { background: #16a34a; color: #fff; }
+.pl-em_curso { border-color: var(--accent, #2563eb); }
+.pl-em_curso .pl-badge { background: var(--accent, #2563eb); color: #fff; }
+.pl-execucao { border-style: dashed; }
+.pl-selected { box-shadow: 0 0 0 2px var(--accent, #2563eb) inset; }
+.pipeline-meta { margin-top: 6px; }
+.pipeline-requisitos { margin-top: 10px; max-width: 560px; }
+.pl-req-list { list-style: none; margin: 0; padding: 0; font-size: 13px; }
+.pl-req-list li { padding: 3px 0; }
+.pl-req-todo { color: var(--muted, #64748b); }
+.pl-req-done { color: #16a34a; }
+
 /* Componente financeira (TRNSF-944) — tabelas rubrica × ano */
 .fin-table {
   width: 100%;

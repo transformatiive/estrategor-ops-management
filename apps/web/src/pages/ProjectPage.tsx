@@ -1,36 +1,37 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { VISTA_LABELS, vistasDaFase, type PipelineDTO } from "@estrategor/shared";
 import { api } from "../lib/api.js";
 import { useAsync } from "../lib/useAsync.js";
-import { Avatars, ErrorState, Progress, ProgramBadge, StateBadge } from "../components/ui.js";
+import { Avatars, ErrorState, Progress, ProgramBadge } from "../components/ui.js";
 import { DocumentsTab } from "../components/DocumentsTab.js";
 import { RecolhaTab } from "../components/RecolhaTab.js";
 import { DiagnosticoTab } from "../components/DiagnosticoTab.js";
 import { SeguimentoTab } from "../components/SeguimentoTab.js";
 import { CandidaturaTab } from "../components/CandidaturaTab.js";
 import { ExtracaoTab } from "../components/ExtracaoTab.js";
-
-// Separadores da página de projecto.
-const TABS = [
-  { key: "resumo", label: "Resumo" },
-  { key: "milestones", label: "Milestones" },
-  { key: "diagnostico", label: "Diagnóstico" },
-  { key: "candidatura", label: "Candidatura" },
-  { key: "extracao", label: "Extração" },
-  { key: "recolha", label: "Recolha" },
-  { key: "documentos", label: "Documentos" },
-  { key: "seguimento", label: "Checklist & Seguimento" },
-] as const;
-
-type TabKey = (typeof TABS)[number]["key"];
+import { PipelinePanel } from "../components/PipelinePanel.js";
 
 export function ProjectPage() {
   const { id = "" } = useParams();
   const navigate = useNavigate();
-  const [tab, setTab] = useState<TabKey>("resumo");
   const { data, loading, error, reload } = useAsync(() => api.project(id), [id]);
+  const { data: pipe, reload: reloadPipe } = useAsync<PipelineDTO>(() => api.pipeline(id), [id]);
+
+  // fase em foco (default = fase atual do projeto) e vista dentro dessa fase
+  const [faseSel, setFaseSel] = useState<string | null>(null);
+  const [vista, setVista] = useState<string | null>(null);
 
   if (error) return <ErrorState error={error} onRetry={reload} />;
+
+  const faseAtual = faseSel ?? pipe?.faseAtual ?? "diagnostico";
+  const vistas = vistasDaFase(faseAtual);
+  const vistaAtiva = vista && vistas.includes(vista) ? vista : (vistas[0] ?? "resumo");
+
+  function selectFase(faseKey: string) {
+    setFaseSel(faseKey);
+    setVista(vistasDaFase(faseKey)[0] ?? "resumo");
+  }
 
   return (
     <>
@@ -43,25 +44,29 @@ export function ProjectPage() {
         <div>
           <div className="page-title">{data?.title ?? (loading ? "A carregar…" : "")}</div>
           <div className="page-subtitle">
-            {data ? `${data.clientName} · ${data.code}` : " "}
+            {data ? `${data.clientName} · ${data.code}` : " "}
           </div>
         </div>
-        {data && <StateBadge state={data.state} />}
+        {pipe && <span className="badge badge-muted">{pipe.badgeLabel}</span>}
       </div>
 
+      {/* Pipeline em linguagem de cliente (TRNSF-963) */}
+      {pipe && <PipelinePanel pipe={pipe} faseSelecionada={faseAtual} onSelect={selectFase} />}
+
+      {/* Vistas da fase selecionada */}
       <div className="tabs">
-        {TABS.map((t) => (
+        {vistas.map((v) => (
           <button
-            key={t.key}
-            className={"tab" + (tab === t.key ? " active" : "")}
-            onClick={() => setTab(t.key)}
+            key={v}
+            className={"tab" + (v === vistaAtiva ? " active" : "")}
+            onClick={() => setVista(v)}
           >
-            {t.label}
+            {VISTA_LABELS[v] ?? v}
           </button>
         ))}
       </div>
 
-      {tab === "resumo" && data && (
+      {vistaAtiva === "resumo" && data && (
         <div className="card" style={{ maxWidth: 560 }}>
           <div className="dp-field">
             <div className="dp-field-label">Programa</div>
@@ -71,9 +76,7 @@ export function ProjectPage() {
           </div>
           <div className="dp-field">
             <div className="dp-field-label">Fase</div>
-            <div className="dp-field-value">
-              <StateBadge state={data.state} />
-            </div>
+            <div className="dp-field-value">{pipe?.badgeLabel ?? "—"}</div>
           </div>
           <div className="dp-field">
             <div className="dp-field-label">Responsável</div>
@@ -94,7 +97,7 @@ export function ProjectPage() {
         </div>
       )}
 
-      {tab === "milestones" && data && (
+      {vistaAtiva === "milestones" && data && (
         <div className="milestone-list" style={{ maxWidth: 560 }}>
           {data.milestones.map((m) => (
             <div className="milestone-item" key={m.id}>
@@ -113,12 +116,14 @@ export function ProjectPage() {
         </div>
       )}
 
-      {tab === "candidatura" && <CandidaturaTab projectId={id} />}
-      {tab === "extracao" && <ExtracaoTab projectId={id} />}
-      {tab === "documentos" && <DocumentsTab projectId={id} />}
-      {tab === "recolha" && <RecolhaTab projectId={id} />}
-      {tab === "diagnostico" && <DiagnosticoTab projectId={id} onAdvanced={reload} />}
-      {tab === "seguimento" && <SeguimentoTab projectId={id} />}
+      {vistaAtiva === "candidatura" && <CandidaturaTab projectId={id} />}
+      {vistaAtiva === "extracao" && <ExtracaoTab projectId={id} />}
+      {vistaAtiva === "documentos" && <DocumentsTab projectId={id} />}
+      {vistaAtiva === "recolha" && <RecolhaTab projectId={id} />}
+      {vistaAtiva === "diagnostico" && (
+        <DiagnosticoTab projectId={id} onAdvanced={() => { reload(); reloadPipe(); }} />
+      )}
+      {vistaAtiva === "seguimento" && <SeguimentoTab projectId={id} />}
     </>
   );
 }
