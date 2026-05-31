@@ -33,6 +33,7 @@ import type {
   NovoIntlCusto,
   NovaIntlDeslocacao,
   NovoIntlRh,
+  PipelineDTO,
   ProjectExtracoesDTO,
   ValidateExtracaoRequest,
   ProjectCollectionDTO,
@@ -208,6 +209,9 @@ export const api = {
   // verificador + mérito (TRNSF-946)
   verificacao: (id: string) => get<VerificacaoDTO>(`/api/projects/${id}/candidatura/verificacao`),
   verificar: (id: string) => post<VerificacaoDTO>(`/api/projects/${id}/candidatura/verificacao`),
+
+  // vista de pipeline da página de projeto (TRNSF-963)
+  pipeline: (id: string) => get<PipelineDTO>(`/api/projects/${id}/pipeline`),
 
   // exportação estruturada (TRNSF-954)
   exportStatus: (id: string) =>
