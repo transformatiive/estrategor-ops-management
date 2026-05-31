@@ -109,3 +109,4 @@ Deploy automático ao fazer merge em `main`; cada PR corre o
 ### Fase A — Candidatura (A2)
 
 - [x] **TRNSF‑942 · Núcleo da Candidatura:** discriminador de família (`Projeto.family`), modelo de dados comum com **proveniência por campo** (origem `extraido|intake|gerado|calculado` + estado `por_validar|validado|corrigido`), separador *Candidatura* com preview pré-preenchido, transições A2↔A3. Regra transversal: nada `extraido`/`gerado` é final sem validação humana. (As secções de família, motores e exportação são tickets próprios.)
+- [x] **TRNSF‑953 · Catálogos / Rulebook:** listas de referência e regras como **dados** (CAE, NUTS+baixa densidade, países, rubricas SNC, categorias de custo por família, indicadores, domínios intl, tipos de documento, anexos por 3 níveis), no seed de referência (idempotente, produção) e lidas por `GET /api/catalogos`. Atualizar um catálogo não exige alterar código.

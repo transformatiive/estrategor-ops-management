@@ -6,3 +6,4 @@ export * from "./classification.js";
 export * from "./documents.js";
 export * from "./seguimento.js";
 export * from "./candidatura.js";
+export * from "./catalogos.js";
