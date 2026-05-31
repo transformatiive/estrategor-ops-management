@@ -5,3 +5,4 @@ export * from "./merit.js";
 export * from "./classification.js";
 export * from "./documents.js";
 export * from "./seguimento.js";
+export * from "./candidatura.js";
