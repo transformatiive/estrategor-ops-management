@@ -25,6 +25,8 @@ import type {
   NovaSubstituicaoLinha,
   IntakeInovacaoDTO,
   IntakeInovacaoAnswers,
+  IntlAcoesDTO,
+  NovaIntlAcao,
   ProjectExtracoesDTO,
   ValidateExtracaoRequest,
   ProjectCollectionDTO,
@@ -248,6 +250,15 @@ export const api = {
   intakeInovacao: (token: string) => get<IntakeInovacaoDTO>(`/api/recolha/${token}/intake`),
   submitIntakeInovacao: (token: string, answers: IntakeInovacaoAnswers) =>
     post<{ ok: boolean }>(`/api/recolha/${token}/intake`, answers),
+
+  // Família B — ações de internacionalização (TRNSF-960)
+  intlAcoes: (id: string) => get<IntlAcoesDTO>(`/api/projects/${id}/candidatura/intl-acoes`),
+  updateIntlDominio: (id: string, numero: number, body: { aplicavel?: boolean; contributo?: string | null }) =>
+    patch<IntlAcoesDTO>(`/api/projects/${id}/candidatura/intl-dominios`, { numero, ...body }),
+  addIntlAcao: (id: string, acao: NovaIntlAcao) =>
+    post<IntlAcoesDTO>(`/api/projects/${id}/candidatura/intl-acoes`, acao),
+  deleteIntlAcao: (id: string, aid: string) =>
+    request<IntlAcoesDTO>(`/api/projects/${id}/candidatura/intl-acoes/${aid}`, { method: "DELETE" }),
 
   // formulário público do cliente (sem login)
   publicCollection: (token: string) =>
