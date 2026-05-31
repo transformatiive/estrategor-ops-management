@@ -21,3 +21,4 @@ export * from "./intl_acoes.js";
 export * from "./intl_detalhe.js";
 export * from "./intake_intl.js";
 export * from "./pipeline.js";
+export * from "./dashboard.js";

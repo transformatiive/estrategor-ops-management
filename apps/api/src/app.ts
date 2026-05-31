@@ -26,6 +26,7 @@ import { exportacaoRoutes } from "./routes/exportacao.js";
 import { intlAcoesRoutes } from "./routes/intlAcoes.js";
 import { intlDetalheRoutes } from "./routes/intlDetalhe.js";
 import { pipelineRoutes } from "./routes/pipeline.js";
+import { dashboardRoutes } from "./routes/dashboard.js";
 import { registerStatic } from "./static.js";
 
 /** Constrói a instância Fastify com plugins e rotas registados. */
@@ -68,6 +69,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(intlAcoesRoutes);
   await app.register(intlDetalheRoutes);
   await app.register(pipelineRoutes);
+  await app.register(dashboardRoutes);
 
   // SPA (serviço único): serve apps/web/dist + fallback para index.html.
   await registerStatic(app);

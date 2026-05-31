@@ -34,6 +34,7 @@ import type {
   NovaIntlDeslocacao,
   NovoIntlRh,
   PipelineDTO,
+  DashboardDTO,
   ProjectExtracoesDTO,
   ValidateExtracaoRequest,
   ProjectCollectionDTO,
@@ -212,6 +213,10 @@ export const api = {
 
   // vista de pipeline da página de projeto (TRNSF-963)
   pipeline: (id: string) => get<PipelineDTO>(`/api/projects/${id}/pipeline`),
+
+  // dashboard de trabalho (TRNSF-964)
+  dashboard: (consultor?: string) =>
+    get<DashboardDTO>(`/api/dashboard${consultor ? `?consultor=${encodeURIComponent(consultor)}` : ""}`),
 
   // exportação estruturada (TRNSF-954)
   exportStatus: (id: string) =>
