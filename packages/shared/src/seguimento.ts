@@ -118,3 +118,37 @@ export interface UrgentDeadlineDTO {
   daysOverdue: number; // >0 em atraso; <=0 a haver
   severity: "atrasado" | "urgente" | "proximo";
 }
+
+export type DeadlineSeverity = "atrasado" | "urgente" | "proximo";
+
+/** Estado de um prazo a partir da data de vencimento. */
+export function deadlineSeverity(dueDate: Date, now: Date = new Date()): { severity: DeadlineSeverity; daysOverdue: number } {
+  const isPast = dueDate < now;
+  if (isPast) return { severity: "atrasado", daysOverdue: daysBetween(dueDate, now) };
+  const upcoming = daysBetween(now, dueDate);
+  return { severity: upcoming <= 7 ? "urgente" : "proximo", daysOverdue: -upcoming };
+}
+
+/** Prazo de um projeto (CRUD na página de projeto). */
+export interface DeadlineDTO {
+  id: string;
+  projectId: string;
+  label: string;
+  dueDate: string;
+  portal: string | null;
+  status: string; // pendente | completado
+  severity: DeadlineSeverity;
+  daysOverdue: number;
+}
+
+export interface NovoDeadline {
+  label: string;
+  dueDate: string; // aaaa-mm-dd
+  portal?: string | null;
+}
+
+export const DEADLINE_SEVERITY_LABEL: Record<DeadlineSeverity, string> = {
+  atrasado: "Em atraso",
+  urgente: "Urgente",
+  proximo: "Próximo",
+};

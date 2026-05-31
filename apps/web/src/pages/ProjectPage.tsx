@@ -11,6 +11,7 @@ import { SeguimentoTab } from "../components/SeguimentoTab.js";
 import { CandidaturaTab } from "../components/CandidaturaTab.js";
 import { ExtracaoTab } from "../components/ExtracaoTab.js";
 import { PipelinePanel } from "../components/PipelinePanel.js";
+import { ProjectDeadlines } from "../components/ProjectDeadlines.js";
 
 export function ProjectPage() {
   const { id = "" } = useParams();
@@ -96,6 +97,8 @@ export function ProjectPage() {
           </div>
         </div>
       )}
+
+      {vistaAtiva === "resumo" && data && <ProjectDeadlines projectId={id} />}
 
       {vistaAtiva === "milestones" && data && (
         <div className="milestone-list" style={{ maxWidth: 560 }}>
