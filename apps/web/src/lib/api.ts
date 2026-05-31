@@ -18,6 +18,8 @@ import type {
   TipologiasDTO,
   TipologiaTipo,
   AtividadesIndicadoresDTO,
+  InovacaoExtraDTO,
+  Industria40Ambito,
   ProjectExtracoesDTO,
   ValidateExtracaoRequest,
   ProjectCollectionDTO,
@@ -217,6 +219,11 @@ export const api = {
     request<AtividadesIndicadoresDTO>(`/api/projects/${id}/candidatura/indicadores/${iid}`, { method: "DELETE" }),
   sugerirIndicadores: (id: string) =>
     post<AtividadesIndicadoresDTO & { adicionados: number }>(`/api/projects/${id}/candidatura/indicadores/sugerir`),
+
+  // Família A — Indústria 4.0 + Transição Climática (TRNSF-957)
+  inovacaoExtra: (id: string) => get<InovacaoExtraDTO>(`/api/projects/${id}/candidatura/inovacao-extra`),
+  updateInovacaoExtra: (id: string, body: { industria40Ambitos?: Partial<Record<Industria40Ambito, boolean>>; transicaoAmbitos?: string[] }) =>
+    patch<InovacaoExtraDTO>(`/api/projects/${id}/candidatura/inovacao-extra`, body),
 
   // formulário público do cliente (sem login)
   publicCollection: (token: string) =>
