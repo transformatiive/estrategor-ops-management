@@ -8,7 +8,7 @@ import {
   type ProjectFoldersDTO,
   type ProjectListItemDTO,
 } from "@estrategor/shared";
-import { documentTypesForProgram } from "@estrategor/shared";
+import { documentTypesForProgram, canManageUsers } from "@estrategor/shared";
 import { prisma } from "../db.js";
 import { requireAuth } from "../auth/guards.js";
 import { provisionProjectFolders } from "../workdrive/provision.js";
@@ -109,8 +109,11 @@ export async function projectRoutes(app: FastifyInstance) {
   });
 
   // B-01 — lista de projetos com fase atual
-  app.get("/api/projects", async () => {
+  app.get("/api/projects", async (req) => {
+    // RBAC: gestor/admin vê todos; consultor vê só os seus (TRNSF-965/934).
+    const isManager = canManageUsers(req.user!.role);
     const projects = await prisma.project.findMany({
+      where: isManager ? {} : { responsibles: { some: { userId: req.user!.id } } },
       orderBy: { createdAt: "asc" },
       include: {
         client: true,
@@ -126,9 +129,11 @@ export async function projectRoutes(app: FastifyInstance) {
       clientName: p.client.name,
       program: p.program.code,
       state: p.state,
+      family: p.family ?? null,
       nextAction: p.nextAction,
       progress: p.progress,
       responsibles: p.responsibles.map((r) => ({
+        id: r.user.id,
         initials: r.user.initials,
         color: r.user.color,
         fullName: r.user.fullName,

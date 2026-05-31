@@ -1307,6 +1307,41 @@ body {
   flex: 1;
 }
 
+/* Listagem de projetos: filtros + lista/kanban (TRNSF-965) */
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+.filtros .login-input { flex: 0 1 auto; min-width: 140px; }
+.vista-toggle { display: inline-flex; gap: 4px; margin-left: auto; }
+.kanban-col-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--bg, #f8fafc);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+button.kanban-card {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+.kanban-card-title { font-size: 13px; font-weight: 600; }
+.kanban-card-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px; }
+.kanban-empty { color: var(--hint, #94a3b8); font-size: 13px; padding: 6px 2px; }
+
 /* Dashboard de Trabalho (TRNSF-964) */
 .dash-list {
   display: flex;
