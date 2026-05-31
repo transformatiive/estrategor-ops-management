@@ -27,6 +27,10 @@ import type {
   IntakeInovacaoAnswers,
   IntlAcoesDTO,
   NovaIntlAcao,
+  IntlDetalheDTO,
+  NovoIntlCusto,
+  NovaIntlDeslocacao,
+  NovoIntlRh,
   ProjectExtracoesDTO,
   ValidateExtracaoRequest,
   ProjectCollectionDTO,
@@ -259,6 +263,15 @@ export const api = {
     post<IntlAcoesDTO>(`/api/projects/${id}/candidatura/intl-acoes`, acao),
   deleteIntlAcao: (id: string, aid: string) =>
     request<IntlAcoesDTO>(`/api/projects/${id}/candidatura/intl-acoes/${aid}`, { method: "DELETE" }),
+
+  // Família B — detalhe da ação (custos/deslocações) + RH (TRNSF-961)
+  intlDetalhe: (id: string) => get<IntlDetalheDTO>(`/api/projects/${id}/candidatura/intl-detalhe`),
+  addIntlCusto: (id: string, c: NovoIntlCusto) => post<IntlDetalheDTO>(`/api/projects/${id}/candidatura/intl-custos`, c),
+  deleteIntlCusto: (id: string, cid: string) => request<IntlDetalheDTO>(`/api/projects/${id}/candidatura/intl-custos/${cid}`, { method: "DELETE" }),
+  addIntlDeslocacao: (id: string, d: NovaIntlDeslocacao) => post<IntlDetalheDTO>(`/api/projects/${id}/candidatura/intl-deslocacoes`, d),
+  deleteIntlDeslocacao: (id: string, did: string) => request<IntlDetalheDTO>(`/api/projects/${id}/candidatura/intl-deslocacoes/${did}`, { method: "DELETE" }),
+  addIntlRh: (id: string, r: NovoIntlRh) => post<IntlDetalheDTO>(`/api/projects/${id}/candidatura/intl-rh`, r),
+  deleteIntlRh: (id: string, rid: string) => request<IntlDetalheDTO>(`/api/projects/${id}/candidatura/intl-rh/${rid}`, { method: "DELETE" }),
 
   // formulário público do cliente (sem login)
   publicCollection: (token: string) =>

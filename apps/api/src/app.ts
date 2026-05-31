@@ -24,6 +24,7 @@ import { inovacaoExtraRoutes } from "./routes/inovacaoExtra.js";
 import { inovacaoCondRoutes } from "./routes/inovacaoCond.js";
 import { exportacaoRoutes } from "./routes/exportacao.js";
 import { intlAcoesRoutes } from "./routes/intlAcoes.js";
+import { intlDetalheRoutes } from "./routes/intlDetalhe.js";
 import { registerStatic } from "./static.js";
 
 /** Constrói a instância Fastify com plugins e rotas registados. */
@@ -64,6 +65,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(inovacaoCondRoutes);
   await app.register(exportacaoRoutes);
   await app.register(intlAcoesRoutes);
+  await app.register(intlDetalheRoutes);
 
   // SPA (serviço único): serve apps/web/dist + fallback para index.html.
   await registerStatic(app);
