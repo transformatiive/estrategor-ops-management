@@ -8,6 +8,7 @@ import type {
   CreateUserRequest,
   CandidaturaGeracaoDTO,
   DiagnosticDTO,
+  FinanceiroDTO,
   GeneratedFieldDTO,
   HealthDTO,
   ProjectExtracoesDTO,
@@ -164,6 +165,13 @@ export const api = {
   geracao: (id: string) => get<CandidaturaGeracaoDTO>(`/api/projects/${id}/candidatura/geracao`),
   gerarMinuta: (id: string, docType: string) =>
     post<GeneratedFieldDTO>(`/api/projects/${id}/candidatura/gerar`, { docType }),
+
+  // componente financeira (TRNSF-944)
+  financeiro: (id: string) => get<FinanceiroDTO>(`/api/projects/${id}/candidatura/financeiro`),
+  seedFinanceiro: (id: string) => post<FinanceiroDTO>(`/api/projects/${id}/candidatura/financeiro/seed`),
+  updateFinanceiroCell: (id: string, mapa: string, rubrica: string, ano: number, valor: number) =>
+    patch<FinanceiroDTO>(`/api/projects/${id}/candidatura/financeiro/cell`, { mapa, rubrica, ano, valor }),
+  validarFinanceiro: (id: string) => post<FinanceiroDTO>(`/api/projects/${id}/candidatura/financeiro/validar`),
 
   // formulário público do cliente (sem login)
   publicCollection: (token: string) =>
