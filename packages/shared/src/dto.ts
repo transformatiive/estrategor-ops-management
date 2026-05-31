@@ -55,9 +55,11 @@ export interface ProjectListItemDTO {
   clientName: string;
   program: ProgramCode | string;
   state: ProjectState;
+  /** família do sistema de incentivos, quando já definida no projeto */
+  family: string | null;
   nextAction: string | null;
   progress: number;
-  responsibles: { initials: string; color: string; fullName: string }[];
+  responsibles: { id: string; initials: string; color: string; fullName: string }[];
 }
 
 /** Marco da timeline de um projeto. */
