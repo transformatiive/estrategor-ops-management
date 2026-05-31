@@ -11,6 +11,9 @@ import type {
   FinanceiroDTO,
   GeneratedFieldDTO,
   HealthDTO,
+  InvestimentosDTO,
+  NovaInvestimentoLinha,
+  ResumoExecutivoDTO,
   ProjectExtracoesDTO,
   ValidateExtracaoRequest,
   ProjectCollectionDTO,
@@ -172,6 +175,16 @@ export const api = {
   updateFinanceiroCell: (id: string, mapa: string, rubrica: string, ano: number, valor: number) =>
     patch<FinanceiroDTO>(`/api/projects/${id}/candidatura/financeiro/cell`, { mapa, rubrica, ano, valor }),
   validarFinanceiro: (id: string) => post<FinanceiroDTO>(`/api/projects/${id}/candidatura/financeiro/validar`),
+
+  // custos / investimentos + resumo executivo (TRNSF-945)
+  investimentos: (id: string) => get<InvestimentosDTO>(`/api/projects/${id}/candidatura/investimentos`),
+  addInvestimento: (id: string, linha: NovaInvestimentoLinha) =>
+    post<InvestimentosDTO>(`/api/projects/${id}/candidatura/investimentos`, linha),
+  updateInvestimento: (id: string, linhaId: string, linha: NovaInvestimentoLinha) =>
+    patch<InvestimentosDTO>(`/api/projects/${id}/candidatura/investimentos/${linhaId}`, linha),
+  deleteInvestimento: (id: string, linhaId: string) =>
+    request<InvestimentosDTO>(`/api/projects/${id}/candidatura/investimentos/${linhaId}`, { method: "DELETE" }),
+  resumoExecutivo: (id: string) => get<ResumoExecutivoDTO>(`/api/projects/${id}/candidatura/resumo`),
 
   // formulário público do cliente (sem login)
   publicCollection: (token: string) =>
