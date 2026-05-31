@@ -35,6 +35,13 @@ const schema = z.object({
   WORKDRIVE_ROOT_FOLDER_ID: z.string().optional(),
   // Diretório local onde o adaptador stub guarda os ficheiros carregados (dev/CI).
   WORKDRIVE_STUB_DIR: z.string().default("/tmp/estrategor-workdrive"),
+  // Pré-diagnóstico (TRNSF-967). Sem chave → a faixa fica "sem_chave" (graciosa).
+  // VIES não precisa de chave. Sonar corre via OpenRouter (mesma chave) com um
+  // modelo Perplexity; nif.pt (faixa B) precisa da sua própria chave:
+  OPENROUTER_MODEL_SONAR: z.string().default("perplexity/sonar"),
+  NIF_PT_API_KEY: z.string().optional(),
+  NIF_PT_BASE: z.string().default("https://www.nif.pt"),
+  VIES_BASE: z.string().default("https://ec.europa.eu/taxation_customs/vies/rest-api"),
   // Limite de tamanho por ficheiro carregado pelo cliente (bytes). Default 25 MB.
   UPLOAD_MAX_BYTES: z.coerce.number().default(25 * 1024 * 1024),
   // Classificação por IA (TRNSF-938). Sem chave → classificador stub determinístico.

@@ -10,6 +10,7 @@ import { api, ApiError } from "../lib/api.js";
 import { useAsync } from "../lib/useAsync.js";
 import { ErrorState } from "./ui.js";
 import { Dropdown } from "./Dropdown.js";
+import { PreDiagnosticoPanel } from "./PreDiagnosticoPanel.js";
 
 const RESULT_BADGE: Record<DiagnosticDTO["result"], { cls: string; label: string }> = {
   POR_INICIAR: { cls: "badge-muted", label: "Por iniciar" },
@@ -113,6 +114,9 @@ export function DiagnosticoTab({
         <div className="section-title">Diagnóstico A0</div>
         <span className={"badge " + badge.cls}>{badge.label}</span>
       </div>
+
+      {/* ── Pré-diagnóstico assistido por IA (TRNSF-967) ── */}
+      <PreDiagnosticoPanel projectId={projectId} />
 
       {/* ── Condições de acesso ── */}
       <div className="card" style={{ marginBottom: 16 }}>

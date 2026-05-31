@@ -8,6 +8,7 @@ import type {
   CreateUserRequest,
   CandidaturaGeracaoDTO,
   DiagnosticDTO,
+  PreDiagnosticoDTO,
   FinanceiroDTO,
   GeneratedFieldDTO,
   HealthDTO,
@@ -185,6 +186,12 @@ export const api = {
     put<DiagnosticDTO>(`/api/projects/${id}/diagnostic`, data),
   advanceDiagnostic: (id: string) =>
     post<{ ok: boolean; state: string }>(`/api/projects/${id}/diagnostic/advance`),
+
+  // pré-diagnóstico assistido por IA (TRNSF-967)
+  prediagnostico: (id: string) => get<PreDiagnosticoDTO>(`/api/projects/${id}/prediagnostico`),
+  runPrediagnostico: (id: string) => post<{ ok: boolean; estado: string }>(`/api/projects/${id}/prediagnostico/run`),
+  updatePrediagCampo: (id: string, body: { key: string; value?: string | number | null; action: "validar" | "corrigir" }) =>
+    patch<PreDiagnosticoDTO>(`/api/projects/${id}/prediagnostico/campo`, body),
 
   // candidatura (TRNSF-942)
   candidatura: (id: string) =>
