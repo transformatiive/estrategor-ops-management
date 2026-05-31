@@ -15,6 +15,8 @@ import type {
   NovaInvestimentoLinha,
   ResumoExecutivoDTO,
   VerificacaoDTO,
+  TipologiasDTO,
+  TipologiaTipo,
   ProjectExtracoesDTO,
   ValidateExtracaoRequest,
   ProjectCollectionDTO,
@@ -190,6 +192,15 @@ export const api = {
   // verificador + mérito (TRNSF-946)
   verificacao: (id: string) => get<VerificacaoDTO>(`/api/projects/${id}/candidatura/verificacao`),
   verificar: (id: string) => post<VerificacaoDTO>(`/api/projects/${id}/candidatura/verificacao`),
+
+  // Família A — tipologias de investimento (TRNSF-955)
+  tipologias: (id: string) => get<TipologiasDTO>(`/api/projects/${id}/candidatura/tipologias`),
+  addTipologia: (id: string, tipo: TipologiaTipo, dados?: Record<string, string | number | null>) =>
+    post<TipologiasDTO>(`/api/projects/${id}/candidatura/tipologias`, { tipo, dados }),
+  updateTipologia: (id: string, tid: string, dados: Record<string, string | number | null>) =>
+    patch<TipologiasDTO>(`/api/projects/${id}/candidatura/tipologias/${tid}`, { dados }),
+  deleteTipologia: (id: string, tid: string) =>
+    request<TipologiasDTO>(`/api/projects/${id}/candidatura/tipologias/${tid}`, { method: "DELETE" }),
 
   // formulário público do cliente (sem login)
   publicCollection: (token: string) =>
