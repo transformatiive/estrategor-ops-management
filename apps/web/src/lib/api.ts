@@ -52,6 +52,7 @@ import type {
   ClientListItemDTO,
   ClientDetailDTO,
   AssignableUserDTO,
+  SearchResultsDTO,
   UserDTO,
 } from "@estrategor/shared";
 
@@ -140,6 +141,9 @@ export const api = {
 
   // utilizadores atribuíveis como responsável (qualquer sessão)
   assignableUsers: () => get<AssignableUserDTO[]>("/api/team/assignable"),
+
+  // pesquisa global (topbar)
+  search: (q: string) => get<SearchResultsDTO>(`/api/search?q=${encodeURIComponent(q)}`),
 
   // prazos do projeto (CRUD)
   deadlines: (id: string) => get<DeadlineDTO[]>(`/api/projects/${id}/deadlines`),

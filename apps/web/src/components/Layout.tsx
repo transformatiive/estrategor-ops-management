@@ -2,6 +2,7 @@ import { useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { ROLE_LABELS } from "@estrategor/shared";
 import { useAuth } from "../lib/auth.js";
+import { GlobalSearch } from "./GlobalSearch.js";
 
 interface NavItem {
   to: string;
@@ -75,7 +76,7 @@ export function Layout() {
           />
           <span>/ Operacional</span>
         </div>
-        <div className="topbar-search">Pesquisar projecto, cliente, referência…</div>
+        <div className="topbar-search"><GlobalSearch /></div>
         <div className="topbar-right">
           {user && (
             <div className="topbar-avatar" title={user.fullName}>
