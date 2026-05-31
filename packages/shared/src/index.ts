@@ -11,3 +11,4 @@ export * from "./extracao.js";
 export * from "./geracao.js";
 export * from "./financeiro.js";
 export * from "./investimentos.js";
+export * from "./verificacao.js";

@@ -14,6 +14,7 @@ import type {
   InvestimentosDTO,
   NovaInvestimentoLinha,
   ResumoExecutivoDTO,
+  VerificacaoDTO,
   ProjectExtracoesDTO,
   ValidateExtracaoRequest,
   ProjectCollectionDTO,
@@ -185,6 +186,10 @@ export const api = {
   deleteInvestimento: (id: string, linhaId: string) =>
     request<InvestimentosDTO>(`/api/projects/${id}/candidatura/investimentos/${linhaId}`, { method: "DELETE" }),
   resumoExecutivo: (id: string) => get<ResumoExecutivoDTO>(`/api/projects/${id}/candidatura/resumo`),
+
+  // verificador + mérito (TRNSF-946)
+  verificacao: (id: string) => get<VerificacaoDTO>(`/api/projects/${id}/candidatura/verificacao`),
+  verificar: (id: string) => post<VerificacaoDTO>(`/api/projects/${id}/candidatura/verificacao`),
 
   // formulário público do cliente (sem login)
   publicCollection: (token: string) =>
