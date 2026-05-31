@@ -1310,13 +1310,72 @@ body {
 /* Listagem de projetos: filtros + lista/kanban (TRNSF-965) */
 .filtros {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 8px;
-  align-items: center;
   margin-bottom: 14px;
 }
-.filtros .login-input { flex: 0 1 auto; min-width: 140px; }
-.vista-toggle { display: inline-flex; gap: 4px; margin-left: auto; }
+.filtros-top { display: flex; gap: 8px; align-items: center; }
+.filtros-search { flex: 1 1 auto; }
+.filtros-chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.vista-toggle { display: inline-flex; gap: 4px; }
+.filtros-clear {
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 6px 8px;
+  text-decoration: underline;
+}
+
+/* Dropdown próprio (filtros) */
+.dropdown { position: relative; display: inline-block; }
+.dropdown-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 6px 12px;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text, #1e293b);
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.dropdown-btn:hover { border-color: var(--accent, #2563eb); }
+.dropdown-btn.filled { border-color: var(--accent, #2563eb); color: var(--accent, #2563eb); font-weight: 600; }
+.dropdown-caret { font-size: 10px; color: var(--muted); }
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 40;
+  min-width: 100%;
+  max-height: 320px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 10px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.12);
+  padding: 4px;
+}
+.dropdown-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: none;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+  color: var(--text, #1e293b);
+}
+.dropdown-item:hover { background: var(--surface-2, #f1f5f9); }
+.dropdown-item.sel { background: var(--accent, #2563eb); color: #fff; }
 .kanban-col-head {
   display: flex;
   align-items: center;

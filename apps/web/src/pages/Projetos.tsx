@@ -13,6 +13,7 @@ import { api } from "../lib/api.js";
 import { useAsync } from "../lib/useAsync.js";
 import { Avatars, EmptyState, ErrorState, Progress, ProgramBadge, TableSkeleton } from "../components/ui.js";
 import { NewProjectModal } from "../components/NewProjectModal.js";
+import { Dropdown } from "../components/Dropdown.js";
 import { useAuth } from "../lib/auth.js";
 
 type Vista = "lista" | "kanban";
@@ -68,31 +69,35 @@ export function Projetos() {
         <button className="btn btn-primary" onClick={() => setCreating(true)}>+ Novo projecto</button>
       </div>
 
-      {/* Barra de filtros */}
+      {/* Barra de filtros — pesquisa em cima, dropdowns próprios compactos */}
       <div className="filtros">
-        <input className="login-input" style={{ flex: "2 1 200px" }} placeholder="Pesquisar projeto, cliente ou referência…" value={q} onChange={(e) => setQ(e.target.value)} />
-        <select className="login-input" value={programa} onChange={(e) => setPrograma(e.target.value)}>
-          <option value="">Programa: todos</option>
-          {programas.map((pg) => <option key={pg} value={pg}>{pg}</option>)}
-        </select>
-        <select className="login-input" value={fase} onChange={(e) => setFase(e.target.value)}>
-          <option value="">Fase: todas</option>
-          {PIPELINE_FASES.map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
-        </select>
-        {isManager && (
-          <select className="login-input" value={responsavel} onChange={(e) => setResponsavel(e.target.value)}>
-            <option value="">Responsável: todos</option>
-            {responsaveis.map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
-          </select>
-        )}
-        <select className="login-input" value={familia} onChange={(e) => setFamilia(e.target.value)}>
-          <option value="">Família: todas</option>
-          <option value="inovacao_produtiva">Inovação Produtiva</option>
-          <option value="internacionalizacao">Internacionalização</option>
-        </select>
-        <div className="vista-toggle">
-          <button className={"tab" + (vista === "lista" ? " active" : "")} onClick={() => setVistaP("lista")}>Lista</button>
-          <button className={"tab" + (vista === "kanban" ? " active" : "")} onClick={() => setVistaP("kanban")}>Kanban</button>
+        <div className="filtros-top">
+          <input className="login-input filtros-search" placeholder="Pesquisar projeto, cliente ou referência…" value={q} onChange={(e) => setQ(e.target.value)} />
+          <div className="vista-toggle">
+            <button className={"tab" + (vista === "lista" ? " active" : "")} onClick={() => setVistaP("lista")}>Lista</button>
+            <button className={"tab" + (vista === "kanban" ? " active" : "")} onClick={() => setVistaP("kanban")}>Kanban</button>
+          </div>
+        </div>
+        <div className="filtros-chips">
+          <Dropdown value={programa} onChange={setPrograma} allLabel="Programa: todos" options={programas.map((pg) => ({ value: pg, label: pg }))} />
+          <Dropdown value={fase} onChange={setFase} allLabel="Fase: todas" options={PIPELINE_FASES.map((f) => ({ value: f.key, label: f.label }))} />
+          {isManager && (
+            <Dropdown value={responsavel} onChange={setResponsavel} allLabel="Responsável: todos" options={responsaveis.map((r) => ({ value: r.id, label: r.nome }))} />
+          )}
+          <Dropdown
+            value={familia}
+            onChange={setFamilia}
+            allLabel="Família: todas"
+            options={[
+              { value: "inovacao_produtiva", label: "Inovação Produtiva" },
+              { value: "internacionalizacao", label: "Internacionalização" },
+            ]}
+          />
+          {(programa || fase || responsavel || familia) && (
+            <button className="filtros-clear" onClick={() => { setPrograma(""); setFase(""); setResponsavel(""); setFamilia(""); }}>
+              Limpar filtros
+            </button>
+          )}
         </div>
       </div>
 
