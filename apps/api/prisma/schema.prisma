@@ -80,6 +80,9 @@ enum FieldOrigin {
   intake // fornecido pelo cliente no formulário de recolha
   gerado // produzido pelo motor de geração IA
   calculado // resultado de cálculo determinístico
+  oficial_vies // dado oficial do VIES (Comissão Europeia) — nasce validado
+  api_empresas // dado de API comercial de empresas (nif.pt) — por validar
+  pre_diagnostico_ia // contexto/leitura por IA (Sonar+Sonnet) — por validar
 }
 
 enum FieldState {
@@ -201,6 +204,7 @@ model Project {
   diagnostics      Diagnostic[]
   activities       ActivityLog[]
   candidatura      Candidatura?
+  preDiagnostico   PreDiagnostico?
 
   @@index([clientId])
   @@index([programId])
@@ -443,6 +447,36 @@ model Diagnostic {
 
   @@index([projectId])
   @@map("diagnostics")
+}
+
+// ─── Pré-diagnóstico assistido por IA (TRNSF-967) ─────────────────────────
+// Rascunho de diagnóstico produzido em segundo plano na criação do cliente,
+// juntando fontes por fiabilidade (VIES oficial, API empresas comercial, IA
+// contextual). NADA tem efeito sem validação humana. 1:1 com o projeto.
+model PreDiagnostico {
+  id        String   @id @default(cuid())
+  projectId String   @unique @map("project_id")
+  // pendente | concluido | falhou
+  estado    String   @default("pendente")
+  // estado por faixa: pendente | ok | falhou | sem_chave
+  estadoVies        String @default("pendente") @map("estado_vies")
+  estadoApiEmpresas String @default("pendente") @map("estado_api_empresas")
+  estadoSonar       String @default("pendente") @map("estado_sonar")
+  estadoSonnet      String @default("pendente") @map("estado_sonnet")
+  // [{ key, label, value, origem, estado, fonte }] — campos com proveniência
+  campos            Json?
+  // [{ item, nota }] — checklist "a confirmar oficialmente" (a IA não garante)
+  checklistAConfirmar Json? @map("checklist_a_confirmar")
+  // auditoria: respostas em bruto e fontes
+  fontesSonar       Json?  @map("fontes_sonar")
+  brutoVies         Json?  @map("bruto_vies")
+  brutoApiEmpresas  Json?  @map("bruto_api_empresas")
+  executadoEm       DateTime? @map("executado_em")
+  createdAt         DateTime  @default(now()) @map("created_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("pre_diagnosticos")
 }
 
 model Aviso {

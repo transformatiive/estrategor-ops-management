@@ -35,7 +35,15 @@ export const CAND_STAGE_LABELS: Record<CandStage, string> = {
   A4: "Pronto para submissão",
 };
 
-export const FIELD_ORIGINS = ["extraido", "intake", "gerado", "calculado"] as const;
+export const FIELD_ORIGINS = [
+  "extraido",
+  "intake",
+  "gerado",
+  "calculado",
+  "oficial_vies",
+  "api_empresas",
+  "pre_diagnostico_ia",
+] as const;
 export type FieldOrigin = (typeof FIELD_ORIGINS)[number];
 
 export const FIELD_STATES = ["por_validar", "validado", "corrigido"] as const;
@@ -47,6 +55,9 @@ export const FIELD_ORIGIN_LABELS: Record<FieldOrigin, string> = {
   intake: "Fornecido pelo cliente",
   gerado: "Gerado por IA",
   calculado: "Calculado",
+  oficial_vies: "Oficial (VIES)",
+  api_empresas: "API de empresas",
+  pre_diagnostico_ia: "Pré-diagnóstico (IA)",
 };
 
 export const FIELD_STATE_LABELS: Record<FieldState, string> = {
@@ -63,12 +74,18 @@ export const FIELD_STATE_BADGE: Record<FieldState, { icon: string; cls: string }
 };
 
 /**
- * Regra transversal (TRNSF-942): nenhum campo `extraido` ou `gerado` é final
- * sem passar a `validado` ou `corrigido`. `intake` e `calculado` não exigem
- * validação humana obrigatória (mas podem ser corrigidos).
+ * Regra transversal (TRNSF-942/967): campos `extraido`, `gerado`, `api_empresas`
+ * e `pre_diagnostico_ia` não são finais sem passar a `validado`/`corrigido`.
+ * `intake`, `calculado` e `oficial_vies` (fonte estatal) não exigem validação
+ * humana obrigatória (mas podem ser corrigidos).
  */
 export function requiresHumanValidation(origin: FieldOrigin): boolean {
-  return origin === "extraido" || origin === "gerado";
+  return (
+    origin === "extraido" ||
+    origin === "gerado" ||
+    origin === "api_empresas" ||
+    origin === "pre_diagnostico_ia"
+  );
 }
 
 export function isFieldFinal(origin: FieldOrigin, state: FieldState): boolean {

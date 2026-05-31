@@ -106,6 +106,10 @@ Deploy automático ao fazer merge em `main`; cada PR corre o
 - [x] **TRNSF‑938 · E — Classificação/Divisão/Arquivo (IA):** fila de validação no separador *Documentos*; IA (OpenRouter/Claude, com stub sem chave) propõe tipo+confiança, divide PDFs multi-documento, e só arquiva na pasta correcta após confirmação humana.
 - [x] **TRNSF‑939 · F — Rastreio e Seguimento:** separador *Checklist & Seguimento* (verde/vermelho por tipo), motor de lembretes por email (rondas T+1/T+3/T+5, §9) via endpoint de cron protegido, vista *Prazos* e bloco 🔴 *Prazos urgentes* (deadlines + recolhas em atraso).
 
+### Pré-diagnóstico assistido por IA
+
+- [x] **TRNSF‑967 · Pré‑diagnóstico na criação do cliente:** ao criar um projeto com cliente **com NIF**, corre em **segundo plano** (sem bloquear) um rascunho de diagnóstico, por **fiabilidade da fonte**: **VIES** (oficial, sem chave → nome/morada `oficial_vies`/validado), **API de empresas** (nif.pt → CAE normalizado pelo catálogo/953, natureza, capital, localização, `api_empresas`/por_validar) e **IA contextual** (Perplexity Sonar + Claude Sonnet 4.6 → leitura estruturada `pre_diagnostico_ia`/por_validar + checklist "a confirmar oficialmente"). **Linhas vermelhas:** a IA nunca decide elegibilidade; escalão PME, situação fiscal/SS e rácios só aparecem na checklist (nunca como facto); sem validação humana **nada tem efeito**. Tolerante a falhas por faixa (degradação graciosa sem chaves). Aterra no separador *Diagnóstico*, validável campo a campo, com origem/estado/fonte visíveis.
+
 ### Fase A — Candidatura (A2)
 
 - [x] **TRNSF‑942 · Núcleo da Candidatura:** discriminador de família (`Projeto.family`), modelo de dados comum com **proveniência por campo** (origem `extraido|intake|gerado|calculado` + estado `por_validar|validado|corrigido`), separador *Candidatura* com preview pré-preenchido, transições A2↔A3. Regra transversal: nada `extraido`/`gerado` é final sem validação humana. (As secções de família, motores e exportação são tickets próprios.)

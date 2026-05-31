@@ -12,6 +12,7 @@ import { documentTypesForProgram, canManageUsers } from "@estrategor/shared";
 import { prisma } from "../db.js";
 import { requireAuth } from "../auth/guards.js";
 import { provisionProjectFolders } from "../workdrive/provision.js";
+import { runPreDiagnostico } from "../prediagnostico/engine.js";
 
 const createProjectSchema = z.object({
   title: z.string().min(1),
@@ -103,6 +104,12 @@ export async function projectRoutes(app: FastifyInstance) {
     } catch (e) {
       foldersError = e instanceof Error ? e.message : String(e);
       app.log.error({ err: e }, "Falha ao provisionar pastas");
+    }
+
+    // TRNSF-967 — pré-diagnóstico em segundo plano se o cliente tiver NIF.
+    // Não bloqueia a criação; tolerante a falhas.
+    if (clientNif?.trim()) {
+      runPreDiagnostico(project.id).catch((e) => app.log.error({ err: e }, "pré-diagnóstico falhou"));
     }
 
     return reply.code(201).send({ id: project.id, code: project.code, foldersError });
