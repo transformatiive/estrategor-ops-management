@@ -47,6 +47,8 @@ import type {
   SaveDiagnosticRequest,
   UpdateUserRequest,
   UrgentDeadlineDTO,
+  DeadlineDTO,
+  NovoDeadline,
   UserDTO,
 } from "@estrategor/shared";
 
@@ -128,6 +130,13 @@ export const api = {
   // rastreio e seguimento (TRNSF-939)
   tracking: (id: string) => get<ProjectTrackingDTO>(`/api/projects/${id}/tracking`),
   urgentDeadlines: () => get<UrgentDeadlineDTO[]>("/api/deadlines/urgent"),
+
+  // prazos do projeto (CRUD)
+  deadlines: (id: string) => get<DeadlineDTO[]>(`/api/projects/${id}/deadlines`),
+  addDeadline: (id: string, body: NovoDeadline) => post<DeadlineDTO>(`/api/projects/${id}/deadlines`, body),
+  updateDeadline: (did: string, body: Partial<NovoDeadline> & { status?: "pendente" | "completado" }) =>
+    patch<DeadlineDTO>(`/api/deadlines/${did}`, body),
+  deleteDeadline: (did: string) => request<{ ok: boolean }>(`/api/deadlines/${did}`, { method: "DELETE" }),
 
   // documentos / classificação IA (TRNSF-938)
   documents: (id: string) => get<ProjectDocumentsDTO>(`/api/projects/${id}/documents`),
