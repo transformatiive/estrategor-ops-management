@@ -13,6 +13,7 @@ import {
 import { api, ApiError } from "../lib/api.js";
 import { useAsync } from "../lib/useAsync.js";
 import { ErrorState } from "./ui.js";
+import { GeracaoPanel } from "./GeracaoPanel.js";
 
 type CandResponse = CandidaturaDTO | { candidatura: null; familyChosen: CandFamily | null };
 
@@ -117,6 +118,9 @@ export function CandidaturaTab({ projectId }: { projectId: string }) {
         </div>
         {msg && <div className="login-error" style={{ marginTop: 10 }}>{msg}</div>}
       </div>
+
+      {/* Geração IA dos campos de texto (TRNSF-943) */}
+      <GeracaoPanel projectId={projectId} onChanged={reload} />
 
       {/* Secções */}
       {cand.sections.map((sec) => (

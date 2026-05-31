@@ -123,6 +123,7 @@ model User {
   sessions         Session[]
   validatedDocuments Document[]        @relation("ValidatedDocuments")
   validatedExtracoes Extracao[]        @relation("ValidatedExtracoes")
+  validatedGeneratedFields GeneratedField[] @relation("ValidatedGeneratedFields")
 
   @@map("users")
 }
@@ -513,9 +514,10 @@ model Candidatura {
   createdAt       DateTime   @default(now()) @map("created_at")
   updatedAt       DateTime   @updatedAt @map("updated_at")
 
-  project    Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  fields     CandField[]
-  extracoes  Extracao[]
+  project         Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  fields          CandField[]
+  extracoes       Extracao[]
+  generatedFields GeneratedField[]
 
   @@map("candidaturas")
 }
@@ -576,6 +578,36 @@ model Extracao {
 
   @@index([candidaturaId])
   @@map("extracoes")
+}
+
+// ─── Geração IA de texto (TRNSF-943) ─────────────────────────────────────
+// Minutas de texto livre geradas por IA para o consultor refinar. Cada geração
+// preenche um CandField (origem='gerado'). Versionado: cada geração/edição é
+// uma linha nova (versao crescente). doc_type é validado contra o catálogo em
+// @estrategor/shared (dados, não enum de BD) para se acrescentarem campos sem
+// migração.
+model GeneratedField {
+  id            String     @id @default(cuid())
+  candidaturaId String     @map("candidatura_id")
+  docType       String     @map("doc_type")
+  family        CandFamily
+  versao        Int        @default(1)
+  estado        FieldState @default(por_validar)
+  conteudo      String
+  // {documento_ids, intake_keys, grelha_id, ...} — proveniência da geração
+  dataSources   Json?      @map("data_sources")
+  charLimit     Int        @map("char_limit")
+  charCount     Int        @map("char_count")
+  geradoEm      DateTime   @default(now()) @map("gerado_em")
+  validatedById String?    @map("validated_by_id")
+  validatedAt   DateTime?  @map("validated_at")
+
+  candidatura Candidatura @relation(fields: [candidaturaId], references: [id], onDelete: Cascade)
+  validatedBy User?       @relation("ValidatedGeneratedFields", fields: [validatedById], references: [id])
+
+  @@index([candidaturaId])
+  @@index([candidaturaId, docType])
+  @@map("generated_documents")
 }
 
 // ─── Catálogos / Rulebook (TRNSF-953) ────────────────────────────────────

@@ -33,6 +33,8 @@ const schema = z.object({
   // Classificação por IA (TRNSF-938). Sem chave → classificador stub determinístico.
   OPENROUTER_API_KEY: z.string().optional(),
   OPENROUTER_MODEL: z.string().default("anthropic/claude-sonnet-4.6"),
+  // Rota de modelo para campos longos/argumentativos (TRNSF-943). Configurável.
+  OPENROUTER_MODEL_OPUS: z.string().default("anthropic/claude-opus-4.1"),
   OPENROUTER_BASE: z.string().default("https://openrouter.ai/api/v1"),
   // Email de seguimento (TRNSF-939). Sem SMTP_* → adaptador stub (regista, não envia).
   SMTP_HOST: z.string().optional(),
