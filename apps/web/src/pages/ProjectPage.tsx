@@ -7,14 +7,16 @@ import { DocumentsTab } from "../components/DocumentsTab.js";
 import { RecolhaTab } from "../components/RecolhaTab.js";
 import { DiagnosticoTab } from "../components/DiagnosticoTab.js";
 import { SeguimentoTab } from "../components/SeguimentoTab.js";
+import { CandidaturaTab } from "../components/CandidaturaTab.js";
 
-// Separadores da página de projecto. Os blocos restantes preenchem-nos nos tickets seguintes.
+// Separadores da página de projecto.
 const TABS = [
   { key: "resumo", label: "Resumo" },
   { key: "milestones", label: "Milestones" },
   { key: "diagnostico", label: "Diagnóstico" },
+  { key: "candidatura", label: "Candidatura" },
   { key: "recolha", label: "Recolha" },
-  { key: "documentos", label: "Documentos", ticket: "TRNSF-938 (E)" },
+  { key: "documentos", label: "Documentos" },
   { key: "seguimento", label: "Checklist & Seguimento" },
 ] as const;
 
@@ -109,26 +111,11 @@ export function ProjectPage() {
         </div>
       )}
 
+      {tab === "candidatura" && <CandidaturaTab projectId={id} />}
       {tab === "documentos" && <DocumentsTab projectId={id} />}
       {tab === "recolha" && <RecolhaTab projectId={id} />}
       {tab === "diagnostico" && <DiagnosticoTab projectId={id} onAdvanced={reload} />}
-
-      {/* Separadores do bloco F: ainda por implementar */}
-      {TABS.filter(
-        (t) => !["resumo", "milestones", "documentos", "recolha", "diagnostico"].includes(t.key),
-      ).map(
-        (t) =>
-          tab === t.key && (
-            <div className="empty" key={t.key}>
-              <p>
-                <b>{t.label}</b> — por implementar.
-              </p>
-              <p style={{ fontSize: 12, marginTop: 4 }}>
-                {"ticket" in t ? t.ticket : ""}
-              </p>
-            </div>
-          ),
-      )}
+      {tab === "seguimento" && <SeguimentoTab projectId={id} />}
     </>
   );
 }

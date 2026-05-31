@@ -59,6 +59,35 @@ enum CollectionLinkStatus {
   EXPIRADO
 }
 
+// Família do sistema de incentivos (TRNSF-942). 'qualificacao' previsto mas
+// fora de âmbito v0.
+enum CandFamily {
+  inovacao_produtiva
+  internacionalizacao
+  qualificacao
+}
+
+// Estado da candidatura na máquina de estados A2/A3/A4.
+enum CandStage {
+  A2
+  A3
+  A4
+}
+
+// Proveniência de cada campo da candidatura (conceito central — TRNSF-942).
+enum FieldOrigin {
+  extraido // lido de documento do cliente (motor de extração)
+  intake // fornecido pelo cliente no formulário de recolha
+  gerado // produzido pelo motor de geração IA
+  calculado // resultado de cálculo determinístico
+}
+
+enum FieldState {
+  por_validar
+  validado
+  corrigido
+}
+
 enum DocumentOrigin {
   CLIENTE
   MANUAL
@@ -138,6 +167,7 @@ model Project {
   clientId        String       @map("client_id")
   programId       String       @map("program_id")
   state           ProjectState @default(A0)
+  family          CandFamily?  // discriminador da família da candidatura (TRNSF-942)
   investmentTotal Decimal?     @map("investment_total") @db.Decimal(14, 2)
   incentiveValue  Decimal?     @map("incentive_value") @db.Decimal(14, 2)
   nextAction      String?      @map("next_action")
@@ -161,6 +191,7 @@ model Project {
   tasks            Task[]
   diagnostics      Diagnostic[]
   activities       ActivityLog[]
+  candidatura      Candidatura?
 
   @@index([clientId])
   @@index([programId])
@@ -458,4 +489,51 @@ model ActivityLog {
 
   @@index([projectId])
   @@map("activity_log")
+}
+
+// ─── Candidatura (TRNSF-942 · núcleo) ────────────────────────────────────
+// Cabeçalho da candidatura PT2030. Uma por projecto. Ramifica pela família.
+model Candidatura {
+  id              String     @id @default(cuid())
+  projectId       String     @unique @map("project_id")
+  family          CandFamily
+  codigoAviso     String?    @map("codigo_aviso")
+  medida          String?
+  codigoProjetoSgo String?   @map("codigo_projeto_sgo")
+  stage           CandStage  @default(A2)
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+
+  project Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  fields  CandField[]
+
+  @@map("candidaturas")
+}
+
+// Armazém genérico de campos da candidatura com proveniência por campo.
+// Cada campo é identificado por (candidatura, secção, chave) e regista o seu
+// valor + origem + estado de validação. As secções comuns (cand_*) e as
+// específicas de família são definidas no catálogo em @estrategor/shared; as
+// tabelas tipadas específicas entram nos tickets de cada secção.
+model CandField {
+  id            String      @id @default(cuid())
+  candidaturaId String      @map("candidatura_id")
+  section       String // ex.: "beneficiario", "declaracoes" (chave da secção comum)
+  key           String // ex.: "nif", "nome", "cae_principal"
+  // valor guardado como JSON para suportar texto, número, datas e linhas de tabela
+  value         Json?
+  origin        FieldOrigin
+  state         FieldState  @default(por_validar)
+  // proveniência auxiliar: documento de origem (extração), nota de geração, etc.
+  sourceRef     String?     @map("source_ref")
+  updatedById   String?     @map("updated_by_id")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+  createdAt     DateTime    @default(now()) @map("created_at")
+
+  candidatura Candidatura @relation(fields: [candidaturaId], references: [id], onDelete: Cascade)
+
+  @@unique([candidaturaId, section, key])
+  @@index([candidaturaId])
+  @@index([candidaturaId, section])
+  @@map("cand_fields")
 }

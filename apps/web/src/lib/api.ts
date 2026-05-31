@@ -1,4 +1,6 @@
 import type {
+  CandidaturaDTO,
+  CandFamily,
   ChecklistItemDTO,
   CollectionRequestDTO,
   CreateCollectionRequest,
@@ -131,6 +133,20 @@ export const api = {
     put<DiagnosticDTO>(`/api/projects/${id}/diagnostic`, data),
   advanceDiagnostic: (id: string) =>
     post<{ ok: boolean; state: string }>(`/api/projects/${id}/diagnostic/advance`),
+
+  // candidatura (TRNSF-942)
+  candidatura: (id: string) =>
+    get<CandidaturaDTO | { candidatura: null; familyChosen: CandFamily | null }>(
+      `/api/projects/${id}/candidatura`,
+    ),
+  startCandidatura: (id: string, family: CandFamily, codigoAviso?: string, medida?: string) =>
+    post<CandidaturaDTO>(`/api/projects/${id}/candidatura`, { family, codigoAviso, medida }),
+  updateCandField: (
+    id: string,
+    body: { section: string; key: string; value?: unknown; action: "validar" | "corrigir" },
+  ) => patch<CandidaturaDTO>(`/api/projects/${id}/candidatura/field`, body),
+  candidaturaStage: (id: string, to: "A3" | "A2") =>
+    post<{ ok: boolean; stage: string }>(`/api/projects/${id}/candidatura/stage`, { to }),
 
   // formulário público do cliente (sem login)
   publicCollection: (token: string) =>

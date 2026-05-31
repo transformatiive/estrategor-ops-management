@@ -1233,6 +1233,80 @@ body {
   gap: 6px;
 }
 
+.cand-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+.cand-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.cand-section {
+  margin-bottom: 12px;
+}
+.cand-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.cand-section-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+.cand-empty {
+  font-size: 12px;
+  color: var(--muted);
+  font-style: italic;
+}
+.cand-field {
+  border-top: 1px solid var(--border);
+  padding: 8px 0;
+}
+.cand-field:first-of-type {
+  border-top: none;
+}
+.cand-field-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.cand-field-key {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.cand-field-prov {
+  font-size: 11.5px;
+  color: var(--hint);
+}
+.cand-field-value {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+  margin-top: 4px;
+}
+.cand-field-buttons {
+  display: flex;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.cand-field-edit {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+.cand-field-edit .login-input {
+  flex: 1;
+}
+
 /* ============================================================================
    RESPONSIVO — ver nota no topo do ficheiro. Toda a funcionalidade nova deve
    manter-se utilizável nestes breakpoints.

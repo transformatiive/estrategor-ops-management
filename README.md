@@ -105,3 +105,7 @@ Deploy automático ao fazer merge em `main`; cada PR corre o
 - [x] **TRNSF‑940/941 · G — A0 Diagnóstico:** separador *Diagnóstico* (condições de acesso como dados por aviso + motor de mérito `GrelhaMerito` configurável), grelha real SICE Qualificação MPr‑2025‑2 semeada, matriz regional A.1, transição A0→Candidatura só com diagnóstico concluído.
 - [x] **TRNSF‑938 · E — Classificação/Divisão/Arquivo (IA):** fila de validação no separador *Documentos*; IA (OpenRouter/Claude, com stub sem chave) propõe tipo+confiança, divide PDFs multi-documento, e só arquiva na pasta correcta após confirmação humana.
 - [x] **TRNSF‑939 · F — Rastreio e Seguimento:** separador *Checklist & Seguimento* (verde/vermelho por tipo), motor de lembretes por email (rondas T+1/T+3/T+5, §9) via endpoint de cron protegido, vista *Prazos* e bloco 🔴 *Prazos urgentes* (deadlines + recolhas em atraso).
+
+### Fase A — Candidatura (A2)
+
+- [x] **TRNSF‑942 · Núcleo da Candidatura:** discriminador de família (`Projeto.family`), modelo de dados comum com **proveniência por campo** (origem `extraido|intake|gerado|calculado` + estado `por_validar|validado|corrigido`), separador *Candidatura* com preview pré-preenchido, transições A2↔A3. Regra transversal: nada `extraido`/`gerado` é final sem validação humana. (As secções de família, motores e exportação são tickets próprios.)
