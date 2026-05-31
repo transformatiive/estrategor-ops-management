@@ -9,3 +9,4 @@ export * from "./candidatura.js";
 export * from "./catalogos.js";
 export * from "./extracao.js";
 export * from "./geracao.js";
+export * from "./financeiro.js";

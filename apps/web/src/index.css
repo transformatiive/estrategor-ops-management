@@ -1307,6 +1307,48 @@ body {
   flex: 1;
 }
 
+/* Componente financeira (TRNSF-944) — tabelas rubrica × ano */
+.fin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+  min-width: 480px;
+}
+.fin-table th,
+.fin-table td {
+  border: 1px solid var(--border, #e2e8f0);
+  padding: 4px 8px;
+  white-space: nowrap;
+}
+.fin-table th {
+  background: var(--surface-2, #f1f5f9);
+  text-align: right;
+  font-weight: 600;
+}
+.fin-table th:first-child,
+.fin-table td:first-child {
+  text-align: left;
+}
+.fin-table tr.fin-computed {
+  background: var(--surface-2, #f8fafc);
+  font-weight: 600;
+}
+.fin-cell {
+  width: 96px;
+  text-align: right;
+  border: 1px solid transparent;
+  background: transparent;
+  font: inherit;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+.fin-cell:hover,
+.fin-cell:focus {
+  border-color: var(--accent, #2563eb);
+  background: #fff;
+  outline: none;
+}
+
 /* ============================================================================
    RESPONSIVO — ver nota no topo do ficheiro. Toda a funcionalidade nova deve
    manter-se utilizável nestes breakpoints.
