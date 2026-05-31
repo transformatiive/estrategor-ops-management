@@ -20,6 +20,9 @@ import type {
   AtividadesIndicadoresDTO,
   InovacaoExtraDTO,
   Industria40Ambito,
+  InovacaoCondDTO,
+  DescricaoFisicaDados,
+  NovaSubstituicaoLinha,
   ProjectExtracoesDTO,
   ValidateExtracaoRequest,
   ProjectCollectionDTO,
@@ -224,6 +227,15 @@ export const api = {
   inovacaoExtra: (id: string) => get<InovacaoExtraDTO>(`/api/projects/${id}/candidatura/inovacao-extra`),
   updateInovacaoExtra: (id: string, body: { industria40Ambitos?: Partial<Record<Industria40Ambito, boolean>>; transicaoAmbitos?: string[] }) =>
     patch<InovacaoExtraDTO>(`/api/projects/${id}/candidatura/inovacao-extra`, body),
+
+  // Família A — substituição de importações + descrição física (TRNSF-958)
+  inovacaoCond: (id: string) => get<InovacaoCondDTO>(`/api/projects/${id}/candidatura/inovacao-cond`),
+  addSubstituicao: (id: string, linha: NovaSubstituicaoLinha) =>
+    post<InovacaoCondDTO>(`/api/projects/${id}/candidatura/substituicao`, linha),
+  deleteSubstituicao: (id: string, sid: string) =>
+    request<InovacaoCondDTO>(`/api/projects/${id}/candidatura/substituicao/${sid}`, { method: "DELETE" }),
+  updateDescricaoFisica: (id: string, dados: DescricaoFisicaDados) =>
+    patch<InovacaoCondDTO>(`/api/projects/${id}/candidatura/descricao-fisica`, dados),
 
   // formulário público do cliente (sem login)
   publicCollection: (token: string) =>
