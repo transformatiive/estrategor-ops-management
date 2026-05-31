@@ -2,7 +2,14 @@ import { z } from "zod";
 
 /** Validação das variáveis de ambiente no arranque (falha cedo se faltar algo). */
 const schema = z.object({
-  NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+  // Plataformas como o Railway podem injetar NODE_ENV="" (string vazia): nesse
+  // caso assumimos "production" (é um deploy); ausente/undefined → "development"
+  // (dev local). Sem este preprocess, o Zod rejeitava "" e o servidor crashava
+  // no arranque.
+  NODE_ENV: z.preprocess(
+    (v) => (typeof v === "string" && v.trim() === "" ? "production" : v),
+    z.enum(["development", "test", "production"]).default("development"),
+  ),
   PORT: z.coerce.number().default(3001),
   DATABASE_URL: z.string().min(1, "DATABASE_URL é obrigatório"),
   SESSION_SECRET: z.string().min(1).default("dev-only-change-me"),
