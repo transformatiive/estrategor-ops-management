@@ -3,6 +3,7 @@ import type { AtividadesIndicadoresDTO } from "@estrategor/shared";
 import { api, ApiError } from "../lib/api.js";
 import { useAsync } from "../lib/useAsync.js";
 import { ErrorState } from "./ui.js";
+import { Dropdown } from "./Dropdown.js";
 
 /** Inovação — Atividades de inovação + Indicadores (TRNSF-956). Só família A. */
 export function AtividadesPanel({ projectId, onChanged }: { projectId: string; onChanged: () => void }) {
@@ -68,10 +69,7 @@ export function AtividadesPanel({ projectId, onChanged }: { projectId: string; o
             </table>
           </div>
           <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
-            <select className="login-input" style={{ flex: "1 1 240px" }} value={novoInd} onChange={(e) => setNovoInd(e.target.value)}>
-              <option value="">Adicionar indicador do catálogo…</option>
-              {data.catalogo.map((c) => <option key={c.codigo} value={c.codigo}>{c.codigo} — {c.designacao}</option>)}
-            </select>
+            <Dropdown block style={{ flex: "1 1 240px" }} value={novoInd} onChange={setNovoInd} placeholder="Adicionar indicador do catálogo…" options={data.catalogo.map((c) => ({ value: c.codigo, label: `${c.codigo} — ${c.designacao}` }))} />
             <button className="btn btn-primary" disabled={busy || !novoInd} onClick={() => run(async () => { await api.addIndicador(projectId, novoInd); setNovoInd(""); })}>Adicionar</button>
             <button className="btn btn-secondary" disabled={busy} onClick={() => run(() => api.sugerirIndicadores(projectId))}>Sugerir da financeira</button>
           </div>

@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { ROLES, ROLE_LABELS, type Role, type UserDTO } from "@estrategor/shared";
+import { Dropdown } from "../components/Dropdown.js";
 import { api, ApiError } from "../lib/api.js";
 import { useAsync } from "../lib/useAsync.js";
 import { EmptyState, ErrorState } from "../components/ui.js";
@@ -170,17 +171,12 @@ export function Utilizadores() {
               onChange={(e) => setForm({ ...form, email: e.target.value })}
             />
             <label className="login-label">Papel</label>
-            <select
-              className="login-input"
+            <Dropdown
+              block
               value={form.role}
-              onChange={(e) => setForm({ ...form, role: e.target.value as Role })}
-            >
-              {ROLES.map((r) => (
-                <option key={r} value={r}>
-                  {ROLE_LABELS[r]}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => setForm({ ...form, role: v as Role })}
+              options={ROLES.map((r) => ({ value: r, label: ROLE_LABELS[r] }))}
+            />
             {!form.id && (
               <>
                 <label className="login-label">Palavra-passe inicial</label>

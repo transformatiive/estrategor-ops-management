@@ -7,6 +7,7 @@ import {
 import { api, ApiError } from "../lib/api.js";
 import { useAsync } from "../lib/useAsync.js";
 import { ErrorState } from "./ui.js";
+import { Dropdown } from "./Dropdown.js";
 
 /**
  * Separador Documentos: fila de validação da classificação por IA (TRNSF-938)
@@ -234,14 +235,7 @@ function QueueRow({ doc, onChanged }: { doc: DocumentDTO; onChanged: () => void 
       </div>
 
       <div className="queue-actions">
-        <select className="login-input" value={type} onChange={(e) => setType(e.target.value)}>
-          <option value="">— tipo de documento —</option>
-          {DOCUMENT_TAXONOMY.map((d) => (
-            <option key={d.key} value={d.key}>
-              {d.name}
-            </option>
-          ))}
-        </select>
+        <Dropdown block value={type} onChange={setType} placeholder="— tipo de documento —" options={DOCUMENT_TAXONOMY.map((d) => ({ value: d.key, label: d.name }))} />
         <button className="btn btn-primary" onClick={confirm} disabled={busy}>
           {busy ? "…" : "Confirmar e arquivar"}
         </button>

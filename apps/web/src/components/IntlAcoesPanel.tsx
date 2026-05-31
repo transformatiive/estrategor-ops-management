@@ -3,6 +3,7 @@ import type { AtividadesIndicadoresDTO, IntlAcoesDTO, NovaIntlAcao } from "@estr
 import { api, ApiError } from "../lib/api.js";
 import { useAsync } from "../lib/useAsync.js";
 import { ErrorState } from "./ui.js";
+import { Dropdown } from "./Dropdown.js";
 
 const EMPTY: NovaIntlAcao = { dominio: 1, tipoAcao: "", mercadoPais: "", ano: null };
 
@@ -64,9 +65,7 @@ export function IntlAcoesPanel({ projectId, onChanged }: { projectId: string; on
             </table>
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
-            <select className="login-input" style={{ flex: "1 1 180px" }} value={nova.dominio} onChange={(e) => setNova({ ...nova, dominio: Number(e.target.value) })}>
-              {data.dominios.map((d) => <option key={d.numero} value={d.numero}>{d.numero}. {d.designacao}</option>)}
-            </select>
+            <Dropdown block style={{ flex: "1 1 180px" }} value={String(nova.dominio)} onChange={(v) => setNova({ ...nova, dominio: Number(v) })} options={data.dominios.map((d) => ({ value: String(d.numero), label: `${d.numero}. ${d.designacao}` }))} />
             <input className="login-input" style={{ flex: "1 1 120px" }} placeholder="Tipo de ação" value={nova.tipoAcao} onChange={(e) => setNova({ ...nova, tipoAcao: e.target.value })} />
             <input className="login-input" style={{ flex: "1 1 100px" }} placeholder="Mercado/País" value={nova.mercadoPais ?? ""} onChange={(e) => setNova({ ...nova, mercadoPais: e.target.value })} />
             <input className="login-input" style={{ flex: "0 1 80px" }} type="number" placeholder="Ano" value={nova.ano ?? ""} onChange={(e) => setNova({ ...nova, ano: e.target.value === "" ? null : Number(e.target.value) })} />
@@ -113,10 +112,7 @@ function IntlIndicadores({ projectId, onChanged }: { projectId: string; onChange
         </table>
       </div>
       <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
-        <select className="login-input" style={{ flex: "1 1 240px" }} value={novo} onChange={(e) => setNovo(e.target.value)}>
-          <option value="">Adicionar indicador do catálogo…</option>
-          {data.catalogo.map((c) => <option key={c.codigo} value={c.codigo}>{c.codigo} — {c.designacao}</option>)}
-        </select>
+        <Dropdown block style={{ flex: "1 1 240px" }} value={novo} onChange={setNovo} placeholder="Adicionar indicador do catálogo…" options={data.catalogo.map((c) => ({ value: c.codigo, label: `${c.codigo} — ${c.designacao}` }))} />
         <button className="btn btn-primary" disabled={busy || !novo} onClick={() => run(async () => { await api.addIndicador(projectId, novo); setNovo(""); })}>Adicionar</button>
       </div>
     </div>

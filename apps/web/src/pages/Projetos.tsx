@@ -41,11 +41,9 @@ export function Projetos() {
 
   const all = projects ?? [];
   const programas = useMemo(() => [...new Set(all.map((p) => p.program))].sort(), [all]);
-  const responsaveis = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const p of all) for (const r of p.responsibles) m.set(r.id, r.fullName);
-    return [...m.entries()].map(([id, nome]) => ({ id, nome }));
-  }, [all]);
+  // responsáveis: lista da tabela de utilizadores (não derivada dos projetos)
+  const { data: team } = useAsync(() => api.assignableUsers());
+  const responsaveis = (team ?? []).map((u) => ({ id: u.id, nome: u.fullName }));
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();

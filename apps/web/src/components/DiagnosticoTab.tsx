@@ -9,6 +9,7 @@ import type {
 import { api, ApiError } from "../lib/api.js";
 import { useAsync } from "../lib/useAsync.js";
 import { ErrorState } from "./ui.js";
+import { Dropdown } from "./Dropdown.js";
 
 const RESULT_BADGE: Record<DiagnosticDTO["result"], { cls: string; label: string }> = {
   POR_INICIAR: { cls: "badge-muted", label: "Por iniciar" },
@@ -170,18 +171,13 @@ export function DiagnosticoTab({
                 <label className="merit-sub-label">
                   Região do investimento (resolve a matriz regional A.1)
                 </label>
-                <select
-                  className="login-input"
+                <Dropdown
+                  block
                   value={regiao}
-                  onChange={(e) => setRegiao(e.target.value)}
-                >
-                  <option value="">— escolher região —</option>
-                  {data.availableRegions.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setRegiao}
+                  placeholder="— escolher região —"
+                  options={data.availableRegions.map((r) => ({ value: r, label: r }))}
+                />
               </div>
             )}
 
@@ -215,20 +211,13 @@ export function DiagnosticoTab({
                             (matriz regional — região não definida nesta grelha)
                           </span>
                         ) : (
-                          <select
-                            className="login-input"
-                            value={selection[sub.codigo] ?? ""}
-                            onChange={(e) =>
-                              setSelection((s) => ({ ...s, [sub.codigo]: Number(e.target.value) }))
-                            }
-                          >
-                            <option value="">— escolher —</option>
-                            {opts.map((o, i) => (
-                              <option key={i} value={i}>
-                                {o.label} ({o.pts})
-                              </option>
-                            ))}
-                          </select>
+                          <Dropdown
+                            block
+                            value={selection[sub.codigo] != null ? String(selection[sub.codigo]) : ""}
+                            onChange={(v) => setSelection((s) => ({ ...s, [sub.codigo]: Number(v) }))}
+                            placeholder="— escolher —"
+                            options={opts.map((o, i) => ({ value: String(i), label: `${o.label} (${o.pts})` }))}
+                          />
                         )}
                       </div>
                     );

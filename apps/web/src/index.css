@@ -1351,8 +1351,11 @@ body {
   text-decoration: underline;
 }
 
-/* Dropdown próprio (filtros) */
+/* Dropdown próprio (filtros e formulários) */
 .dropdown { position: relative; display: inline-block; }
+.dropdown.block { display: block; width: 100%; }
+.dropdown.block .dropdown-btn { width: 100%; justify-content: space-between; }
+.dropdown-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dropdown-btn {
   display: inline-flex;
   align-items: center;

@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { PROGRAM_CODES, type AssignableUserDTO, type ProgramCode } from "@estrategor/shared";
 import { api, ApiError } from "../lib/api.js";
 import { useAuth } from "../lib/auth.js";
+import { Dropdown } from "./Dropdown.js";
 
 const PROGRAM_LABELS: Record<ProgramCode, string> = {
   PT2030: "PT2030",
@@ -87,27 +88,21 @@ export function NewProjectModal({
         <input className="login-input" value={clientNif} onChange={(e) => setClientNif(e.target.value)} />
 
         <label className="login-label">Consultor responsável</label>
-        <select className="login-input" value={responsavel} onChange={(e) => setResponsavel(e.target.value)}>
-          {team.length === 0 && <option value="">—</option>}
-          {team.map((u) => (
-            <option key={u.id} value={u.id}>
-              {u.fullName}{u.id === user?.id ? " (eu)" : ""}
-            </option>
-          ))}
-        </select>
+        <Dropdown
+          block
+          value={responsavel}
+          onChange={setResponsavel}
+          placeholder="Escolher responsável…"
+          options={team.map((u) => ({ value: u.id, label: u.fullName + (u.id === user?.id ? " (eu)" : "") }))}
+        />
 
         <label className="login-label">Programa</label>
-        <select
-          className="login-input"
+        <Dropdown
+          block
           value={program}
-          onChange={(e) => setProgram(e.target.value as ProgramCode)}
-        >
-          {PROGRAM_CODES.map((p) => (
-            <option key={p} value={p}>
-              {PROGRAM_LABELS[p]}
-            </option>
-          ))}
-        </select>
+          onChange={(v) => setProgram(v as ProgramCode)}
+          options={PROGRAM_CODES.map((p) => ({ value: p, label: PROGRAM_LABELS[p] }))}
+        />
 
         {program === "PT2030" && (
           <>
