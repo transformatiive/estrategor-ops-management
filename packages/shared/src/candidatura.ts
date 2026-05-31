@@ -28,6 +28,13 @@ export const CAND_FAMILY_LABELS: Record<CandFamily, string> = {
 export const CAND_STAGES = ["A2", "A3", "A4"] as const;
 export type CandStage = (typeof CAND_STAGES)[number];
 
+/** Rótulos de fase em linguagem de cliente (os códigos A2/A3/A4 são internos). */
+export const CAND_STAGE_LABELS: Record<CandStage, string> = {
+  A2: "Em preparação",
+  A3: "Em revisão interna",
+  A4: "Pronto para submissão",
+};
+
 export const FIELD_ORIGINS = ["extraido", "intake", "gerado", "calculado"] as const;
 export type FieldOrigin = (typeof FIELD_ORIGINS)[number];
 

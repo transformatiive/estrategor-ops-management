@@ -96,7 +96,7 @@ export function DiagnosticoTab({
       await api.advanceDiagnostic(projectId);
       reload();
       onAdvanced?.();
-      setMsg("Avançou para Candidatura (A1) ✓");
+      setMsg("Diagnóstico concluído — pode iniciar a candidatura ✓");
     } catch (e) {
       setMsg(e instanceof ApiError ? e.message : "Erro ao avançar.");
     } finally {

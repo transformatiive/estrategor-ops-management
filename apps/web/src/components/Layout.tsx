@@ -53,7 +53,8 @@ export function Layout() {
   const configItems: NavItem[] = [
     { to: "/clientes", label: "Clientes" },
     ...(canManageUsers ? [{ to: "/utilizadores", label: "Utilizadores" }] : []),
-    { to: "/definicoes", label: "Definições" },
+    // "Definições" removido da navegação enquanto não tiver conteúdo (volta quando
+    // existir Configuração real, p.ex. Programas/avisos). A rota mantém-se.
   ];
 
   return (

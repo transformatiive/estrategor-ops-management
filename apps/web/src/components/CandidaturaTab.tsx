@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   CAND_FAMILIES_V0,
   CAND_FAMILY_LABELS,
+  CAND_STAGE_LABELS,
   FIELD_ORIGIN_LABELS,
   FIELD_STATE_BADGE,
   isFieldFinal,
@@ -101,7 +102,7 @@ export function CandidaturaTab({ projectId }: { projectId: string }) {
           Candidatura — {cand.familyLabel}
           {cand.codigoAviso ? ` · ${cand.codigoAviso}` : ""}
         </div>
-        <span className="badge badge-muted">Fase {cand.stage}</span>
+        <span className="badge badge-muted">{CAND_STAGE_LABELS[cand.stage]}</span>
       </div>
 
       {/* Resumo de proveniência */}
@@ -117,12 +118,12 @@ export function CandidaturaTab({ projectId }: { projectId: string }) {
         <div className="cand-actions">
           {cand.stage === "A2" && (
             <button className="btn btn-primary" disabled={busy} onClick={() => stage("A3")}>
-              Submeter para revisão (A3)
+              Submeter para revisão interna
             </button>
           )}
           {cand.stage === "A3" && (
             <button className="btn btn-secondary" disabled={busy} onClick={() => stage("A2")}>
-              Devolver para preparação (A2)
+              Devolver para preparação
             </button>
           )}
         </div>
