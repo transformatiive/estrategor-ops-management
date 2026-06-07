@@ -86,6 +86,22 @@ export function DiagnosticoTab({
     );
   }
 
+  // TRNSF-1035 — aplica os "Provável PASSA/FALHA" determinísticos ao estado das
+  // condições, para o consultor REVER e confirmar (Guardar). Nunca decide
+  // sozinho: as que não têm sugestão determinística ficam como estão.
+  function aplicarSugestoes() {
+    setConditions((cs) =>
+      cs.map((c) =>
+        c.sugestao === "provavel_passa"
+          ? { ...c, status: "PASSA" as ConditionStatus }
+          : c.sugestao === "provavel_falha"
+            ? { ...c, status: "FALHA" as ConditionStatus }
+            : c,
+      ),
+    );
+    setMsg("Sugestões aplicadas — reveja e guarde.");
+  }
+
   async function escolherAviso(meritGridId: string) {
     if (!meritGridId) return;
     setSaving(true);
@@ -135,6 +151,9 @@ export function DiagnosticoTab({
   }
 
   const badge = RESULT_BADGE[data.result];
+  const nSugestoes = conditions.filter(
+    (c) => c.sugestao === "provavel_passa" || c.sugestao === "provavel_falha",
+  ).length;
 
   return (
     <div style={{ maxWidth: 760 }}>
@@ -200,7 +219,19 @@ export function DiagnosticoTab({
 
       {/* ── Condições de acesso ── */}
       <div className="card" style={{ marginBottom: 16 }}>
-        <div className="dp-section-title">Condições de acesso</div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+          <div className="dp-section-title" style={{ marginBottom: 0 }}>Condições de acesso</div>
+          {nSugestoes > 0 && (
+            <button className="btn btn-secondary btn-sm" onClick={aplicarSugestoes} title="Preenche as condições com sugestão determinística; reveja e guarde">
+              Aplicar sugestões ({nSugestoes})
+            </button>
+          )}
+        </div>
+        {nSugestoes > 0 && (
+          <p className="deadline-sub" style={{ margin: "6px 0 4px" }}>
+            Há {nSugestoes} condição(ões) com Provável PASSA/FALHA. "Aplicar sugestões" preenche-as — confirme e guarde; o estado final é seu.
+          </p>
+        )}
         {conditions.length === 0 && (
           <p style={{ fontSize: 12.5, color: "var(--muted)" }}>
             Não há condições de acesso configuradas para este aviso.
