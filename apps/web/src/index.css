@@ -803,6 +803,16 @@ body {
   border-radius: 10px;
   padding: 16px;
 }
+/* Layout em 2 colunas (ex.: Resumo + Prazos), com quebra para mobile. */
+.two-col {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.two-col > * {
+  flex: 1 1 360px;
+}
 .activity-item {
   display: flex;
   gap: 10px;
