@@ -5,6 +5,7 @@ import type {
   CollectionRequestDTO,
   CreateCollectionRequest,
   CreateProjectRequest,
+  UpdateProjectRequest,
   CreateUserRequest,
   CandidaturaGeracaoDTO,
   DiagnosticDTO,
@@ -98,6 +99,7 @@ const patch = <T>(path: string, body: unknown) =>
   request<T>(path, { method: "PATCH", body: JSON.stringify(body) });
 const put = <T>(path: string, body: unknown) =>
   request<T>(path, { method: "PUT", body: JSON.stringify(body) });
+const del = <T>(path: string) => request<T>(path, { method: "DELETE" });
 
 export const api = {
   health: () => get<HealthDTO>("/health"),
@@ -122,6 +124,13 @@ export const api = {
   checklist: (id: string) => get<ChecklistItemDTO[]>(`/api/projects/${id}/checklist`),
   createProject: (data: CreateProjectRequest) =>
     post<{ id: string; code: string; foldersError: string | null }>("/api/projects", data),
+  // editar cabeçalho do projeto (TRNSF-1027) — RBAC na API
+  updateProject: (id: string, data: UpdateProjectRequest) =>
+    patch<ProjectDetailDTO>(`/api/projects/${id}`, data),
+  // apagar projeto (só gestor/admin) + resumo de dados associados (aviso prévio)
+  projectDeleteInfo: (id: string) =>
+    get<{ documents: number; checklist: number; deadlines: number; tasks: number; milestones: number; candidatura: boolean; preDiagnostico: boolean; hasData: boolean }>(`/api/projects/${id}/delete-info`),
+  deleteProject: (id: string) => del<{ ok: boolean }>(`/api/projects/${id}`),
 
   // pastas WorkDrive (TRNSF-936)
   folders: (id: string) => get<ProjectFoldersDTO>(`/api/projects/${id}/folders`),
