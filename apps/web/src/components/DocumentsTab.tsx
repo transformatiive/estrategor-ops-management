@@ -102,11 +102,17 @@ export function DocumentsTab({ projectId }: { projectId: string }) {
                   ✓ {d.storedFilename ?? d.originalFilename}
                   <span className="deadline-sub"> · {d.documentTypeName}</span>
                 </span>
-                {d.workdriveUrl && (
-                  <a className="folder-link" href={d.workdriveUrl} target="_blank" rel="noreferrer">
-                    abrir ↗
+                <span style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                  {/* TRNSF-1053 — serve da BD (TRNSF-1046), funciona após arquivar. */}
+                  <a className="folder-link" href={api.documentFileUrl(d.id)} target="_blank" rel="noreferrer">
+                    Ver documento ↗
                   </a>
-                )}
+                  {d.workdriveUrl && (
+                    <a className="folder-link" href={d.workdriveUrl} target="_blank" rel="noreferrer">
+                      WorkDrive ↗
+                    </a>
+                  )}
+                </span>
               </div>
             ))}
           </div>
