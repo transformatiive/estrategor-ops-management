@@ -1340,6 +1340,97 @@ body {
   flex: 1;
 }
 
+/* Pré-diagnóstico (TRNSF-967): progresso animado, bullets e botão Corrigir */
+.btn.btn-sm {
+  padding: 3px 12px;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.cand-field-value:has(.prediag-bullets) {
+  align-items: flex-start;
+}
+.cand-field-value > .btn {
+  flex-shrink: 0;
+}
+.prediag-bullets,
+.prediag-subbullets {
+  margin: 2px 0 0;
+  padding-left: 18px;
+}
+.prediag-bullets li {
+  margin-bottom: 2px;
+}
+.prediag-checklist {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+}
+.prediag-checklist > li {
+  margin-bottom: 8px;
+}
+.prediag-subbullets {
+  list-style: circle;
+  margin-top: 3px;
+}
+.prediag-run {
+  margin-bottom: 10px;
+}
+.prediag-run-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-weight: 600;
+  font-size: 13.5px;
+  margin-bottom: 6px;
+}
+.prediag-bar {
+  height: 6px;
+  background: var(--border);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.prediag-bar-fill {
+  height: 100%;
+  background: var(--primary, #1f6f4a);
+  border-radius: 99px;
+  transition: width 0.5s ease;
+}
+.prediag-steps {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  font-size: 13px;
+}
+.prediag-step {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  padding: 3px 0;
+  color: var(--muted);
+}
+.prediag-step-icon {
+  width: 16px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.prediag-step.done {
+  color: var(--text, #1a1a1a);
+}
+.prediag-step.done .prediag-step-icon {
+  color: var(--primary, #1f6f4a);
+}
+.prediag-step.running {
+  color: var(--text, #1a1a1a);
+}
+.prediag-step.running .prediag-step-icon {
+  color: var(--primary, #1f6f4a);
+  animation: prediag-pulse 1s ease-in-out infinite;
+}
+@keyframes prediag-pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
 /* Listagem de projetos: filtros + lista/kanban (TRNSF-965) */
 .filtros {
   display: flex;
