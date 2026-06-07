@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   canManageUsers,
+  computeMerit,
   type CondSugestao,
   type ConditionStateDTO,
   type ConditionStatus,
   type DiagnosticDTO,
   type MeritGridData,
-  type MeritResult,
 } from "@estrategor/shared";
 import { api, ApiError } from "../lib/api.js";
 import { useAsync } from "../lib/useAsync.js";
@@ -73,11 +73,14 @@ export function DiagnosticoTab({
   }, [data]);
 
   const gridData = data?.gridData as MeritGridData | null;
-  const breakdown = data?.meritBreakdown as MeritResult | null;
   const meritProposal = data?.meritProposal ?? null;
 
-  // recálculo local imediato para feedback (o servidor é a fonte de verdade ao guardar)
-  const localResult = useMemo(() => breakdown, [breakdown]);
+  // Recálculo local ao vivo (TRNSF-1043): a MP atualiza a cada escolha; o
+  // servidor continua a ser a fonte de verdade ao guardar.
+  const localResult = useMemo(
+    () => (gridData ? computeMerit(gridData, selection, regiao || gridData.regiao || null) : null),
+    [gridData, selection, regiao],
+  );
 
   if (loading) return <p style={{ color: "var(--muted)" }}>A carregar diagnóstico…</p>;
   if (error) return <ErrorState error={error} onRetry={reload} />;
@@ -417,13 +420,15 @@ export function DiagnosticoTab({
 
             <div className="merit-total">
               <span>
-                MP:{" "}
-                <b>
-                  {localResult && localResult.missing.length === 0
-                    ? localResult.mp.toFixed(2)
-                    : "—"}
-                </b>{" "}
+                MP: <b>{localResult ? localResult.mp.toFixed(2) : "—"}</b>{" "}
                 / mínimo {data.grid.mpMinimo?.toFixed(2)}
+                {localResult && localResult.missing.length > 0 && (
+                  <span className="deadline-sub">
+                    {" "}
+                    · provisório (faltam {localResult.missing.length} subcritério
+                    {localResult.missing.length > 1 ? "s" : ""})
+                  </span>
+                )}
               </span>
               {localResult && localResult.missing.length === 0 && (
                 <span className={"badge " + (localResult.passes ? "badge-green" : "badge-danger")}>
