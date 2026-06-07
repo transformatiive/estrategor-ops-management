@@ -510,6 +510,10 @@ model MeritGrid {
   formulaMp        String?  @map("formula_mp")
   grid             Json
   accessConditions Json?    @map("access_conditions")
+  // Elegibilidade estruturada do aviso (TRNSF-1030): CAE elegíveis, regiões NUTS,
+  // baixa densidade, naturezas + estado (por_validar|validado). Vem do PDF do
+  // aviso, validada por admin. Sem isto, não há "Provável PASSA/FALHA".
+  eligibilidade    Json?    @map("eligibilidade")
   extracted        Boolean  @default(true) // false = ainda só registo (a extrair)
   createdAt        DateTime @default(now()) @map("created_at")
 
