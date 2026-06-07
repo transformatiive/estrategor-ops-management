@@ -43,9 +43,13 @@ const COND_LABEL: Record<ConditionStatus, string> = {
 export function DiagnosticoTab({
   projectId,
   onAdvanced,
+  onChanged,
 }: {
   projectId: string;
   onAdvanced?: () => void;
+  /** Recarrega o pipeline/projeto após uma alteração que não muda de fase
+   *  (guardar, escolher aviso, sugerir mérito) — TRNSF-1048. */
+  onChanged?: () => void;
 }) {
   const { user } = useAuth();
   const { data, loading, error, reload } = useAsync(
@@ -122,6 +126,7 @@ export function DiagnosticoTab({
     try {
       await api.setAviso(projectId, meritGridId);
       reload();
+      onChanged?.();
       setMsg("Aviso associado ✓");
     } catch (e) {
       setMsg(e instanceof ApiError ? e.message : "Erro ao associar o aviso.");
@@ -140,6 +145,7 @@ export function DiagnosticoTab({
         regiao: regiao || null,
       });
       reload();
+      onChanged?.();
       setMsg("Guardado ✓");
     } catch (e) {
       setMsg(e instanceof ApiError ? e.message : "Erro ao guardar.");
@@ -154,6 +160,7 @@ export function DiagnosticoTab({
     try {
       await api.sugerirMerito(projectId);
       reload();
+      onChanged?.();
       setMsg("Pontuação proposta pela IA — reveja, ajuste e guarde.");
     } catch (e) {
       setMsg(e instanceof ApiError ? e.message : "Erro ao sugerir pontuação.");

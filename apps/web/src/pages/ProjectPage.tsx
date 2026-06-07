@@ -150,6 +150,12 @@ export function ProjectPage() {
             reload();
             reloadPipe();
           }}
+          onChanged={() => {
+            // Guardar / escolher aviso / sugerir mérito: atualiza o pipeline
+            // ("O que falta") e o progresso sem mudar de fase (TRNSF-1048).
+            reload();
+            reloadPipe();
+          }}
         />
       )}
       {vistaAtiva === "seguimento" && <SeguimentoTab projectId={id} />}
