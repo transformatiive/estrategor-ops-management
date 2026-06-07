@@ -554,7 +554,7 @@ body {
 /* ── DIAGNÓSTICO A0 ── */
 .cond-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
   padding: 8px 0;
@@ -564,8 +564,23 @@ body {
 .cond-row:last-child {
   border-bottom: none;
 }
+.cond-row > .badge {
+  flex-shrink: 0;
+}
+.cond-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
 .cond-label {
   font-size: 12.5px;
+}
+.cond-sugestao {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
 }
 .merit-crit {
   border: 1px solid var(--border);
