@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   FAIXA_ESTADO_LABEL,
   FIELD_ORIGIN_LABELS,
@@ -15,33 +15,52 @@ import { useAsync } from "../lib/useAsync.js";
 const faixaBadge = (e: FaixaEstado) =>
   e === "ok" ? "badge-green" : e === "falhou" ? "badge-danger" : "badge-muted";
 
+/** Faixas por ordem de execução, com descrição do que cada uma faz (feedback). */
+const FAIXAS: { key: keyof PreDiagnosticoDTO["faixas"]; nome: string; desc: string }[] = [
+  { key: "vies", nome: "VIES", desc: "validação oficial do NIF e dados na Comissão Europeia" },
+  { key: "apiEmpresas", nome: "Dados da empresa", desc: "CAE, natureza jurídica, capital social e localização" },
+  { key: "sonar", nome: "Contexto (Sonar)", desc: "recolha de contexto público com fontes" },
+  { key: "sonnet", nome: "Leitura (Sonnet 4.6)", desc: "estruturação da análise e checklist a confirmar" },
+];
+
 /**
  * Pré-diagnóstico assistido por IA (TRNSF-967) no ecrã de Diagnóstico A0.
  * Rascunho com proveniência e fonte por campo; validável campo a campo.
  * Enquanto não validado, NÃO tem efeito (não altera estado nem elegibilidade).
  */
 export function PreDiagnosticoPanel({ projectId }: { projectId: string }) {
-  const { data, loading, error, reload } = useAsync<PreDiagnosticoDTO>(() => api.prediagnostico(projectId), [projectId]);
+  const { data, reload } = useAsync<PreDiagnosticoDTO>(() => api.prediagnostico(projectId), [projectId]);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
-  if (loading || error || !data) return null;
+  // Enquanto está a correr, faz polling para mostrar o progresso ao vivo.
+  const aCorrer = data?.estado === "pendente";
+  useEffect(() => {
+    if (!aCorrer) return;
+    const t = setInterval(() => reload(), 2500);
+    return () => clearInterval(t);
+  }, [aCorrer, reload]);
 
-  async function run(fn: () => Promise<unknown>, ok?: string) {
+  // Só esconde no arranque (sem dados ainda); durante o polling mantém-se visível.
+  if (!data) return null;
+
+  async function run(fn: () => Promise<unknown>) {
     setBusy(true); setMsg(null);
-    try { await fn(); if (ok) setMsg(ok); reload(); }
+    try { await fn(); reload(); }
     catch (e) { setMsg(e instanceof ApiError ? e.message : "Erro."); }
     finally { setBusy(false); }
   }
 
   const inexistente = data.estado === "inexistente";
+  const concluidas = FAIXAS.filter((f) => data.faixas[f.key] !== "pendente").length;
+  const aDecorrer = FAIXAS.find((f) => data.faixas[f.key] === "pendente");
 
   return (
     <div className="card" style={{ marginBottom: 16, maxWidth: 820 }}>
       <div className="section-header" style={{ marginBottom: 8 }}>
         <div className="section-title" style={{ fontSize: 15 }}>Pré-diagnóstico assistido por IA</div>
-        <button className="btn btn-secondary" disabled={busy} onClick={() => run(() => api.runPrediagnostico(projectId), "A correr em segundo plano… atualize daqui a pouco.")}>
-          {inexistente ? "Correr pré-diagnóstico" : "Recorrer"}
+        <button className="btn btn-secondary" disabled={busy || aCorrer} onClick={() => run(() => api.runPrediagnostico(projectId))}>
+          {aCorrer ? "A analisar…" : inexistente ? "Correr pré-diagnóstico" : "Recorrer"}
         </button>
       </div>
 
@@ -59,6 +78,13 @@ export function PreDiagnosticoPanel({ projectId }: { projectId: string }) {
             <span className={"badge " + faixaBadge(data.faixas.sonnet)}>Sonnet 4.6: {FAIXA_ESTADO_LABEL[data.faixas.sonnet]}</span>
             {data.executadoEm && <span className="deadline-sub">{new Date(data.executadoEm).toLocaleString("pt-PT")}</span>}
           </div>
+          {/* Progresso ao vivo enquanto corre (na app, em segundo plano) */}
+          {aCorrer && (
+            <div className="badge badge-muted" style={{ display: "block", marginBottom: 8, padding: "8px 10px", lineHeight: 1.5 }}>
+              <strong>A analisar a empresa…</strong> {concluidas} de {FAIXAS.length} fontes concluídas.
+              {aDecorrer && <> A processar: {aDecorrer.desc}.</>}
+            </div>
+          )}
           {/* Razão de falha por faixa (diagnóstico) */}
           {(data.faixasDetalhe?.apiEmpresas || data.faixasDetalhe?.vies) && (
             <p className="deadline-sub" style={{ marginTop: 0, marginBottom: 8 }}>
