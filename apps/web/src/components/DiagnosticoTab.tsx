@@ -86,6 +86,21 @@ export function DiagnosticoTab({
     );
   }
 
+  async function escolherAviso(meritGridId: string) {
+    if (!meritGridId) return;
+    setSaving(true);
+    setMsg(null);
+    try {
+      await api.setAviso(projectId, meritGridId);
+      reload();
+      setMsg("Aviso associado ✓");
+    } catch (e) {
+      setMsg(e instanceof ApiError ? e.message : "Erro ao associar o aviso.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function save() {
     setSaving(true);
     setMsg(null);
@@ -126,6 +141,44 @@ export function DiagnosticoTab({
       <div className="section-header">
         <div className="section-title">Diagnóstico A0</div>
         <span className={"badge " + badge.cls}>{badge.label}</span>
+      </div>
+
+      {/* ── Aviso do projeto (TRNSF-1031): escolha explícita = certeza ── */}
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+          <div className="dp-section-title" style={{ marginBottom: 0 }}>Aviso do projeto</div>
+          <span className={"badge " + (data.avisoConfirmado ? "badge-green" : "badge-warning")}>
+            {data.avisoConfirmado ? "Confirmado ✓" : "Por confirmar"}
+          </span>
+        </div>
+        <p className="deadline-sub" style={{ margin: "6px 0 10px" }}>
+          A elegibilidade (CAE/regiões) é por aviso. Escolha o aviso concreto deste projeto — é o que garante que o cliente é avaliado contra as regras certas.
+        </p>
+        {data.avisos.length === 0 ? (
+          <p style={{ fontSize: 12.5, color: "var(--muted)" }}>
+            Não há avisos configurados para este programa ainda.
+          </p>
+        ) : (
+          <Dropdown
+            block
+            value={data.selectedGridId ?? ""}
+            onChange={(v) => escolherAviso(v)}
+            options={[
+              ...(data.avisoConfirmado ? [] : [{ value: "", label: "— Escolha o aviso —" }]),
+              ...data.avisos.map((a) => ({
+                value: a.id,
+                label: `${a.codigoAviso} · ${a.measure}${a.regiao ? ` · ${a.regiao}` : ""} · v${a.versao}${
+                  a.eligibilidadeEstado === "validado" ? " · elegibilidade ✓" : a.eligibilidadeEstado === "por_validar" ? " · elegibilidade por validar" : ""
+                }`,
+              })),
+            ]}
+          />
+        )}
+        {!data.avisoConfirmado && data.avisos.length > 0 && (
+          <p className="login-error" style={{ marginTop: 8 }}>
+            Sugestão automática (não confirmada). Confirme o aviso para concluir o diagnóstico.
+          </p>
+        )}
       </div>
 
       {/* ── Pré-diagnóstico assistido por IA (TRNSF-967) ── */}
@@ -281,11 +334,17 @@ export function DiagnosticoTab({
         <button
           className="btn btn-secondary"
           onClick={advance}
-          disabled={saving || (data.result !== "ELEGIVEL" && data.result !== "A_REVER")}
+          disabled={
+            saving ||
+            !data.avisoConfirmado ||
+            (data.result !== "ELEGIVEL" && data.result !== "A_REVER")
+          }
           title={
-            data.result === "ELEGIVEL" || data.result === "A_REVER"
-              ? "Avançar para Candidatura"
-              : "Conclua o diagnóstico para avançar"
+            !data.avisoConfirmado
+              ? "Escolha e confirme o aviso do projeto para avançar"
+              : data.result === "ELEGIVEL" || data.result === "A_REVER"
+                ? "Avançar para Candidatura"
+                : "Conclua o diagnóstico para avançar"
           }
         >
           Avançar → Candidatura

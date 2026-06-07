@@ -432,6 +432,9 @@ model Diagnostic {
   meritBreakdown Json?   @map("merit_breakdown")
   mp            Decimal? @db.Decimal(5, 2)
   meritGridId   String?  @map("merit_grid_id")
+  // TRNSF-1031: o aviso foi escolhido EXPLICITAMENTE pelo consultor (não pela
+  // heurística). Sem isto não se conclui/avança o diagnóstico.
+  avisoConfirmado Boolean @default(false) @map("aviso_confirmado")
   gridVersion   String?  @map("grid_version")
   // ELEGIVEL | NAO_ELEGIVEL | A_REVER | SEM_GRELHA | POR_INICIAR
   result        String   @default("POR_INICIAR")

@@ -250,6 +250,17 @@ export interface GeoEmpresa {
   baixaDensidade: boolean | null;
 }
 
+/** Aviso (grelha) disponível para o consultor escolher no diagnóstico (TRNSF-1031). */
+export interface AvisoOpcaoDTO {
+  id: string;
+  codigoAviso: string;
+  measure: string;
+  regiao: string | null;
+  versao: string;
+  /** estado da elegibilidade estruturada: "validado" | "por_validar" | "nenhuma" */
+  eligibilidadeEstado: "validado" | "por_validar" | "nenhuma";
+}
+
 /** Grelha aplicável a um projecto/aviso (ou indicação de ausência). */
 export interface MeritGridSummaryDTO {
   id: string;
@@ -278,6 +289,11 @@ export interface DiagnosticDTO {
   conditions: ConditionStateDTO[];
   // elegibilidade estruturada do aviso (TRNSF-1030), null se não definida
   eligibilidade: AvisoElegibilidade | null;
+  // aviso resolvido para este projeto (grelha) e se foi escolhido EXPLICITAMENTE
+  selectedGridId: string | null;
+  avisoConfirmado: boolean;
+  // avisos disponíveis no programa do projeto, para o consultor escolher (2A)
+  avisos: AvisoOpcaoDTO[];
   // grelha de mérito disponível (ou null → "Grelha não configurada")
   grid: MeritGridSummaryDTO | null;
   // estrutura da grelha para o ecrã (critérios/subcritérios/opções)
