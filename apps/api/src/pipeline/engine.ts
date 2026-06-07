@@ -25,10 +25,31 @@ export async function buildPipelineDTO(projectId: string): Promise<PipelineDTO |
 
   if (faseAtual === "diagnostico") {
     const diag = await prisma.diagnostic.findUnique({ where: { projectId } });
-    requisitos.push({
-      label: "Concluir o diagnóstico de elegibilidade",
-      done: !!diag && (diag.result === "ELEGIVEL" || diag.result === "A_REVER"),
-    });
+    if (!diag) {
+      requisitos.push({ label: "Iniciar e concluir o diagnóstico de elegibilidade", done: false });
+    } else {
+      // Detalha o que falta (TRNSF-1047), em vez de um "concluir" vago.
+      const conds = Array.isArray(diag.conditions)
+        ? (diag.conditions as { status?: string }[])
+        : [];
+      const porResponder = conds.filter((c) => (c?.status ?? "NA") === "NA").length;
+      const merit = (diag.meritBreakdown as { missing?: unknown[] } | null) ?? null;
+      const meritCompleto = !!merit && Array.isArray(merit.missing) && merit.missing.length === 0;
+      const concluido = diag.result === "ELEGIVEL" || diag.result === "A_REVER";
+
+      requisitos.push({ label: "Confirmar o aviso do projeto", done: !!diag.avisoConfirmado });
+      requisitos.push({
+        label:
+          porResponder > 0
+            ? `Responder às condições de acesso (faltam ${porResponder})`
+            : "Responder às condições de acesso",
+        done: conds.length > 0 && porResponder === 0,
+      });
+      requisitos.push({
+        label: "Completar a pontuação de mérito",
+        done: concluido || meritCompleto,
+      });
+    }
   } else if (faseAtual === "recolha") {
     const checklist = await prisma.checklistItem.findMany({ where: { projectId } });
     requisitos.push({
