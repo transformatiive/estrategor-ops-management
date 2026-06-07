@@ -2,6 +2,7 @@ import {
   DOCUMENT_TAXONOMY,
   REMINDER_ROUNDS,
   addBusinessDays,
+  isDelivered,
   reminderEmail,
 } from "@estrategor/shared";
 import { prisma } from "../db.js";
@@ -18,7 +19,11 @@ function publicLink(token: string): string {
   return `${baseUrlFromEnv()}/recolha/${token}`;
 }
 
-/** Documentos pedidos ainda em falta (checklist EM_FALTA) de um pedido de recolha. */
+/**
+ * Documentos pedidos ainda em falta de um pedido de recolha. "Entregue" =
+ * RECEBIDO (na fila) ou VALIDADO (arquivado) — TRNSF-1050: o cliente já não
+ * precisa de reenviar e os lembretes param assim que o documento chega.
+ */
 async function missingKeys(link: {
   projectId: string;
   requestedKeys: string[];
@@ -31,7 +36,7 @@ async function missingKeys(link: {
     where: { projectId: link.projectId, documentTypeId: { in: types.map((t) => t.id) } },
   });
   const received = new Set(
-    items.filter((i) => i.status === "RECEBIDO").map((i) => i.documentTypeId),
+    items.filter((i) => isDelivered(i.status)).map((i) => i.documentTypeId),
   );
   return types.filter((t) => !received.has(t.id)).map((t) => t.key);
 }

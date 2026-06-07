@@ -24,6 +24,19 @@ export function classifierMode(): "openrouter" | "stub" {
 // recai no texto extraído. 12 MB de PDF ≈ 16 MB em base64.
 const MAX_VISION_BYTES = 12 * 1024 * 1024;
 
+// Abaixo deste limiar de confiança NÃO forçamos um tipo (TRNSF-1049): a proposta
+// passa a "por identificar" (null) e o consultor escolhe. Assim um documento mal
+// classificado não é associado a um tipo errado nem marca um pedido como recebido.
+const CLASSIFY_MIN_CONFIDENCE = 0.55;
+
+/** "Por identificar" abaixo do limiar de confiança (não associa tipo errado). */
+function withConfidenceFloor(r: ClassificationResult): ClassificationResult {
+  if (!r.multiDocument && r.proposedTypeKey && r.confidence < CLASSIFY_MIN_CONFIDENCE) {
+    return { ...r, proposedTypeKey: null };
+  }
+  return r;
+}
+
 /**
  * Classifica um documento (TRNSF-938 / TRNSF-1049). Usa a OpenRouter (Claude
  * Sonnet 4.6) a analisar o CONTEÚDO do documento por visão; só quando não há
@@ -32,20 +45,20 @@ const MAX_VISION_BYTES = 12 * 1024 * 1024;
  */
 export async function classifyDocument(input: ClassifyInput): Promise<ClassificationResult> {
   if (!env.OPENROUTER_API_KEY) {
-    return stubClassify(input.originalFilename, input.pageCount, input.candidateKeys);
+    return withConfidenceFloor(stubClassify(input.originalFilename, input.pageCount, input.candidateKeys));
   }
   try {
-    return await classifyWithOpenRouter(input);
+    return withConfidenceFloor(await classifyWithOpenRouter(input));
   } catch (e) {
     // Não esconder a causa: registar para diagnóstico (TRNSF-1049).
     const msg = e instanceof Error ? e.message : String(e);
     console.error(`[classifier] IA falhou para "${input.originalFilename}": ${msg}`);
     const r = stubClassify(input.originalFilename, input.pageCount, input.candidateKeys);
-    return {
+    return withConfidenceFloor({
       ...r,
       confidence: Math.min(r.confidence, 0.4),
       rationale: `Classificação por nome (IA indisponível: ${msg.slice(0, 120)}).`,
-    };
+    });
   }
 }
 

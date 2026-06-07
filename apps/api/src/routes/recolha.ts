@@ -2,6 +2,8 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import {
   DOCUMENT_TAXONOMY,
+  deriveChecklistStatus,
+  isDelivered,
   type CollectionItemDTO,
   type CollectionRequestDTO,
   type ProjectCollectionDTO,
@@ -27,6 +29,39 @@ function nameOf(key: string): string {
   return DOCUMENT_TAXONOMY.find((d) => d.key === key)?.name ?? key;
 }
 
+/**
+ * Deriva o estado da checklist por tipo de documento a partir dos documentos do
+ * projecto (TRNSF-1050/1051). Mapeia cada documento ao seu tipo (confirmado se
+ * arquivado, proposto se ainda na fila) e devolve VALIDADO/RECEBIDO/EM_FALTA por
+ * chave de tipo pedida. Fonte única de verdade para a checklist e o formulário
+ * público — evita repedir/duplicar documentos já recebidos.
+ */
+async function deriveStatusByKey(
+  projectId: string,
+  keys: string[],
+): Promise<Map<string, "EM_FALTA" | "RECEBIDO" | "VALIDADO">> {
+  const out = new Map<string, "EM_FALTA" | "RECEBIDO" | "VALIDADO">();
+  if (keys.length === 0) return out;
+  const docTypes = await prisma.documentType.findMany({ where: { key: { in: keys } } });
+  const typeKeyById = new Map(docTypes.map((d) => [d.id, d.key]));
+  const docs = await prisma.document.findMany({
+    where: { projectId, status: { in: ["arquivado", "a_validar", "em_analise"] } },
+  });
+  const statusesByKey = new Map<string, string[]>();
+  for (const d of docs) {
+    const typeId = d.status === "arquivado" ? d.documentTypeId : d.documentTypeId ?? d.proposedTypeId;
+    const key = typeId ? typeKeyById.get(typeId) : undefined;
+    if (!key) continue;
+    const arr = statusesByKey.get(key) ?? [];
+    arr.push(d.status);
+    statusesByKey.set(key, arr);
+  }
+  for (const key of keys) {
+    out.set(key, deriveChecklistStatus(statusesByKey.get(key) ?? []));
+  }
+  return out;
+}
+
 function publicUrl(baseUrl: string, token: string): string {
   return `${baseUrl}/recolha/${token}`;
 }
@@ -39,17 +74,10 @@ async function toRequestDTO(linkId: string, baseUrl: string): Promise<Collection
   });
   if (!link) return null;
 
-  // estado por tipo pedido: cruza com checklist_items
-  const docTypes = await prisma.documentType.findMany({
-    where: { key: { in: link.requestedKeys } },
-  });
-  const checklist = await prisma.checklistItem.findMany({
-    where: { projectId: link.projectId, documentTypeId: { in: docTypes.map((d) => d.id) } },
-  });
+  // estado por tipo pedido: DERIVADO dos documentos do projecto (TRNSF-1050)
+  const statusByKey = await deriveStatusByKey(link.projectId, link.requestedKeys);
 
   const items: CollectionItemDTO[] = link.requestedKeys.map((key) => {
-    const dt = docTypes.find((d) => d.key === key);
-    const ci = dt ? checklist.find((c) => c.documentTypeId === dt.id) : undefined;
     // mostra o documento validado (tipo confirmado); só na ausência, o proposto
     const doc =
       link.documents.find((d) => d.documentType?.key === key) ??
@@ -57,7 +85,7 @@ async function toRequestDTO(linkId: string, baseUrl: string): Promise<Collection
     return {
       documentTypeKey: key,
       documentTypeName: nameOf(key),
-      status: ci?.status ?? "EM_FALTA",
+      status: statusByKey.get(key) ?? "EM_FALTA",
       documentId: doc?.id ?? null,
       fileName: doc?.storedFilename ?? null,
       workdriveUrl: doc?.workdriveUrl ?? null,
@@ -155,17 +183,10 @@ export async function recolhaRoutes(app: FastifyInstance) {
     });
     if (!link) return reply.code(404).send({ error: "Ligação inválida." });
 
-    // "Entregue" = documento validado/arquivado pelo consultor (checklist RECEBIDO),
-    // NÃO a proposta da IA por validar. Evita marcar entregue sem confirmação humana.
-    const docTypes = await prisma.documentType.findMany({
-      where: { key: { in: link.requestedKeys } },
-    });
-    const checklist = await prisma.checklistItem.findMany({
-      where: { projectId: link.projectId, documentTypeId: { in: docTypes.map((d) => d.id) } },
-    });
-    const receivedTypeIds = new Set(
-      checklist.filter((c) => c.status === "RECEBIDO").map((c) => c.documentTypeId),
-    );
+    // "Recebido" = já existe um documento deste tipo no projecto, na fila de
+    // validação (RECEBIDO) ou já arquivado (VALIDADO) — TRNSF-1051. O formulário
+    // mostra-o como "Recebido ✓" e não volta a pedir, evitando duplicados na fila.
+    const statusByKey = await deriveStatusByKey(link.projectId, link.requestedKeys);
 
     const expired = link.status === "EXPIRADO" || link.expiresAt < new Date();
     const status = expired ? "EXPIRADO" : link.status;
@@ -175,14 +196,11 @@ export async function recolhaRoutes(app: FastifyInstance) {
       programCode: link.project.program.code,
       status,
       expiresAt: link.expiresAt.toISOString(),
-      items: link.requestedKeys.map((key) => {
-        const dt = docTypes.find((d) => d.key === key);
-        return {
-          documentTypeKey: key,
-          documentTypeName: nameOf(key),
-          delivered: dt ? receivedTypeIds.has(dt.id) : false,
-        };
-      }),
+      items: link.requestedKeys.map((key) => ({
+        documentTypeKey: key,
+        documentTypeName: nameOf(key),
+        delivered: isDelivered(statusByKey.get(key) ?? "EM_FALTA"),
+      })),
     };
     return dto;
   });

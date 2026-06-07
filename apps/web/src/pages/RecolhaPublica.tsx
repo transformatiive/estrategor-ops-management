@@ -25,6 +25,8 @@ export function RecolhaPublica() {
   );
   const [uploads, setUploads] = useState<UploadState[]>([]);
   const [busy, setBusy] = useState(false);
+  // TRNSF-1051 — permite reenviar/corrigir um documento já recebido (opcional).
+  const [resend, setResend] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   async function handleFiles(files: FileList | null) {
@@ -82,7 +84,8 @@ export function RecolhaPublica() {
   }
 
   const expired = data.status === "EXPIRADO";
-  const done = data.status === "USADO" || data.items.every((i) => i.delivered);
+  const pending = data.items.filter((i) => !i.delivered);
+  const done = data.status === "USADO" || (data.items.length > 0 && pending.length === 0);
 
   return (
     <div className="recolha-screen">
@@ -107,35 +110,39 @@ export function RecolhaPublica() {
 
         {!expired && (
           <>
-            {/* Campo único de upload */}
-            <div
-              className="recolha-drop"
-              onClick={() => inputRef.current?.click()}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={(e) => {
-                e.preventDefault();
-                handleFiles(e.dataTransfer.files);
-              }}
-            >
-              <input
-                ref={inputRef}
-                type="file"
-                multiple
-                accept="image/*,application/pdf"
-                style={{ display: "none" }}
-                onChange={(e) => {
-                  handleFiles(e.target.files);
-                  e.target.value = "";
+            {/* Campo único de upload — só enquanto faltar algo (ou se o cliente
+                escolher reenviar/corrigir). TRNSF-1051: não voltamos a pedir o
+                que já foi recebido, evitando duplicados na fila. */}
+            {(pending.length > 0 || resend) && (
+              <div
+                className="recolha-drop"
+                onClick={() => inputRef.current?.click()}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  handleFiles(e.dataTransfer.files);
                 }}
-              />
-              <div className="recolha-drop-title">
-                {busy ? "A enviar…" : "Carregar documentos / tirar foto"}
+              >
+                <input
+                  ref={inputRef}
+                  type="file"
+                  multiple
+                  accept="image/*,application/pdf"
+                  style={{ display: "none" }}
+                  onChange={(e) => {
+                    handleFiles(e.target.files);
+                    e.target.value = "";
+                  }}
+                />
+                <div className="recolha-drop-title">
+                  {busy ? "A enviar…" : "Carregar documentos / tirar foto"}
+                </div>
+                <div className="recolha-drop-sub">
+                  Arraste os ficheiros para aqui ou clique para escolher. Pode enviar
+                  vários de uma vez (PDF ou fotografia). Nós tratamos de identificar cada documento.
+                </div>
               </div>
-              <div className="recolha-drop-sub">
-                Arraste os ficheiros para aqui ou clique para escolher. Pode enviar
-                vários de uma vez (PDF ou fotografia). Nós tratamos de identificar cada documento.
-              </div>
-            </div>
+            )}
 
             {/* Ficheiros enviados nesta sessão */}
             {uploads.length > 0 && (
@@ -153,20 +160,31 @@ export function RecolhaPublica() {
               </div>
             )}
 
-            {/* Lista de referência: documentos pedidos */}
+            {/* Lista de referência: documentos pedidos e o que já foi recebido */}
             <div className="recolha-ref">
               <div className="recolha-ref-title">Documentos pedidos</div>
               {data.items.map((item) => (
                 <div className="recolha-ref-row" key={item.documentTypeKey}>
                   <span>{item.documentTypeName}</span>
                   {item.delivered ? (
-                    <span className="badge badge-green">Entregue</span>
+                    <span className="badge badge-green">Recebido ✓</span>
                   ) : (
                     <span className="badge badge-muted">Em falta</span>
                   )}
                 </div>
               ))}
             </div>
+
+            {/* Afetação opcional: reenviar/corrigir um documento já recebido */}
+            {pending.length === 0 && !resend && (
+              <button
+                className="btn btn-secondary"
+                style={{ marginTop: 12 }}
+                onClick={() => setResend(true)}
+              >
+                Reenviar ou corrigir um documento
+              </button>
+            )}
           </>
         )}
 

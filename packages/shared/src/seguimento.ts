@@ -1,6 +1,30 @@
 import type { ChecklistStatus } from "./enums.js";
 
 /**
+ * Deriva o estado da checklist (TRNSF-1050) a partir dos estados dos documentos
+ * de um tipo, sem depender do `ChecklistItem.status` persistido. Garante que a
+ * checklist e o formulário público refletem sempre a realidade:
+ *  - VALIDADO (verde) se existe um documento ARQUIVADO deste tipo;
+ *  - RECEBIDO (amarelo) se existe um documento na fila de validação (a_validar)
+ *    ou em análise que mapeia para este tipo;
+ *  - EM_FALTA (vermelho) caso contrário.
+ */
+export function deriveChecklistStatus(docStatuses: string[]): ChecklistStatus {
+  if (docStatuses.includes("arquivado")) return "VALIDADO";
+  if (docStatuses.some((s) => s === "a_validar" || s === "em_analise")) return "RECEBIDO";
+  return "EM_FALTA";
+}
+
+/**
+ * Um documento conta como entregue (já não falta) se foi recebido ou validado.
+ * Aceita também o rótulo legado `EM_REVISAO` (linhas anteriores à migração
+ * TRNSF-1050, que estavam na fila de validação) — conta como entregue.
+ */
+export function isDelivered(status: ChecklistStatus | "EM_REVISAO"): boolean {
+  return status === "RECEBIDO" || status === "VALIDADO" || status === "EM_REVISAO";
+}
+
+/**
  * Motor de seguimento (TRNSF-939 / spec §9). Rondas de lembrete por pedido de
  * recolha, com intervalos em dias úteis e textos-base.
  */
@@ -83,8 +107,8 @@ export type ReminderState = "AGENDADO" | "ENVIADO" | "ESCALADO" | "FECHADO";
 export interface TrackingItemDTO {
   documentTypeKey: string;
   documentTypeName: string;
-  status: ChecklistStatus; // RECEBIDO=verde, EM_FALTA=vermelho, EM_REVISAO=âmbar
-  delivered: boolean;
+  status: ChecklistStatus; // VALIDADO=verde, RECEBIDO=amarelo, EM_FALTA=vermelho
+  delivered: boolean; // entregue = RECEBIDO ou VALIDADO (já não falta)
   documentId: string | null;
   workdriveUrl: string | null;
 }

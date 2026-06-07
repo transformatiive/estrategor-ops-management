@@ -61,7 +61,9 @@ export const STATE_BADGE_LABEL: Record<ProjectState, string> = {
 /** Vistas relevantes a cada fase (chaves dos separadores existentes). */
 export const FASE_VISTAS: Record<string, string[]> = {
   diagnostico: ["resumo", "diagnostico"],
-  recolha: ["resumo", "recolha", "documentos", "seguimento"],
+  // TRNSF-1050 — o separador "Recolha" foi fundido em "Checklist & Seguimento":
+  // pedir documentos (gerar ligação) + estado por cores + lembretes num só lugar.
+  recolha: ["resumo", "documentos", "seguimento"],
   preparacao: ["resumo", "candidatura", "extracao", "documentos", "seguimento"],
   revisao: ["resumo", "candidatura", "seguimento"],
   submissao: ["resumo", "candidatura"],
@@ -79,7 +81,6 @@ export const VISTA_LABELS: Record<string, string> = {
   diagnostico: "Diagnóstico",
   candidatura: "Candidatura",
   extracao: "Extração",
-  recolha: "Recolha",
   documentos: "Documentos",
   seguimento: "Checklist & Seguimento",
 };

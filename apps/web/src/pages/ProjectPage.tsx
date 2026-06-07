@@ -5,7 +5,6 @@ import { api } from "../lib/api.js";
 import { useAsync } from "../lib/useAsync.js";
 import { Avatars, ErrorState, Progress, ProgramBadge } from "../components/ui.js";
 import { DocumentsTab } from "../components/DocumentsTab.js";
-import { RecolhaTab } from "../components/RecolhaTab.js";
 import { DiagnosticoTab } from "../components/DiagnosticoTab.js";
 import { SeguimentoTab } from "../components/SeguimentoTab.js";
 import { CandidaturaTab } from "../components/CandidaturaTab.js";
@@ -137,7 +136,6 @@ export function ProjectPage() {
       {vistaAtiva === "candidatura" && <CandidaturaTab projectId={id} />}
       {vistaAtiva === "extracao" && <ExtracaoTab projectId={id} />}
       {vistaAtiva === "documentos" && <DocumentsTab projectId={id} />}
-      {vistaAtiva === "recolha" && <RecolhaTab projectId={id} />}
       {vistaAtiva === "diagnostico" && (
         <DiagnosticoTab
           projectId={id}
