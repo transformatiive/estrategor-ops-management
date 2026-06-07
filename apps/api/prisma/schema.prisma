@@ -326,11 +326,26 @@ model Document {
   parent         Document?       @relation("DocumentSplits", fields: [parentDocumentId], references: [id])
   parts          Document[]      @relation("DocumentSplits")
   extracao       Extracao?
+  blob           DocumentBlob?
 
   @@index([projectId])
   @@index([collectionLinkId])
   @@index([status])
   @@map("documents")
+}
+
+// Armazenamento dos bytes do ficheiro na BD (TRNSF-1046) — por agora, até
+// passarmos para o WorkDrive. Tabela à parte para não carregar os bytes nas
+// listagens de documentos.
+model DocumentBlob {
+  id         String   @id @default(cuid())
+  documentId String   @unique @map("document_id")
+  bytes      Bytes
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@map("document_blobs")
 }
 
 // ─── Épico D/F — Recolha e Seguimento ────────────────────────────────────

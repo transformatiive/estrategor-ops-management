@@ -11,6 +11,7 @@ import { env } from "../env.js";
 import { requireAuth } from "../auth/guards.js";
 import { getWorkDrive } from "../workdrive/adapter.js";
 import { ingestDocument, validateDocument, rejectDocument } from "../ai/pipeline.js";
+import { contentDisposition } from "../util/headers.js";
 
 const validateSchema = z.object({
   documentTypeKey: z.string().min(1),
@@ -83,16 +84,20 @@ export async function documentosRoutes(app: FastifyInstance) {
   app.get<{ Params: { docId: string } }>("/api/documents/:docId/file", async (req, reply) => {
     const doc = await prisma.document.findUnique({ where: { id: req.params.docId } });
     if (!doc) return reply.code(404).send({ error: "Documento não encontrado." });
-    if (!doc.workdriveFileId) return reply.code(404).send({ error: "Ficheiro indisponível." });
     try {
-      const content = await getWorkDrive().downloadFile(doc.workdriveFileId);
+      // TRNSF-1046 — serve da BD (fonte durável); fallback para o WorkDrive.
+      const blob = await prisma.documentBlob.findUnique({ where: { documentId: doc.id } });
+      const bytes =
+        blob?.bytes ??
+        (doc.workdriveFileId ? await getWorkDrive().downloadFile(doc.workdriveFileId) : null);
+      if (!bytes) return reply.code(404).send({ error: "Ficheiro indisponível." });
       reply.header("Content-Type", doc.mimeType ?? "application/octet-stream");
-      // inline para abrir no browser (PDF/imagem); nome legível para download
+      // inline para abrir no browser (PDF/imagem); nome legível e seguro no header
       reply.header(
         "Content-Disposition",
-        `inline; filename="${(doc.storedFilename ?? doc.originalFilename).replace(/"/g, "")}"`,
+        contentDisposition(doc.storedFilename ?? doc.originalFilename, "inline"),
       );
-      return reply.send(content);
+      return reply.send(Buffer.from(bytes));
     } catch (e) {
       app.log.error({ err: e }, "Falha ao obter ficheiro do documento");
       return reply.code(502).send({ error: "Não foi possível obter o ficheiro." });
