@@ -189,6 +189,34 @@ export function CandidaturaTab({ projectId }: { projectId: string }) {
   );
 }
 
+/** Resumo legível de um valor: pares "rótulo: valor", sem id e sem JSON cru. */
+function entryToText(entry: unknown): string {
+  if (entry === null || entry === undefined) return "—";
+  if (typeof entry !== "object") return String(entry);
+  const obj = entry as Record<string, unknown>;
+  const parts = Object.entries(obj)
+    .filter(([k, v]) => k !== "id" && v !== null && v !== undefined && v !== "")
+    .map(([k, v]) => `${k}: ${typeof v === "object" ? JSON.stringify(v) : String(v)}`);
+  return parts.length ? parts.join(" · ") : "—";
+}
+
+/** Render legível do valor de um campo (evita JSON cru no preview — TRNSF-1054). */
+function FieldValue({ value }: { value: unknown }) {
+  if (value === null || value === undefined || value === "") return <span>—</span>;
+  if (typeof value !== "object") return <span>{String(value)}</span>;
+  if (Array.isArray(value)) {
+    if (value.length === 0) return <span>—</span>;
+    return (
+      <ul style={{ margin: 0, paddingLeft: 16 }}>
+        {value.map((entry, i) => (
+          <li key={i}>{entryToText(entry)}</li>
+        ))}
+      </ul>
+    );
+  }
+  return <span>{entryToText(value)}</span>;
+}
+
 /** Linha de campo do preview com indicador de proveniência + ações. */
 function FieldRow({
   projectId,
@@ -240,7 +268,7 @@ function FieldRow({
         </div>
       ) : (
         <div className="cand-field-value">
-          <span>{typeof field.value === "string" ? field.value : JSON.stringify(field.value ?? "—")}</span>
+          <FieldValue value={field.value} />
           <span className="cand-field-buttons">
             <button className="back-link" onClick={() => setEditing(true)}>corrigir</button>
             {requiresHumanValidation(field.origin) && field.state === "por_validar" && (

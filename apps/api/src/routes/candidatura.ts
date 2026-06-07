@@ -6,6 +6,7 @@ import {
   CAND_FAMILY_LABELS,
   commonSection,
   isFieldFinal,
+  isStructuredSection,
   type CandidaturaDTO,
   type CandFieldDTO,
   type CandSectionDTO,
@@ -74,26 +75,30 @@ async function buildDTO(candidaturaId: string): Promise<CandidaturaDTO | null> {
     ...[...bySection.keys()].filter((k) => !CAND_COMMON_SECTIONS.some((s) => s.key === k)),
   ];
 
+  // O resumo de proveniência conta TODOS os campos; a lista genérica do preview
+  // exclui as secções estruturadas (geridas por painéis dedicados na Web) para
+  // não duplicar nem mostrar JSON cru (TRNSF-1054).
   let total = 0;
   let finalised = 0;
-  const sections: CandSectionDTO[] = orderedKeys.map((key) => {
-    const def = commonSection(key);
+  const sections: CandSectionDTO[] = [];
+  for (const key of orderedKeys) {
     const rows = bySection.get(key) ?? [];
-    const fields = rows.map(toFieldDTO);
     const secFinal = rows.filter((f) => isFieldFinal(f.origin, f.state)).length;
     total += rows.length;
     finalised += secFinal;
-    return {
+    if (isStructuredSection(key)) continue; // apresentada pelo painel dedicado
+    const def = commonSection(key);
+    sections.push({
       key,
       name: def?.name ?? key,
       sgoRef: def
         ? ((def.sgo as Record<string, string | undefined>)[cand.family] ?? null)
         : null,
-      fields,
+      fields: rows.map(toFieldDTO),
       total: rows.length,
       finalised: secFinal,
-    };
-  });
+    });
+  }
 
   const pendingValidation = (cand.fields as FieldRow[]).filter(
     (f) => !isFieldFinal(f.origin, f.state),

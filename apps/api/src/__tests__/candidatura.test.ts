@@ -3,6 +3,7 @@ import {
   CAND_COMMON_SECTIONS,
   CAND_FAMILIES_V0,
   isFieldFinal,
+  isStructuredSection,
   requiresHumanValidation,
 } from "@estrategor/shared";
 
@@ -38,5 +39,27 @@ describe("catálogo de secções comuns", () => {
 
   it("v0 oferece apenas as duas famílias (sem qualificacao)", () => {
     expect(CAND_FAMILIES_V0).toEqual(["inovacao_produtiva", "internacionalizacao"]);
+  });
+});
+
+describe("secções estruturadas (TRNSF-1054)", () => {
+  it("as secções geridas por painel são marcadas como estruturadas", () => {
+    for (const key of [
+      "tipologia",
+      "atividades_inovacao",
+      "indicadores",
+      "acoes_intl",
+      "intl_rh",
+      "financeiro",
+      "investimentos",
+    ]) {
+      expect(isStructuredSection(key)).toBe(true);
+    }
+  });
+
+  it("secções comuns escalares não são estruturadas", () => {
+    expect(isStructuredSection("beneficiario")).toBe(false);
+    expect(isStructuredSection("mercado_linhas")).toBe(false);
+    expect(isStructuredSection("enquadramento_tematico")).toBe(false);
   });
 });

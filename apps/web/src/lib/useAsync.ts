@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export interface AsyncState<T> {
   data: T | null;
@@ -16,10 +16,17 @@ export function useAsync<T>(fn: () => Promise<T>, deps: unknown[] = []): AsyncSt
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const run = useCallback(fn, deps);
+  const runRef = useRef(run);
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
+    // Um refresh (reload por `nonce`) mantém os dados atuais visíveis para não
+    // desmontar a UI nem perder o contexto (secções abertas, scroll, edição em
+    // curso). Só mostramos "loading" no primeiro carregamento ou quando as
+    // dependências mudam — ex.: mudar de projeto (TRNSF-1055).
+    const depsChanged = runRef.current !== run;
+    runRef.current = run;
+    if (depsChanged) setLoading(true);
     setError(null);
     run()
       .then((d) => active && setData(d))
