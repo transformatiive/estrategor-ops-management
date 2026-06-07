@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import {
   PROGRAM_CODES,
+  CAND_FAMILIES,
   type ChecklistItemDTO,
   type FolderDTO,
   type ProjectDetailDTO,
@@ -23,6 +24,14 @@ const createProjectSchema = z.object({
   responsibleIds: z.array(z.string()).optional(),
 });
 
+const updateProjectSchema = z.object({
+  title: z.string().min(1).optional(),
+  clientName: z.string().min(1).optional(),
+  program: z.enum(PROGRAM_CODES).optional(),
+  family: z.enum(CAND_FAMILIES).nullable().optional(),
+  responsibleIds: z.array(z.string()).optional(),
+});
+
 function toFolderDTO(f: {
   id: string;
   path: string;
@@ -40,6 +49,49 @@ function toFolderDTO(f: {
     isRoot: f.isRoot,
     workdriveId: f.workdriveId,
     workdriveUrl: f.workdriveUrl,
+  };
+}
+
+/** Constrói o detalhe de um projeto (Resumo + Milestones). Reutilizado por
+ *  GET e pelo PATCH do cabeçalho (TRNSF-1027). */
+async function buildProjectDetail(id: string): Promise<ProjectDetailDTO | null> {
+  const p = await prisma.project.findUnique({
+    where: { id },
+    include: {
+      client: true,
+      program: true,
+      responsibles: { include: { user: true } },
+      milestones: { orderBy: { order: "asc" } },
+    },
+  });
+  if (!p) return null;
+  return {
+    id: p.id,
+    code: p.code,
+    title: p.title,
+    clientName: p.client.name,
+    clientNif: p.client.nif,
+    program: p.program.code,
+    programName: p.program.name,
+    state: p.state,
+    nextAction: p.nextAction,
+    progress: p.progress,
+    investmentTotal: p.investmentTotal?.toString() ?? null,
+    incentiveValue: p.incentiveValue?.toString() ?? null,
+    family: p.family ?? null,
+    crmDealId: p.crmDealId ?? null,
+    responsibles: p.responsibles.map((r) => ({
+      id: r.user.id,
+      initials: r.user.initials,
+      color: r.user.color,
+      fullName: r.user.fullName,
+    })),
+    milestones: p.milestones.map((m) => ({
+      id: m.id,
+      name: m.name,
+      date: m.date,
+      status: m.status,
+    })),
   };
 }
 
@@ -153,45 +205,107 @@ export async function projectRoutes(app: FastifyInstance) {
   app.get<{ Params: { id: string } }>(
     "/api/projects/:id",
     async (req, reply) => {
-      const p = await prisma.project.findUnique({
-        where: { id: req.params.id },
-        include: {
-          client: true,
-          program: true,
-          responsibles: { include: { user: true } },
-          milestones: { orderBy: { order: "asc" } },
-        },
-      });
-      if (!p) return reply.code(404).send({ error: "Projeto não encontrado" });
-
-      const dto: ProjectDetailDTO = {
-        id: p.id,
-        code: p.code,
-        title: p.title,
-        clientName: p.client.name,
-        clientNif: p.client.nif,
-        program: p.program.code,
-        programName: p.program.name,
-        state: p.state,
-        nextAction: p.nextAction,
-        progress: p.progress,
-        investmentTotal: p.investmentTotal?.toString() ?? null,
-        incentiveValue: p.incentiveValue?.toString() ?? null,
-        responsibles: p.responsibles.map((r) => ({
-          initials: r.user.initials,
-          color: r.user.color,
-          fullName: r.user.fullName,
-        })),
-        milestones: p.milestones.map((m) => ({
-          id: m.id,
-          name: m.name,
-          date: m.date,
-          status: m.status,
-        })),
-      };
+      const dto = await buildProjectDetail(req.params.id);
+      if (!dto) return reply.code(404).send({ error: "Projeto não encontrado" });
       return dto;
     },
   );
+
+  // TRNSF-1027 — editar o cabeçalho do projeto (RBAC: gestor/admin → tudo;
+  // consultor → só o responsável, e só em projetos de que é responsável).
+  app.patch<{ Params: { id: string } }>("/api/projects/:id", async (req, reply) => {
+    const parsed = updateProjectSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ error: parsed.error.errors[0]?.message ?? "Dados inválidos." });
+    }
+    const project = await prisma.project.findUnique({
+      where: { id: req.params.id },
+      include: { responsibles: true },
+    });
+    if (!project) return reply.code(404).send({ error: "Projeto não encontrado" });
+
+    const isManager = canManageUsers(req.user!.role);
+    const isResponsible = project.responsibles.some((r) => r.userId === req.user!.id);
+    if (!isManager && !isResponsible) {
+      return reply.code(403).send({ error: "Sem permissão para editar este projeto." });
+    }
+
+    const body = parsed.data;
+    // Consultor (não gestor) só pode alterar o responsável.
+    if (!isManager) {
+      const tentaOutros = body.title !== undefined || body.clientName !== undefined || body.program !== undefined || body.family !== undefined;
+      if (tentaOutros) {
+        return reply.code(403).send({ error: "Só o gestor pode alterar nome, cliente, programa ou família." });
+      }
+    }
+
+    let programId: string | undefined;
+    if (body.program) {
+      const programRow = await prisma.program.findUnique({ where: { code: body.program } });
+      if (!programRow) return reply.code(400).send({ error: `Programa ${body.program} não existe.` });
+      programId = programRow.id;
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.project.update({
+        where: { id: project.id },
+        data: {
+          ...(body.title !== undefined ? { title: body.title.trim() } : {}),
+          ...(programId ? { programId } : {}),
+          ...(body.family !== undefined ? { family: (body.family || null) as never } : {}),
+        },
+      });
+      if (body.clientName !== undefined) {
+        await tx.client.update({ where: { id: project.clientId }, data: { name: body.clientName.trim() } });
+      }
+      if (body.responsibleIds !== undefined) {
+        await tx.projectResponsible.deleteMany({ where: { projectId: project.id } });
+        if (body.responsibleIds.length) {
+          await tx.projectResponsible.createMany({
+            data: body.responsibleIds.map((userId) => ({ projectId: project.id, userId })),
+            skipDuplicates: true,
+          });
+        }
+      }
+      await tx.activityLog.create({
+        data: { projectId: project.id, userId: req.user!.id, type: "project_update", description: "Atualizou o cabeçalho do projecto." },
+      });
+    });
+
+    const dto = await buildProjectDetail(project.id);
+    return dto;
+  });
+
+  // TRNSF-1027 — resumo de dados associados (para avisar antes de apagar).
+  app.get<{ Params: { id: string } }>("/api/projects/:id/delete-info", async (req, reply) => {
+    if (!canManageUsers(req.user!.role)) return reply.code(403).send({ error: "Sem permissão." });
+    const project = await prisma.project.findUnique({ where: { id: req.params.id } });
+    if (!project) return reply.code(404).send({ error: "Projeto não encontrado" });
+    const [documents, checklist, deadlines, tasks, milestones, candidatura, preDiagnostico] = await Promise.all([
+      prisma.document.count({ where: { projectId: project.id } }),
+      prisma.checklistItem.count({ where: { projectId: project.id } }),
+      prisma.deadline.count({ where: { projectId: project.id } }),
+      prisma.task.count({ where: { projectId: project.id } }),
+      prisma.milestone.count({ where: { projectId: project.id } }),
+      prisma.candidatura.findUnique({ where: { projectId: project.id }, select: { id: true } }),
+      prisma.preDiagnostico.findUnique({ where: { projectId: project.id }, select: { projectId: true } }),
+    ]);
+    const counts = { documents, checklist, deadlines, tasks, milestones, candidatura: !!candidatura, preDiagnostico: !!preDiagnostico };
+    const hasData = documents > 0 || checklist > 0 || deadlines > 0 || tasks > 0 || milestones > 0 || !!candidatura || !!preDiagnostico;
+    return { ...counts, hasData };
+  });
+
+  // TRNSF-1027 — apagar um projeto (só gestor/admin). As relações em cascata
+  // removem os dados associados; ActivityLog/Task ficam órfãos (SetNull).
+  app.delete<{ Params: { id: string } }>("/api/projects/:id", async (req, reply) => {
+    if (!canManageUsers(req.user!.role)) {
+      return reply.code(403).send({ error: "Só um administrador pode apagar projetos." });
+    }
+    const project = await prisma.project.findUnique({ where: { id: req.params.id } });
+    if (!project) return reply.code(404).send({ error: "Projeto não encontrado" });
+    await prisma.project.delete({ where: { id: project.id } });
+    return { ok: true };
+  });
 
   // B-04 (base) — checklist documental de um projeto
   app.get<{ Params: { id: string } }>(
