@@ -8,6 +8,7 @@ import type {
   UpdateProjectRequest,
   CreateUserRequest,
   CandidaturaGeracaoDTO,
+  AvisoElegibilidade,
   DiagnosticDTO,
   PreDiagnosticoDTO,
   FinanceiroDTO,
@@ -193,6 +194,9 @@ export const api = {
   diagnostic: (id: string) => get<DiagnosticDTO>(`/api/projects/${id}/diagnostic`),
   saveDiagnostic: (id: string, data: SaveDiagnosticRequest) =>
     put<DiagnosticDTO>(`/api/projects/${id}/diagnostic`, data),
+  // elegibilidade estruturada do aviso (TRNSF-1030, só admin)
+  setEligibilidade: (id: string, data: AvisoElegibilidade) =>
+    put<DiagnosticDTO>(`/api/projects/${id}/diagnostic/eligibilidade`, data),
   advanceDiagnostic: (id: string) =>
     post<{ ok: boolean; state: string }>(`/api/projects/${id}/diagnostic/advance`),
 

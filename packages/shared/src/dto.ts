@@ -213,9 +213,12 @@ export type DiagnosticResult =
   | "A_REVER"
   | "SEM_GRELHA";
 
-/** Sugestão da pré-análise (TRNSF-1029): indício recolhido ou dados em falta.
- *  Nunca decide elegibilidade — o `status` continua a ser do consultor. */
-export type CondSugestao = "indicio" | "sem_dados";
+/** Sugestão da pré-análise (TRNSF-1029/1030). Nunca decide elegibilidade — é
+ *  sempre "a confirmar"; o `status` continua a ser do consultor.
+ *  - indicio / sem_dados: pré-análise textual (TRNSF-1029).
+ *  - provavel_passa / provavel_falha: cruzamento determinístico com a
+ *    elegibilidade estruturada do aviso (TRNSF-1030). */
+export type CondSugestao = "indicio" | "sem_dados" | "provavel_passa" | "provavel_falha";
 
 export interface ConditionStateDTO {
   key: string;
@@ -226,6 +229,25 @@ export interface ConditionStateDTO {
   sugestao?: CondSugestao | null;
   /** evidência recolhida ou o que falta confirmar (não persistido) */
   sugestaoNota?: string | null;
+}
+
+/** Elegibilidade estruturada de um aviso (TRNSF-1030). Vem do PDF do aviso e é
+ *  validada por admin; sem `estado === "validado"` não produz Provável PASSA/
+ *  FALHA. */
+export interface AvisoElegibilidade {
+  caeElegiveis: string[];
+  nuts2Elegiveis: string[];
+  exigeBaixaDensidade: boolean;
+  naturezasElegiveis: string[];
+  estado: "por_validar" | "validado";
+  notas?: string | null;
+  fonteUrl?: string | null;
+}
+
+/** Geografia da empresa, resolvida do concelho via CatalogoGeo. */
+export interface GeoEmpresa {
+  nuts2: string | null;
+  baixaDensidade: boolean | null;
 }
 
 /** Grelha aplicável a um projecto/aviso (ou indicação de ausência). */
@@ -254,6 +276,8 @@ export interface DiagnosticDTO {
   availableRegions: string[];
   // condições de acesso (dados do aviso) com o estado escolhido
   conditions: ConditionStateDTO[];
+  // elegibilidade estruturada do aviso (TRNSF-1030), null se não definida
+  eligibilidade: AvisoElegibilidade | null;
   // grelha de mérito disponível (ou null → "Grelha não configurada")
   grid: MeritGridSummaryDTO | null;
   // estrutura da grelha para o ecrã (critérios/subcritérios/opções)

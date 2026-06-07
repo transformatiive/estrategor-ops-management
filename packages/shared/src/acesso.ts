@@ -7,7 +7,7 @@
  * FALHA; o estado da condição continua a ser do consultor. Usa apenas dados
  * recolhidos; não inventa valores nem regras.
  */
-import type { CondSugestao } from "./dto.js";
+import type { AvisoElegibilidade, CondSugestao, GeoEmpresa } from "./dto.js";
 
 /** Dados recolhidos relevantes para as condições de acesso. */
 export interface DadosAcesso {
@@ -23,7 +23,24 @@ export interface SugestaoAcesso {
   nota: string;
 }
 
+export interface ResultadoAcesso {
+  sugestao: CondSugestao;
+  nota: string;
+}
+
 const tem = (v?: string | null): boolean => !!(v && String(v).trim());
+const soDigitos = (v: string): string => v.replace(/[^0-9]/g, "");
+
+/** O CAE da empresa está coberto pela lista do aviso? Aceita correspondência
+ *  exata ou por prefixo (ex.: lista "74" cobre "74900"). */
+function caeCoberto(caeEmpresa: string, lista: string[]): boolean {
+  const c = soDigitos(caeEmpresa);
+  if (!c) return false;
+  return lista.some((e) => {
+    const le = soDigitos(e);
+    return le.length > 0 && (c === le || c.startsWith(le));
+  });
+}
 
 /**
  * Devolve a sugestão para uma condição (pelo seu rótulo), ou null quando não há
@@ -68,4 +85,54 @@ export function sugerirCondicaoAcesso(label: string, d: DadosAcesso): SugestaoAc
   }
 
   return null;
+}
+
+/**
+ * Verificação determinística (TRNSF-1030): cruza os dados recolhidos com a
+ * elegibilidade ESTRUTURADA e VALIDADA do aviso para devolver Provável PASSA/
+ * FALHA nas condições de CAE/região/natureza. Sem elegibilidade validada ou
+ * sem dados, recai na pré-análise textual (TRNSF-1029). Nunca decide: o
+ * resultado é sempre "a confirmar".
+ */
+export function verificarCondicaoAcesso(
+  label: string,
+  d: DadosAcesso,
+  elig: AvisoElegibilidade | null,
+  geo: GeoEmpresa | null,
+): ResultadoAcesso | null {
+  const l = label.toLowerCase();
+  const validada = !!elig && elig.estado === "validado";
+
+  // CAE elegível — correspondência exata/por prefixo contra a lista do aviso
+  if (/\bcae\b/.test(l) && validada && elig!.caeElegiveis.length && tem(d.cae)) {
+    return caeCoberto(d.cae!, elig!.caeElegiveis)
+      ? { sugestao: "provavel_passa", nota: `CAE recolhido (${d.cae}) consta da lista de CAE elegíveis do aviso. A confirmar na certidão permanente.` }
+      : { sugestao: "provavel_falha", nota: `CAE recolhido (${d.cae}) não consta da lista de CAE elegíveis do aviso. Confirmar o CAE oficial.` };
+  }
+
+  // Localização / região / baixa densidade
+  if (/(localiza|territ[óo]rio|regi[ãa]o|baixa densidade)/.test(l) && validada && geo) {
+    if (/baixa densidade/.test(l) && elig!.exigeBaixaDensidade && geo.baixaDensidade !== null) {
+      return geo.baixaDensidade
+        ? { sugestao: "provavel_passa", nota: "O concelho da sede está classificado como território de baixa densidade. A confirmar." }
+        : { sugestao: "provavel_falha", nota: "O concelho da sede não consta como baixa densidade (exigida pelo aviso). A confirmar." };
+    }
+    if (elig!.nuts2Elegiveis.length && tem(geo.nuts2)) {
+      return elig!.nuts2Elegiveis.includes(geo.nuts2!)
+        ? { sugestao: "provavel_passa", nota: `A região da sede (${geo.nuts2}) consta das regiões elegíveis do aviso. A confirmar.` }
+        : { sugestao: "provavel_falha", nota: `A região da sede (${geo.nuts2}) não consta das regiões elegíveis do aviso. A confirmar.` };
+    }
+  }
+
+  // Natureza jurídica elegível
+  if (/(natureza\s+jur[íi]dica|forma\s+jur[íi]dica)/.test(l) && validada && elig!.naturezasElegiveis.length && tem(d.naturezaJuridica)) {
+    const nj = d.naturezaJuridica!.toLowerCase();
+    const ok = elig!.naturezasElegiveis.some((n) => nj.includes(n.toLowerCase()) || n.toLowerCase().includes(nj));
+    return ok
+      ? { sugestao: "provavel_passa", nota: `Natureza jurídica recolhida (${d.naturezaJuridica}) compatível com o aviso. A confirmar.` }
+      : { sugestao: "provavel_falha", nota: `Natureza jurídica recolhida (${d.naturezaJuridica}) não consta das formas elegíveis do aviso. A confirmar.` };
+  }
+
+  // Sem cruzamento determinístico → pré-análise textual (indício/sem dados)
+  return sugerirCondicaoAcesso(label, d);
 }

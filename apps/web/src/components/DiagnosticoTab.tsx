@@ -1,16 +1,28 @@
 import { useEffect, useMemo, useState } from "react";
-import type {
-  ConditionStateDTO,
-  ConditionStatus,
-  DiagnosticDTO,
-  MeritGridData,
-  MeritResult,
+import {
+  canManageUsers,
+  type CondSugestao,
+  type ConditionStateDTO,
+  type ConditionStatus,
+  type DiagnosticDTO,
+  type MeritGridData,
+  type MeritResult,
 } from "@estrategor/shared";
 import { api, ApiError } from "../lib/api.js";
 import { useAsync } from "../lib/useAsync.js";
+import { useAuth } from "../lib/auth.js";
 import { ErrorState } from "./ui.js";
 import { Dropdown } from "./Dropdown.js";
 import { PreDiagnosticoPanel } from "./PreDiagnosticoPanel.js";
+import { AvisoElegibilidadeEditor } from "./AvisoElegibilidadeEditor.js";
+
+/** Badge da sugestão da pré-análise das condições (TRNSF-1029/1030). */
+const SUG_BADGE: Record<CondSugestao, { cls: string; label: string }> = {
+  provavel_passa: { cls: "badge-green", label: "Provável PASSA · a confirmar" },
+  provavel_falha: { cls: "badge-danger", label: "Provável FALHA · a confirmar" },
+  indicio: { cls: "badge-blue", label: "Indício" },
+  sem_dados: { cls: "badge-muted", label: "Sem dados — confirmar" },
+};
 
 const RESULT_BADGE: Record<DiagnosticDTO["result"], { cls: string; label: string }> = {
   POR_INICIAR: { cls: "badge-muted", label: "Por iniciar" },
@@ -35,6 +47,7 @@ export function DiagnosticoTab({
   projectId: string;
   onAdvanced?: () => void;
 }) {
+  const { user } = useAuth();
   const { data, loading, error, reload } = useAsync(
     () => api.diagnostic(projectId),
     [projectId],
@@ -137,9 +150,7 @@ export function DiagnosticoTab({
               <span className="cond-label">{c.label}</span>
               {c.sugestao && (
                 <span className="cond-sugestao">
-                  <span className={"badge " + (c.sugestao === "indicio" ? "badge-blue" : "badge-muted")}>
-                    {c.sugestao === "indicio" ? "Indício" : "Sem dados — confirmar"}
-                  </span>
+                  <span className={"badge " + SUG_BADGE[c.sugestao].cls}>{SUG_BADGE[c.sugestao].label}</span>
                   {c.sugestaoNota && <span className="deadline-sub">{c.sugestaoNota}</span>}
                 </span>
               )}
@@ -154,6 +165,9 @@ export function DiagnosticoTab({
             </span>
           </div>
         ))}
+        {canManageUsers(user?.role ?? "CONSULTOR") && (
+          <AvisoElegibilidadeEditor projectId={projectId} atual={data.eligibilidade} onSaved={reload} />
+        )}
       </div>
 
       {/* ── Mérito ── */}

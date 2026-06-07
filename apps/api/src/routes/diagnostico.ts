@@ -1,13 +1,16 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import {
+  canManageUsers,
   computeMerit,
   gridRegions,
-  sugerirCondicaoAcesso,
+  verificarCondicaoAcesso,
+  type AvisoElegibilidade,
   type ConditionStateDTO,
   type DadosAcesso,
   type DiagnosticDTO,
   type DiagnosticResult,
+  type GeoEmpresa,
   type MeritGridData,
   type MeritGridSummaryDTO,
   type PreDiagCampo,
@@ -28,6 +31,16 @@ const saveSchema = z.object({
     .optional(),
   meritSelection: z.record(z.string(), z.number().int().min(0)).optional(),
   regiao: z.string().nullable().optional(),
+});
+
+const eligSchema = z.object({
+  caeElegiveis: z.array(z.string()).default([]),
+  nuts2Elegiveis: z.array(z.string()).default([]),
+  exigeBaixaDensidade: z.boolean().default(false),
+  naturezasElegiveis: z.array(z.string()).default([]),
+  estado: z.enum(["por_validar", "validado"]).default("por_validar"),
+  notas: z.string().nullable().optional(),
+  fonteUrl: z.string().nullable().optional(),
 });
 
 /** Procura a grelha de mérito aplicável a um projecto (por programa/medida). */
@@ -114,10 +127,44 @@ async function dadosAcessoDoProjeto(projectId: string): Promise<DadosAcesso> {
   };
 }
 
-/** Anexa a sugestão da pré-análise a cada condição (não altera o estado). */
-function enriquecerCondicoes(conditions: ConditionStateDTO[], dados: DadosAcesso): ConditionStateDTO[] {
+/** Resolve a geografia da empresa (NUTS II + baixa densidade) a partir do
+ *  concelho recolhido, via CatalogoGeo (TRNSF-953). Sem concelho → vazio. */
+async function geoDoConcelho(concelho: string | null): Promise<GeoEmpresa | null> {
+  if (!concelho?.trim()) return null;
+  const row = await prisma.catalogoGeo.findFirst({
+    where: { concelho: { equals: concelho.trim(), mode: "insensitive" } },
+    select: { nuts2: true, baixaDensidade: true },
+  });
+  if (!row) return { nuts2: null, baixaDensidade: null };
+  return { nuts2: row.nuts2, baixaDensidade: row.baixaDensidade };
+}
+
+/** Lê a elegibilidade estruturada do aviso (defensivo). */
+function lerElegibilidade(raw: unknown): AvisoElegibilidade | null {
+  if (!raw || typeof raw !== "object") return null;
+  const e = raw as Record<string, unknown>;
+  const arr = (v: unknown): string[] => (Array.isArray(v) ? v.map(String) : []);
+  return {
+    caeElegiveis: arr(e.caeElegiveis),
+    nuts2Elegiveis: arr(e.nuts2Elegiveis),
+    exigeBaixaDensidade: e.exigeBaixaDensidade === true,
+    naturezasElegiveis: arr(e.naturezasElegiveis),
+    estado: e.estado === "validado" ? "validado" : "por_validar",
+    notas: typeof e.notas === "string" ? e.notas : null,
+    fonteUrl: typeof e.fonteUrl === "string" ? e.fonteUrl : null,
+  };
+}
+
+/** Anexa a sugestão (determinística onde possível) a cada condição; não altera
+ *  o estado, que continua a ser do consultor. */
+function enriquecerCondicoes(
+  conditions: ConditionStateDTO[],
+  dados: DadosAcesso,
+  elig: AvisoElegibilidade | null,
+  geo: GeoEmpresa | null,
+): ConditionStateDTO[] {
   return conditions.map((c) => {
-    const s = sugerirCondicaoAcesso(c.label, dados);
+    const s = verificarCondicaoAcesso(c.label, dados, elig, geo);
     return { ...c, sugestao: s?.sugestao ?? null, sugestaoNota: s?.nota ?? null };
   });
 }
@@ -139,8 +186,12 @@ async function buildDTO(projectId: string): Promise<DiagnosticDTO | null> {
       label: c.label,
       status: "NA" as const,
     }));
-  // Pré-análise recalculada na leitura (reflete o pré-diagnóstico atual).
-  const conditions = enriquecerCondicoes(baseConditions, await dadosAcessoDoProjeto(projectId));
+  // Pré-análise recalculada na leitura (reflete o pré-diagnóstico atual + a
+  // elegibilidade estruturada do aviso, quando validada).
+  const dados = await dadosAcessoDoProjeto(projectId);
+  const eligibilidade = lerElegibilidade(grid?.eligibilidade);
+  const geo = await geoDoConcelho(dados.concelho ?? null);
+  const conditions = enriquecerCondicoes(baseConditions, dados, eligibilidade, geo);
 
   const meritSelection = (diag?.meritInputs as Record<string, number> | null) ?? {};
   const gridData = (grid?.grid as MeritGridData | null) ?? null;
@@ -157,6 +208,7 @@ async function buildDTO(projectId: string): Promise<DiagnosticDTO | null> {
     regiao,
     availableRegions: gridData ? gridRegions(gridData) : [],
     conditions,
+    eligibilidade,
     grid: grid ? gridSummary(grid) : null,
     gridData,
     meritSelection,
@@ -173,6 +225,34 @@ export async function diagnosticoRoutes(app: FastifyInstance) {
     const dto = await buildDTO(req.params.id);
     if (!dto) return reply.code(404).send({ error: "Projeto não encontrado." });
     return dto;
+  });
+
+  // TRNSF-1030 — definir/validar a elegibilidade estruturada do aviso (admin).
+  // Afeta o aviso (grelha), não só este projeto — é dado do aviso.
+  app.put<{ Params: { id: string } }>("/api/projects/:id/diagnostic/eligibilidade", async (req, reply) => {
+    if (!canManageUsers(req.user!.role)) {
+      return reply.code(403).send({ error: "Só um administrador pode definir a elegibilidade do aviso." });
+    }
+    const parsed = eligSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ error: parsed.error.errors[0]?.message ?? "Dados inválidos." });
+    }
+    const project = await prisma.project.findUnique({ where: { id: req.params.id }, include: { program: true } });
+    if (!project) return reply.code(404).send({ error: "Projeto não encontrado." });
+    const grid = await findGridForProject(project);
+    if (!grid) return reply.code(409).send({ error: "Sem grelha/aviso associado — não há onde guardar a elegibilidade." });
+
+    const elig: AvisoElegibilidade = {
+      caeElegiveis: parsed.data.caeElegiveis.map((s) => s.trim()).filter(Boolean),
+      nuts2Elegiveis: parsed.data.nuts2Elegiveis,
+      exigeBaixaDensidade: parsed.data.exigeBaixaDensidade,
+      naturezasElegiveis: parsed.data.naturezasElegiveis.map((s) => s.trim()).filter(Boolean),
+      estado: parsed.data.estado,
+      notas: parsed.data.notas ?? null,
+      fonteUrl: parsed.data.fonteUrl ?? grid.fonteUrl ?? null,
+    };
+    await prisma.meritGrid.update({ where: { id: grid.id }, data: { eligibilidade: elig as object } });
+    return buildDTO(project.id);
   });
 
   // G — guardar condições de acesso + selecções de mérito (recalcula e persiste)
