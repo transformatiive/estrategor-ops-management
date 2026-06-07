@@ -86,7 +86,7 @@ export async function runPreDiagnostico(projectId: string): Promise<void> {
   // Faixa C (juízo) — Sonnet estrutura A+B+C
   const sonnet = await estruturarSonnet({ nif, nome: vies.nome, caeApi: emp.cae, caeDescricao: emp.caeDescricao, contextoSonar: sonar.contexto });
   if (sonnet.estado === "ok") {
-    const fonte = "Pré-diagnóstico IA (Sonar + Sonnet 4.6)";
+    const fonte = "Pré-diagnóstico (IA)";
     if (sonnet.leitura.setor) campos.push({ key: "setor", label: "Setor (leitura)", value: sonnet.leitura.setor, origem: "pre_diagnostico_ia", estado: "por_validar", fonte });
     if (sonnet.leitura.caeProvavel) campos.push({ key: "cae_provavel", label: "CAE provável (leitura)", value: sonnet.leitura.caeProvavel, origem: "pre_diagnostico_ia", estado: "por_validar", fonte });
     if (sonnet.leitura.tipologiaAviso) campos.push({ key: "tipologia_aviso", label: "Tipologia de aviso aparente", value: sonnet.leitura.tipologiaAviso, origem: "pre_diagnostico_ia", estado: "por_validar", fonte });
