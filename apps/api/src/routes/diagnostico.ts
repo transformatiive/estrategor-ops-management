@@ -18,6 +18,7 @@ import {
 } from "@estrategor/shared";
 import { prisma } from "../db.js";
 import { requireAuth } from "../auth/guards.js";
+import { extrairElegibilidadeDoAviso } from "../extraction/aviso.js";
 
 const saveSchema = z.object({
   conditions: z
@@ -327,7 +328,8 @@ export async function diagnosticoRoutes(app: FastifyInstance) {
     }
     const project = await prisma.project.findUnique({ where: { id: req.params.id }, include: { program: true } });
     if (!project) return reply.code(404).send({ error: "Projeto não encontrado." });
-    const grid = await findGridForProject(project);
+    const diag = await prisma.diagnostic.findUnique({ where: { projectId: project.id }, select: { meritGridId: true } });
+    const grid = await resolveGrid(project, diag?.meritGridId ?? null);
     if (!grid) return reply.code(409).send({ error: "Sem grelha/aviso associado — não há onde guardar a elegibilidade." });
 
     const elig: AvisoElegibilidade = {
@@ -342,6 +344,37 @@ export async function diagnosticoRoutes(app: FastifyInstance) {
     await prisma.meritGrid.update({ where: { id: grid.id }, data: { eligibilidade: elig as object } });
     return buildDTO(project.id);
   });
+
+  // TRNSF-1032 (Fase 2B) — importar a elegibilidade do PDF do aviso (admin).
+  // Usa o fonteUrl do aviso (automático); só pede o link quando falta. A IA
+  // PROPÕE como rascunho `por_validar`; o admin revê e valida. Nunca decide.
+  app.post<{ Params: { id: string }; Body: { fonteUrl?: string } }>(
+    "/api/projects/:id/diagnostic/eligibilidade/importar",
+    async (req, reply) => {
+      if (!canManageUsers(req.user!.role)) {
+        return reply.code(403).send({ error: "Só um administrador pode importar a elegibilidade do aviso." });
+      }
+      const project = await prisma.project.findUnique({ where: { id: req.params.id }, include: { program: true } });
+      if (!project) return reply.code(404).send({ error: "Projeto não encontrado." });
+      const diag = await prisma.diagnostic.findUnique({ where: { projectId: project.id }, select: { meritGridId: true } });
+      const grid = await resolveGrid(project, diag?.meritGridId ?? null);
+      if (!grid) return reply.code(409).send({ error: "Sem grelha/aviso associado — escolha o aviso primeiro." });
+
+      const urlInput = typeof req.body?.fonteUrl === "string" ? req.body.fonteUrl.trim() : "";
+      const url = urlInput || grid.fonteUrl || "";
+      if (!url) {
+        return reply.code(400).send({ error: "Este aviso não tem URL do PDF — cole o link do aviso para importar." });
+      }
+
+      const { proposta } = await extrairElegibilidadeDoAviso(url);
+      // Preserva uma elegibilidade já validada (a importação é uma proposta nova).
+      const atual = lerElegibilidade(grid.eligibilidade);
+      const elig: AvisoElegibilidade = { ...proposta, fonteUrl: url };
+      await prisma.meritGrid.update({ where: { id: grid.id }, data: { eligibilidade: elig as object } });
+      void atual;
+      return buildDTO(project.id);
+    },
+  );
 
   // G — guardar condições de acesso + selecções de mérito (recalcula e persiste)
   app.put<{ Params: { id: string } }>("/api/projects/:id/diagnostic", async (req, reply) => {

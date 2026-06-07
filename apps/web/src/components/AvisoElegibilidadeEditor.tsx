@@ -12,10 +12,12 @@ import { Dropdown } from "./Dropdown.js";
 export function AvisoElegibilidadeEditor({
   projectId,
   atual,
+  fonteUrlAviso,
   onSaved,
 }: {
   projectId: string;
   atual: AvisoElegibilidade | null;
+  fonteUrlAviso?: string | null;
   onSaved: () => void;
 }) {
   const [aberto, setAberto] = useState(false);
@@ -25,12 +27,33 @@ export function AvisoElegibilidadeEditor({
   const [naturezas, setNaturezas] = useState((atual?.naturezasElegiveis ?? []).join(", "));
   const [estado, setEstado] = useState<AvisoElegibilidade["estado"]>(atual?.estado ?? "por_validar");
   const [notas, setNotas] = useState(atual?.notas ?? "");
-  const [fonteUrl, setFonteUrl] = useState(atual?.fonteUrl ?? "");
+  const [fonteUrl, setFonteUrl] = useState(atual?.fonteUrl ?? fonteUrlAviso ?? "");
   const [busy, setBusy] = useState(false);
+  const [importando, setImportando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
   function toggleNuts(n: string) {
     setNuts2((cur) => (cur.includes(n) ? cur.filter((x) => x !== n) : [...cur, n]));
+  }
+
+  function preencherDe(e: AvisoElegibilidade) {
+    setCae(e.caeElegiveis.join(", "));
+    setNuts2(e.nuts2Elegiveis);
+    setBaixa(e.exigeBaixaDensidade);
+    setNaturezas(e.naturezasElegiveis.join(", "));
+    setNotas(e.notas ?? "");
+    setEstado("por_validar"); // proposta da IA entra sempre por validar
+    if (e.fonteUrl) setFonteUrl(e.fonteUrl);
+  }
+
+  async function importar() {
+    setImportando(true); setErro(null);
+    try {
+      const dto = await api.importarElegibilidade(projectId, fonteUrl.trim() || undefined);
+      if (dto.eligibilidade) preencherDe(dto.eligibilidade);
+    } catch (e) {
+      setErro(e instanceof ApiError ? e.message : "Erro ao importar do PDF do aviso.");
+    } finally { setImportando(false); }
   }
 
   async function guardar() {
@@ -70,6 +93,18 @@ export function AvisoElegibilidadeEditor({
           <p className="deadline-sub" style={{ marginTop: 0 }}>
             Dados do aviso (do PDF oficial). Só com estado "Validada" geram Provável PASSA/FALHA. Nunca decidem — o estado de cada condição continua do consultor.
           </p>
+
+          {/* TRNSF-1032 — importar do PDF do aviso (a IA propõe, o admin valida) */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
+            <button className="btn btn-secondary btn-sm" onClick={importar} disabled={importando || busy}>
+              {importando ? "A importar do PDF…" : "Importar do PDF do aviso"}
+            </button>
+            <span className="deadline-sub">
+              {fonteUrlAviso || fonteUrl.trim()
+                ? "Usa o PDF do aviso e propõe a elegibilidade (rascunho a validar)."
+                : "Sem URL no aviso — cole o link do PDF no campo \"Fonte\" abaixo e importe."}
+            </span>
+          </div>
 
           <label className="login-label">CAE elegíveis (códigos separados por vírgula; aceita prefixos, ex.: 62 cobre 62010)</label>
           <textarea className="login-input" rows={2} value={cae} onChange={(e) => setCae(e.target.value)} placeholder="ex.: 26110, 28290, 62" />
