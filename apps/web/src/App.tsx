@@ -8,6 +8,7 @@ import { Prazos } from "./pages/Prazos.js";
 import { Clientes } from "./pages/Clientes.js";
 import { ClienteDetalhe } from "./pages/ClienteDetalhe.js";
 import { Utilizadores } from "./pages/Utilizadores.js";
+import { Avisos } from "./pages/Avisos.js";
 import { Login } from "./pages/Login.js";
 import { RecolhaPublica } from "./pages/RecolhaPublica.js";
 import { Placeholder } from "./pages/Placeholder.js";
@@ -51,6 +52,7 @@ export function App() {
           <Route path="/definicoes" element={<Placeholder title="Definições" epic="Configuração" />} />
           <Route element={<RequireManager />}>
             <Route path="/utilizadores" element={<Utilizadores />} />
+            <Route path="/avisos" element={<Avisos />} />
           </Route>
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
