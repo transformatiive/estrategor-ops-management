@@ -31,7 +31,7 @@ export function ProjectDeadlines({ projectId }: { projectId: string }) {
   const pendentes = data.filter((d) => d.status !== "completado");
 
   return (
-    <div className="card" style={{ maxWidth: 560, marginTop: 16 }}>
+    <div className="card" style={{ maxWidth: 560 }}>
       <div className="section-header" style={{ marginBottom: 8 }}>
         <div className="section-title" style={{ fontSize: 15 }}>Prazos do projeto</div>
       </div>

@@ -84,6 +84,7 @@ export function ProjectPage() {
       </div>
 
       {vistaAtiva === "resumo" && data && (
+        <div className="two-col">
         <div className="card" style={{ maxWidth: 560 }}>
           <div className="dp-field">
             <div className="dp-field-label">Programa</div>
@@ -110,9 +111,9 @@ export function ProjectPage() {
           {/* "Próxima acção" removida: o que falta para avançar já aparece no
               pipeline acima (TRNSF-963), tornando este campo redundante. */}
         </div>
+          <ProjectDeadlines projectId={id} />
+        </div>
       )}
-
-      {vistaAtiva === "resumo" && data && <ProjectDeadlines projectId={id} />}
 
       {vistaAtiva === "milestones" && data && (
         <div className="milestone-list" style={{ maxWidth: 560 }}>
