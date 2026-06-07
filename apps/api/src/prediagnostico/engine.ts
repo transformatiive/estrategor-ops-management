@@ -26,28 +26,37 @@ export async function runPreDiagnostico(projectId: string): Promise<void> {
   if (!project) return;
   const nif = project.client.nif?.trim();
 
+  // Arranca tudo pendente e mostra já a checklist de linha vermelha (visível de
+  // imediato). Em re-execução, limpa campos/fontes anteriores.
   await prisma.preDiagnostico.upsert({
     where: { projectId },
-    update: { estado: "pendente", estadoVies: "pendente", estadoApiEmpresas: "pendente", estadoSonar: "pendente", estadoSonnet: "pendente" },
-    create: { projectId, estado: "pendente" },
+    update: {
+      estado: "pendente", estadoVies: "pendente", estadoApiEmpresas: "pendente", estadoSonar: "pendente", estadoSonnet: "pendente",
+      campos: [] as object, fontesSonar: [] as object, checklistAConfirmar: CHECKLIST_BASE as object, executadoEm: null,
+    },
+    create: { projectId, estado: "pendente", checklistAConfirmar: CHECKLIST_BASE as object },
   });
 
   if (!nif) {
     await prisma.preDiagnostico.update({
       where: { projectId },
-      data: { estado: "falhou", checklistAConfirmar: CHECKLIST_BASE as object, executadoEm: new Date() },
+      data: { estado: "falhou", estadoVies: "falhou", estadoApiEmpresas: "falhou", estadoSonar: "falhou", estadoSonnet: "falhou", checklistAConfirmar: CHECKLIST_BASE as object, executadoEm: new Date() },
     });
     return;
   }
 
   const campos: PreDiagCampo[] = [];
 
-  // Faixa A — VIES (oficial, nasce validado)
+  // Faixa A — VIES (oficial, nasce validado). Grava o progresso ao terminar.
   const vies = await consultarVies(nif);
   if (vies.estado === "ok" && vies.valid) {
     if (vies.nome) campos.push({ key: "nome", label: "Denominação social", value: vies.nome, origem: "oficial_vies", estado: "validado", fonte: "VIES (Comissão Europeia)" });
     if (vies.morada) campos.push({ key: "morada", label: "Morada", value: vies.morada, origem: "oficial_vies", estado: "validado", fonte: "VIES (Comissão Europeia)" });
   }
+  await prisma.preDiagnostico.update({
+    where: { projectId },
+    data: { estadoVies: vies.estado, campos: campos as object, brutoVies: vies.bruto as object },
+  });
 
   // Faixa B — API de empresas (comercial, por validar) + normalização CAE (953)
   const emp = await consultarEmpresas(nif);
@@ -62,9 +71,19 @@ export async function runPreDiagnostico(projectId: string): Promise<void> {
     if (emp.concelho) campos.push({ key: "concelho", label: "Concelho", value: emp.concelho, origem: "api_empresas", estado: "por_validar", fonte: "nif.pt" });
     if (emp.distrito) campos.push({ key: "distrito", label: "Distrito", value: emp.distrito, origem: "api_empresas", estado: "por_validar", fonte: "nif.pt" });
   }
+  await prisma.preDiagnostico.update({
+    where: { projectId },
+    data: { estadoApiEmpresas: emp.estado, campos: campos as object, brutoApiEmpresas: emp.bruto as object },
+  });
 
-  // Faixa C — Sonar (contexto + fontes) e Sonnet (juízo estruturado)
+  // Faixa C (recolha) — Sonar (contexto + fontes)
   const sonar = await consultarSonar(nif, vies.nome);
+  await prisma.preDiagnostico.update({
+    where: { projectId },
+    data: { estadoSonar: sonar.estado, fontesSonar: sonar.fontes as object },
+  });
+
+  // Faixa C (juízo) — Sonnet estrutura A+B+C
   const sonnet = await estruturarSonnet({ nif, nome: vies.nome, caeApi: emp.cae, caeDescricao: emp.caeDescricao, contextoSonar: sonar.contexto });
   if (sonnet.estado === "ok") {
     const fonte = "Pré-diagnóstico IA (Sonar + Sonnet 4.6)";
@@ -82,15 +101,9 @@ export async function runPreDiagnostico(projectId: string): Promise<void> {
     where: { projectId },
     data: {
       estado: algumaOk ? "concluido" : "falhou",
-      estadoVies: vies.estado,
-      estadoApiEmpresas: emp.estado,
-      estadoSonar: sonar.estado,
       estadoSonnet: sonnet.estado,
       campos: campos as object,
       checklistAConfirmar: checklist as object,
-      fontesSonar: sonar.fontes as object,
-      brutoVies: vies.bruto as object,
-      brutoApiEmpresas: emp.bruto as object,
       executadoEm: new Date(),
     },
   });
