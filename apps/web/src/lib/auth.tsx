@@ -15,6 +15,8 @@ interface AuthState {
   canManageUsers: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  /** Recarrega o utilizador da sessão (ex.: depois de editar o próprio perfil). */
+  refresh: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -41,6 +43,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
+  const refresh = useCallback(async () => {
+    const r = await api.session();
+    setUser("user" in r ? null : r);
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
@@ -49,6 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         canManageUsers: user ? canManageUsers(user.role) : false,
         login,
         logout,
+        refresh,
       }}
     >
       {children}

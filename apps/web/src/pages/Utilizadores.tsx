@@ -3,6 +3,7 @@ import { ROLES, ROLE_LABELS, type Role, type UserDTO } from "@estrategor/shared"
 import { Dropdown } from "../components/Dropdown.js";
 import { api, ApiError } from "../lib/api.js";
 import { useAsync } from "../lib/useAsync.js";
+import { useAuth } from "../lib/auth.js";
 import { EmptyState, ErrorState } from "../components/ui.js";
 
 interface FormState {
@@ -16,6 +17,7 @@ interface FormState {
 const EMPTY: FormState = { fullName: "", email: "", role: "CONSULTOR", password: "" };
 
 export function Utilizadores() {
+  const { user, refresh } = useAuth();
   const { data: users, loading, error, reload } = useAsync(() => api.users());
   const [form, setForm] = useState<FormState | null>(null);
   const [resetFor, setResetFor] = useState<UserDTO | null>(null);
@@ -42,6 +44,8 @@ export function Utilizadores() {
           password: form.password,
         });
       }
+      // se editou o próprio perfil, recarrega a sessão (nome/iniciais no topo)
+      if (form.id && form.id === user?.id) await refresh();
       setForm(null);
       reload();
     } catch (err) {
@@ -54,6 +58,7 @@ export function Utilizadores() {
   async function toggleActive(u: UserDTO) {
     try {
       await api.updateUser(u.id, { active: !u.active });
+      if (u.id === user?.id) await refresh();
       reload();
     } catch (err) {
       alert(err instanceof ApiError ? err.message : "Erro.");
