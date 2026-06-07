@@ -59,6 +59,19 @@ export function PreDiagnosticoPanel({ projectId }: { projectId: string }) {
             <span className={"badge " + faixaBadge(data.faixas.sonnet)}>Sonnet 4.6: {FAIXA_ESTADO_LABEL[data.faixas.sonnet]}</span>
             {data.executadoEm && <span className="deadline-sub">{new Date(data.executadoEm).toLocaleString("pt-PT")}</span>}
           </div>
+          {/* Razão de falha por faixa (diagnóstico) */}
+          {(data.faixasDetalhe?.apiEmpresas || data.faixasDetalhe?.vies) && (
+            <p className="deadline-sub" style={{ marginTop: 0, marginBottom: 8 }}>
+              {data.faixasDetalhe?.vies && <span>VIES: {data.faixasDetalhe.vies}. </span>}
+              {data.faixasDetalhe?.apiEmpresas && <span>API empresas: {data.faixasDetalhe.apiEmpresas}.</span>}
+            </p>
+          )}
+          {/* Faixas sem chave: nota de configuração (não é erro) */}
+          {(data.faixas.sonar === "sem_chave" || data.faixas.sonnet === "sem_chave" || data.faixas.apiEmpresas === "sem_chave") && (
+            <p className="deadline-sub" style={{ marginTop: 0, marginBottom: 8 }}>
+              Faixas "Sem chave" estão desativadas por falta de credencial no ambiente (degradação graciosa) — não inventam dados.
+            </p>
+          )}
           <p className="deadline-sub" style={{ marginTop: 0 }}>
             Rascunho — a IA não decide elegibilidade. Valide campo a campo; nada tem efeito sem validação.
           </p>

@@ -42,6 +42,8 @@ export interface PreDiagnosticoDTO {
   /** inexistente = não correu (ex.: cliente sem NIF) */
   estado: "pendente" | "concluido" | "falhou" | "inexistente";
   faixas: { vies: FaixaEstado; apiEmpresas: FaixaEstado; sonar: FaixaEstado; sonnet: FaixaEstado };
+  /** Razão curta de falha por faixa (diagnóstico/auditoria), quando "falhou". */
+  faixasDetalhe?: { vies?: string | null; apiEmpresas?: string | null };
   campos: PreDiagCampo[];
   checklistAConfirmar: ChecklistAConfirmar[];
   fontesSonar: string[];

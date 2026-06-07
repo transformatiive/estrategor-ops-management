@@ -115,8 +115,25 @@ type Row = {
   campos: unknown;
   checklistAConfirmar: unknown;
   fontesSonar: unknown;
+  brutoVies: unknown;
+  brutoApiEmpresas: unknown;
   executadoEm: Date | null;
 };
+
+/**
+ * Razão curta e legível da falha de uma faixa, a partir do JSON em bruto
+ * guardado (status HTTP, erro de rede ou mensagem/result da própria API). Não
+ * expõe segredos: o bruto é a *resposta*, nunca o pedido (a chave vai no URL).
+ */
+function razaoFalha(bruto: unknown): string | null {
+  if (!bruto || typeof bruto !== "object") return null;
+  const b = bruto as Record<string, unknown>;
+  if (typeof b.erro === "string") return b.erro;
+  if (typeof b.status === "number") return `HTTP ${b.status}`;
+  if (typeof b.message === "string") return b.message;
+  if (typeof b.result === "string" && b.result.toLowerCase() !== "success") return `resposta: ${b.result}`;
+  return null;
+}
 
 function toDTO(row: Row): PreDiagnosticoDTO {
   return {
@@ -127,6 +144,10 @@ function toDTO(row: Row): PreDiagnosticoDTO {
       apiEmpresas: row.estadoApiEmpresas as FaixaEstado,
       sonar: row.estadoSonar as FaixaEstado,
       sonnet: row.estadoSonnet as FaixaEstado,
+    },
+    faixasDetalhe: {
+      vies: row.estadoVies === "falhou" ? razaoFalha(row.brutoVies) : null,
+      apiEmpresas: row.estadoApiEmpresas === "falhou" ? razaoFalha(row.brutoApiEmpresas) : null,
     },
     campos: Array.isArray(row.campos) ? (row.campos as PreDiagCampo[]) : [],
     checklistAConfirmar: Array.isArray(row.checklistAConfirmar) ? (row.checklistAConfirmar as ChecklistAConfirmar[]) : [],
