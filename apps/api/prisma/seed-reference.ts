@@ -17,7 +17,7 @@ import {
   ANEXOS,
   CAE_AMOSTRA,
   CATEGORIAS_CUSTO,
-  CONCELHOS_AMOSTRA,
+  CONCELHOS,
   DOCUMENT_TAXONOMY,
   DOMINIOS_INTL,
   INDICADORES,
@@ -110,7 +110,7 @@ export async function seedReference(): Promise<void> {
   for (const p of PAISES) {
     await prisma.catalogoPais.upsert({ where: { codigo: p.codigo }, update: { nome: p.nome }, create: p });
   }
-  for (const g of CONCELHOS_AMOSTRA) {
+  for (const g of CONCELHOS) {
     const existing = await prisma.catalogoGeo.findFirst({
       where: { nuts2: g.nuts2, nuts3: g.nuts3, concelho: g.concelho, freguesia: null },
     });
