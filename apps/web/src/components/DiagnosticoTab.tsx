@@ -58,6 +58,9 @@ export function DiagnosticoTab({
   const [saving, setSaving] = useState(false);
   const [sugerindo, setSugerindo] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  // encerramento "Não prosseguiu" (TRNSF-1044): caixa inline + motivo
+  const [encerrarAberto, setEncerrarAberto] = useState(false);
+  const [motivo, setMotivo] = useState("");
 
   useEffect(() => {
     if (data) {
@@ -159,6 +162,43 @@ export function DiagnosticoTab({
     }
   }
 
+  async function encerrar() {
+    const m = motivo.trim();
+    if (!m) {
+      setMsg("Indique o motivo do encerramento.");
+      return;
+    }
+    setSaving(true);
+    setMsg(null);
+    try {
+      await api.encerrarDiagnostico(projectId, m);
+      setEncerrarAberto(false);
+      setMotivo("");
+      reload();
+      onAdvanced?.();
+      setMsg("Diagnóstico encerrado — não prosseguiu.");
+    } catch (e) {
+      setMsg(e instanceof ApiError ? e.message : "Erro ao encerrar.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function reabrir() {
+    setSaving(true);
+    setMsg(null);
+    try {
+      await api.reopenProject(projectId);
+      reload();
+      onAdvanced?.();
+      setMsg("Projeto reaberto — voltou ao diagnóstico (A0).");
+    } catch (e) {
+      setMsg(e instanceof ApiError ? e.message : "Erro ao reabrir.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function advance() {
     setSaving(true);
     setMsg(null);
@@ -178,6 +218,44 @@ export function DiagnosticoTab({
   const nSugestoes = conditions.filter(
     (c) => c.sugestao === "provavel_passa" || c.sugestao === "provavel_falha",
   ).length;
+  const encerrado = data.projectState === "ENCERRADO";
+  const podeEncerrar = data.result === "A_REVER" || data.result === "NAO_ELEGIVEL";
+
+  // ── Estado terminal "Não prosseguiu" (TRNSF-1044) ──────────────────────
+  // Quando encerrado, mostramos apenas o banner + reabertura (gestor/admin); o
+  // diagnóstico está congelado.
+  if (encerrado) {
+    return (
+      <div style={{ maxWidth: 760 }}>
+        <div className="section-header">
+          <div className="section-title">Diagnóstico A0</div>
+          <span className="badge badge-danger">Não prosseguiu</span>
+        </div>
+        <div className="card" style={{ marginBottom: 16, borderLeft: "3px solid var(--danger)" }}>
+          <div className="dp-section-title" style={{ marginBottom: 6 }}>
+            Não prosseguiu
+          </div>
+          <p className="deadline-sub" style={{ margin: 0 }}>
+            Este diagnóstico foi encerrado por não passar (mérito abaixo do mínimo
+            ou condição de acesso falhada).
+          </p>
+          {data.encerradoMotivo && (
+            <p style={{ margin: "10px 0 0", fontSize: 13.5 }}>
+              <b>Motivo:</b> {data.encerradoMotivo}
+            </p>
+          )}
+        </div>
+        {canManageUsers(user?.role ?? "CONSULTOR") && (
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <button className="btn btn-secondary" onClick={reabrir} disabled={saving}>
+              {saving ? "A reabrir…" : "Reabrir"}
+            </button>
+            {msg && <span style={{ fontSize: 12, color: "var(--muted)" }}>{msg}</span>}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div style={{ maxWidth: 760 }}>
@@ -462,8 +540,66 @@ export function DiagnosticoTab({
         >
           Avançar → Candidatura
         </button>
+        {/* TRNSF-1044 — só quando o diagnóstico não passa */}
+        {podeEncerrar && !encerrarAberto && (
+          <button
+            className="btn btn-secondary"
+            onClick={() => {
+              setEncerrarAberto(true);
+              setMsg(null);
+            }}
+            disabled={saving}
+            title="Encerrar o diagnóstico com uma justificação (não prosseguiu)"
+          >
+            Fechar com comentários
+          </button>
+        )}
         {msg && <span style={{ fontSize: 12, color: "var(--muted)" }}>{msg}</span>}
       </div>
+
+      {/* TRNSF-1044 — caixa inline para encerrar com justificação obrigatória */}
+      {podeEncerrar && encerrarAberto && (
+        <div className="card" style={{ marginTop: 12, borderLeft: "3px solid var(--danger)" }}>
+          <div className="dp-section-title" style={{ marginBottom: 6 }}>
+            Encerrar — não prosseguiu
+          </div>
+          <p className="deadline-sub" style={{ margin: "0 0 8px" }}>
+            O projeto passa ao estado terminal "Não prosseguiu". É reversível: um
+            gestor pode reabri-lo para o diagnóstico.
+          </p>
+          <label className="merit-sub-label" htmlFor="encerrar-motivo">
+            Motivo do encerramento
+          </label>
+          <textarea
+            id="encerrar-motivo"
+            className="login-input"
+            style={{ width: "100%", minHeight: 80, resize: "vertical" }}
+            value={motivo}
+            onChange={(e) => setMotivo(e.target.value)}
+            placeholder="Explique porque é que o projeto não prossegue…"
+          />
+          <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 8 }}>
+            <button
+              className="btn btn-primary"
+              style={{ background: "var(--danger)" }}
+              onClick={encerrar}
+              disabled={saving || !motivo.trim()}
+            >
+              {saving ? "A encerrar…" : "Confirmar encerramento"}
+            </button>
+            <button
+              className="btn btn-secondary"
+              onClick={() => {
+                setEncerrarAberto(false);
+                setMotivo("");
+              }}
+              disabled={saving}
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

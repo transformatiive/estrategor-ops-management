@@ -302,6 +302,9 @@ export interface MeritGridSummaryDTO {
 export interface DiagnosticDTO {
   projectId: string;
   programCode: string;
+  // estado da máquina de estados do projeto (A0…B2 | ENCERRADO). Relevante para
+  // o encerramento "Não prosseguiu" (TRNSF-1044): banner + reabertura.
+  projectState: ProjectState;
   result: DiagnosticResult;
   eligible: boolean | null;
   mp: number | null;
@@ -331,6 +334,8 @@ export interface DiagnosticDTO {
   meritBreakdown: unknown | null;
   // proposta de pontuação assistida por IA (TRNSF-1039), null se ainda não sugerida
   meritProposal?: MeritProposalDTO | null;
+  // justificação do encerramento "Não prosseguiu" (TRNSF-1044); null se aberto
+  encerradoMotivo?: string | null;
   updatedAt: string | null;
 }
 

@@ -41,6 +41,8 @@ export const STATE_TO_FASE: Record<ProjectState, string> = {
   B0: "analise",
   B1: "execucao",
   B2: "encerramento",
+  // Terminal "Não prosseguiu" (TRNSF-1044): congela na fase do diagnóstico.
+  ENCERRADO: "diagnostico",
 };
 
 /** Badge de estado em linguagem de cliente (nunca A0–A4). */
@@ -53,6 +55,7 @@ export const STATE_BADGE_LABEL: Record<ProjectState, string> = {
   B0: "Em análise",
   B1: "Em execução",
   B2: "Encerramento",
+  ENCERRADO: "Não prosseguiu",
 };
 
 /** Vistas relevantes a cada fase (chaves dos separadores existentes). */
