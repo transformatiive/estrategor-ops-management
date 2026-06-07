@@ -93,20 +93,86 @@ export const NUTS: { nuts2: string; nuts3: string[] }[] = [
   { nuts2: "Região Autónoma da Madeira", nuts3: ["Região Autónoma da Madeira"] },
 ];
 
-/** Amostra de concelhos com flag de baixa densidade (completável). */
-export const CONCELHOS_AMOSTRA: { nuts2: string; nuts3: string; concelho: string; baixaDensidade: boolean }[] = [
-  { nuts2: "Norte", nuts3: "Área Metropolitana do Porto", concelho: "Porto", baixaDensidade: false },
-  { nuts2: "Norte", nuts3: "Terras de Trás-os-Montes", concelho: "Bragança", baixaDensidade: true },
-  { nuts2: "Norte", nuts3: "Douro", concelho: "Vila Real", baixaDensidade: true },
-  { nuts2: "Centro", nuts3: "Região de Aveiro", concelho: "Aveiro", baixaDensidade: false },
-  { nuts2: "Centro", nuts3: "Região de Coimbra", concelho: "Coimbra", baixaDensidade: false },
-  { nuts2: "Centro", nuts3: "Beira Baixa", concelho: "Castelo Branco", baixaDensidade: true },
-  { nuts2: "Centro", nuts3: "Beiras e Serra da Estrela", concelho: "Guarda", baixaDensidade: true },
-  { nuts2: "Área Metropolitana de Lisboa", nuts3: "Área Metropolitana de Lisboa", concelho: "Lisboa", baixaDensidade: false },
-  { nuts2: "Alentejo", nuts3: "Alentejo Central", concelho: "Évora", baixaDensidade: true },
-  { nuts2: "Alentejo", nuts3: "Baixo Alentejo", concelho: "Beja", baixaDensidade: true },
-  { nuts2: "Algarve", nuts3: "Algarve", concelho: "Faro", baixaDensidade: false },
+/**
+ * Catálogo completo dos 308 concelhos de Portugal → NUTS II / NUTS III
+ * (classificação NUTS 2024, INE). A flag `baixaDensidade` segue a lista oficial
+ * de territórios do interior/baixa densidade (Deliberação CIC Portugal 2020
+ * n.º 55/2020) ao nível do concelho integralmente classificado; casos parciais
+ * (ao nível da freguesia) ficam `false` e confirmam-se caso a caso.
+ */
+const BAIXA_DENSIDADE = new Set<string>([
+  // Norte
+  "Melgaço", "Monção", "Arcos de Valdevez", "Paredes de Coura", "Ponte da Barca", "Valença", "Vila Nova de Cerveira",
+  "Terras de Bouro", "Vila Verde", "Cabeceiras de Basto", "Mondim de Basto", "Vieira do Minho",
+  "Boticas", "Chaves", "Montalegre", "Ribeira de Pena", "Valpaços", "Vila Pouca de Aguiar",
+  "Baião", "Celorico de Basto", "Cinfães", "Resende",
+  "Alijó", "Armamar", "Carrazeda de Ansiães", "Freixo de Espada à Cinta", "Lamego", "Mesão Frio", "Moimenta da Beira",
+  "Murça", "Penedono", "Peso da Régua", "Sabrosa", "Santa Marta de Penaguião", "São João da Pesqueira", "Sernancelhe",
+  "Tabuaço", "Tarouca", "Torre de Moncorvo", "Vila Nova de Foz Côa", "Vila Real",
+  "Alfândega da Fé", "Bragança", "Macedo de Cavaleiros", "Miranda do Douro", "Mirandela", "Mogadouro", "Vila Flor", "Vimioso", "Vinhais",
+  // Centro
+  "Sever do Vouga",
+  "Arganil", "Góis", "Mortágua", "Oliveira do Hospital", "Pampilhosa da Serra", "Penacova", "Penela", "Tábua", "Vila Nova de Poiares",
+  "Alvaiázere", "Ansião", "Castanheira de Pera", "Figueiró dos Vinhos", "Pedrógão Grande",
+  "Aguiar da Beira", "Carregal do Sal", "Castro Daire", "Mangualde", "Nelas", "Oliveira de Frades", "Penalva do Castelo",
+  "Santa Comba Dão", "São Pedro do Sul", "Sátão", "Tondela", "Vila Nova de Paiva", "Vouzela",
+  "Castelo Branco", "Idanha-a-Nova", "Oleiros", "Penamacor", "Proença-a-Nova", "Vila Velha de Ródão",
+  "Ferreira do Zêzere", "Mação", "Sardoal", "Sertã", "Vila de Rei",
+  "Almeida", "Belmonte", "Celorico da Beira", "Covilhã", "Figueira de Castelo Rodrigo", "Fornos de Algodres", "Fundão",
+  "Gouveia", "Guarda", "Manteigas", "Mêda", "Pinhel", "Sabugal", "Seia", "Trancoso",
+  // Alentejo
+  "Alcácer do Sal", "Grândola", "Odemira", "Santiago do Cacém",
+  "Aljustrel", "Almodôvar", "Alvito", "Barrancos", "Beja", "Castro Verde", "Cuba", "Ferreira do Alentejo", "Mértola",
+  "Moura", "Ourique", "Serpa", "Vidigueira",
+  "Alter do Chão", "Arronches", "Avis", "Campo Maior", "Castelo de Vide", "Crato", "Elvas", "Fronteira", "Gavião",
+  "Marvão", "Monforte", "Nisa", "Ponte de Sor", "Portalegre", "Sousel",
+  "Alandroal", "Arraiolos", "Borba", "Estremoz", "Évora", "Montemor-o-Novo", "Mora", "Mourão", "Portel", "Redondo",
+  "Reguengos de Monsaraz", "Vendas Novas", "Viana do Alentejo", "Vila Viçosa",
+  "Chamusca", "Coruche", "Golegã",
+  // Algarve
+  "Alcoutim", "Aljezur", "Castro Marim", "Monchique", "Vila do Bispo",
+]);
+
+const CONCELHOS_POR_NUTS: { nuts2: string; nuts3: string; concelhos: string[] }[] = [
+  // ── NORTE (86) ──
+  { nuts2: "Norte", nuts3: "Alto Minho", concelhos: ["Arcos de Valdevez", "Caminha", "Melgaço", "Monção", "Paredes de Coura", "Ponte da Barca", "Ponte de Lima", "Valença", "Viana do Castelo", "Vila Nova de Cerveira"] },
+  { nuts2: "Norte", nuts3: "Cávado", concelhos: ["Amares", "Barcelos", "Braga", "Esposende", "Terras de Bouro", "Vila Verde"] },
+  { nuts2: "Norte", nuts3: "Ave", concelhos: ["Cabeceiras de Basto", "Fafe", "Guimarães", "Mondim de Basto", "Póvoa de Lanhoso", "Vieira do Minho", "Vila Nova de Famalicão", "Vizela"] },
+  { nuts2: "Norte", nuts3: "Área Metropolitana do Porto", concelhos: ["Arouca", "Espinho", "Gondomar", "Maia", "Matosinhos", "Oliveira de Azeméis", "Paredes", "Porto", "Póvoa de Varzim", "Santa Maria da Feira", "Santo Tirso", "São João da Madeira", "Trofa", "Vale de Cambra", "Valongo", "Vila do Conde", "Vila Nova de Gaia"] },
+  { nuts2: "Norte", nuts3: "Alto Tâmega", concelhos: ["Boticas", "Chaves", "Montalegre", "Ribeira de Pena", "Valpaços", "Vila Pouca de Aguiar"] },
+  { nuts2: "Norte", nuts3: "Tâmega e Sousa", concelhos: ["Amarante", "Baião", "Castelo de Paiva", "Celorico de Basto", "Cinfães", "Felgueiras", "Lousada", "Marco de Canaveses", "Paços de Ferreira", "Penafiel", "Resende"] },
+  { nuts2: "Norte", nuts3: "Douro", concelhos: ["Alijó", "Armamar", "Carrazeda de Ansiães", "Freixo de Espada à Cinta", "Lamego", "Mesão Frio", "Moimenta da Beira", "Murça", "Penedono", "Peso da Régua", "Sabrosa", "Santa Marta de Penaguião", "São João da Pesqueira", "Sernancelhe", "Tabuaço", "Tarouca", "Torre de Moncorvo", "Vila Nova de Foz Côa", "Vila Real"] },
+  { nuts2: "Norte", nuts3: "Terras de Trás-os-Montes", concelhos: ["Alfândega da Fé", "Bragança", "Macedo de Cavaleiros", "Miranda do Douro", "Mirandela", "Mogadouro", "Vila Flor", "Vimioso", "Vinhais"] },
+  // ── CENTRO (100) ──
+  { nuts2: "Centro", nuts3: "Região de Aveiro", concelhos: ["Águeda", "Albergaria-a-Velha", "Anadia", "Aveiro", "Estarreja", "Ílhavo", "Murtosa", "Oliveira do Bairro", "Ovar", "Sever do Vouga", "Vagos"] },
+  { nuts2: "Centro", nuts3: "Região de Coimbra", concelhos: ["Arganil", "Cantanhede", "Coimbra", "Condeixa-a-Nova", "Figueira da Foz", "Góis", "Lousã", "Mealhada", "Mira", "Miranda do Corvo", "Montemor-o-Velho", "Mortágua", "Oliveira do Hospital", "Pampilhosa da Serra", "Penacova", "Penela", "Soure", "Tábua", "Vila Nova de Poiares"] },
+  { nuts2: "Centro", nuts3: "Região de Leiria", concelhos: ["Alvaiázere", "Ansião", "Batalha", "Castanheira de Pera", "Figueiró dos Vinhos", "Leiria", "Marinha Grande", "Pedrógão Grande", "Pombal", "Porto de Mós"] },
+  { nuts2: "Centro", nuts3: "Viseu Dão Lafões", concelhos: ["Aguiar da Beira", "Carregal do Sal", "Castro Daire", "Mangualde", "Nelas", "Oliveira de Frades", "Penalva do Castelo", "Santa Comba Dão", "São Pedro do Sul", "Sátão", "Tondela", "Vila Nova de Paiva", "Viseu", "Vouzela"] },
+  { nuts2: "Centro", nuts3: "Beira Baixa", concelhos: ["Castelo Branco", "Idanha-a-Nova", "Oleiros", "Penamacor", "Proença-a-Nova", "Vila Velha de Ródão"] },
+  { nuts2: "Centro", nuts3: "Médio Tejo", concelhos: ["Abrantes", "Alcanena", "Constância", "Entroncamento", "Ferreira do Zêzere", "Mação", "Ourém", "Sardoal", "Sertã", "Tomar", "Torres Novas", "Vila de Rei", "Vila Nova da Barquinha"] },
+  { nuts2: "Centro", nuts3: "Beiras e Serra da Estrela", concelhos: ["Almeida", "Belmonte", "Celorico da Beira", "Covilhã", "Figueira de Castelo Rodrigo", "Fornos de Algodres", "Fundão", "Gouveia", "Guarda", "Manteigas", "Mêda", "Pinhel", "Sabugal", "Seia", "Trancoso"] },
+  { nuts2: "Centro", nuts3: "Oeste", concelhos: ["Alcobaça", "Alenquer", "Arruda dos Vinhos", "Bombarral", "Cadaval", "Caldas da Rainha", "Lourinhã", "Nazaré", "Óbidos", "Peniche", "Sobral de Monte Agraço", "Torres Vedras"] },
+  // ── ÁREA METROPOLITANA DE LISBOA (18) ──
+  { nuts2: "Área Metropolitana de Lisboa", nuts3: "Área Metropolitana de Lisboa", concelhos: ["Alcochete", "Almada", "Amadora", "Barreiro", "Cascais", "Lisboa", "Loures", "Mafra", "Moita", "Montijo", "Odivelas", "Oeiras", "Palmela", "Seixal", "Sesimbra", "Setúbal", "Sintra", "Vila Franca de Xira"] },
+  // ── ALENTEJO (58) ──
+  { nuts2: "Alentejo", nuts3: "Alentejo Litoral", concelhos: ["Alcácer do Sal", "Grândola", "Odemira", "Santiago do Cacém", "Sines"] },
+  { nuts2: "Alentejo", nuts3: "Baixo Alentejo", concelhos: ["Aljustrel", "Almodôvar", "Alvito", "Barrancos", "Beja", "Castro Verde", "Cuba", "Ferreira do Alentejo", "Mértola", "Moura", "Ourique", "Serpa", "Vidigueira"] },
+  { nuts2: "Alentejo", nuts3: "Alto Alentejo", concelhos: ["Alter do Chão", "Arronches", "Avis", "Campo Maior", "Castelo de Vide", "Crato", "Elvas", "Fronteira", "Gavião", "Marvão", "Monforte", "Nisa", "Ponte de Sor", "Portalegre", "Sousel"] },
+  { nuts2: "Alentejo", nuts3: "Alentejo Central", concelhos: ["Alandroal", "Arraiolos", "Borba", "Estremoz", "Évora", "Montemor-o-Novo", "Mora", "Mourão", "Portel", "Redondo", "Reguengos de Monsaraz", "Vendas Novas", "Viana do Alentejo", "Vila Viçosa"] },
+  { nuts2: "Alentejo", nuts3: "Lezíria do Tejo", concelhos: ["Almeirim", "Alpiarça", "Azambuja", "Benavente", "Cartaxo", "Chamusca", "Coruche", "Golegã", "Rio Maior", "Salvaterra de Magos", "Santarém"] },
+  // ── ALGARVE (16) ──
+  { nuts2: "Algarve", nuts3: "Algarve", concelhos: ["Albufeira", "Alcoutim", "Aljezur", "Castro Marim", "Faro", "Lagoa", "Lagos", "Loulé", "Monchique", "Olhão", "Portimão", "São Brás de Alportel", "Silves", "Tavira", "Vila do Bispo", "Vila Real de Santo António"] },
+  // ── R.A. AÇORES (19) ──
+  { nuts2: "Região Autónoma dos Açores", nuts3: "Região Autónoma dos Açores", concelhos: ["Angra do Heroísmo", "Calheta (São Jorge)", "Corvo", "Horta", "Lagoa (Açores)", "Lajes das Flores", "Lajes do Pico", "Madalena", "Nordeste", "Ponta Delgada", "Povoação", "Ribeira Grande", "Santa Cruz da Graciosa", "Santa Cruz das Flores", "São Roque do Pico", "Velas", "Vila Franca do Campo", "Vila do Porto", "Vila Praia da Vitória"] },
+  // ── R.A. MADEIRA (11) ──
+  { nuts2: "Região Autónoma da Madeira", nuts3: "Região Autónoma da Madeira", concelhos: ["Calheta (Madeira)", "Câmara de Lobos", "Funchal", "Machico", "Ponta do Sol", "Porto Moniz", "Porto Santo", "Ribeira Brava", "Santa Cruz", "Santana", "São Vicente"] },
 ];
+
+/** Os 308 concelhos com NUTS II/III e flag de baixa densidade (TRNSF-1037). */
+export const CONCELHOS: { nuts2: string; nuts3: string; concelho: string; baixaDensidade: boolean }[] =
+  CONCELHOS_POR_NUTS.flatMap(({ nuts2, nuts3, concelhos }) =>
+    concelhos.map((concelho) => ({ nuts2, nuts3, concelho, baixaDensidade: BAIXA_DENSIDADE.has(concelho) })),
+  );
 
 /** Países / mercados (ISO-3166 alpha-2, principais mercados de exportação). */
 export const PAISES: { codigo: string; nome: string }[] = [

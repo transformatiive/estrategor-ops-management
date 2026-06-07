@@ -2,9 +2,27 @@ import { describe, expect, it } from "vitest";
 import {
   ANEXOS,
   CATEGORIAS_CUSTO,
+  CONCELHOS,
   DOMINIOS_INTL,
   INDICADORES,
 } from "@estrategor/shared";
+
+describe("catálogo de concelhos → NUTS II (TRNSF-1037)", () => {
+  it("tem os 308 concelhos de Portugal, sem duplicados", () => {
+    expect(CONCELHOS).toHaveLength(308);
+    expect(new Set(CONCELHOS.map((c) => c.concelho)).size).toBe(308);
+  });
+
+  it("resolve concelhos da Área Metropolitana de Lisboa (ex.: Oeiras)", () => {
+    const oeiras = CONCELHOS.find((c) => c.concelho === "Oeiras");
+    expect(oeiras?.nuts2).toBe("Área Metropolitana de Lisboa");
+  });
+
+  it("todos têm um NUTS II válido", () => {
+    const validos = new Set(["Norte", "Centro", "Área Metropolitana de Lisboa", "Alentejo", "Algarve", "Região Autónoma dos Açores", "Região Autónoma da Madeira"]);
+    expect(CONCELHOS.every((c) => validos.has(c.nuts2))).toBe(true);
+  });
+});
 
 describe("rulebook / catálogos (TRNSF-953)", () => {
   it("domínios de internacionalização são 1..6 sem buracos", () => {
