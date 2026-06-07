@@ -127,6 +127,40 @@ export function commonSection(key: string): CandSectionDef | undefined {
   return CAND_COMMON_SECTIONS.find((s) => s.key === key);
 }
 
+/**
+ * Secções "estruturadas" geridas por painéis dedicados no separador Candidatura
+ * (TipologiasPanel, AtividadesPanel, InovacaoExtra/Cond, IntlAções/Detalhe,
+ * Financeiro, Custos). Guardam dados em forma de tabela (campo `linhas` com um
+ * array) e já têm um editor próprio acima — por isso **não** devem voltar a
+ * aparecer na lista genérica do preview (senão duplicam e mostram JSON cru).
+ * Fonte única para a API (`buildDTO`) e a Web.
+ */
+export const CAND_STRUCTURED_SECTIONS: ReadonlySet<string> = new Set([
+  // Família A — Inovação Produtiva
+  "tipologia",
+  "atividades_inovacao",
+  "indicadores",
+  "industria_40",
+  "transicao_climatica",
+  "substituicao_importacoes",
+  "descricao_fisica",
+  "intake_inovacao",
+  // Família B — Internacionalização
+  "acoes_intl",
+  "intl_acao_custos",
+  "intl_deslocacoes",
+  "intl_rh",
+  "intake_intl",
+  // Transversais
+  "financeiro",
+  "investimentos",
+]);
+
+/** Secção gerida por um painel dedicado (excluída da lista genérica do preview). */
+export function isStructuredSection(key: string): boolean {
+  return CAND_STRUCTURED_SECTIONS.has(key);
+}
+
 // ─── DTOs ─────────────────────────────────────────────────────────────────
 
 export interface CandFieldDTO {
