@@ -208,6 +208,12 @@ export function DiagnosticoTab({
            propõe automaticamente; aqui revê-se e valida-se ── */}
       {canManageUsers(user?.role ?? "CONSULTOR") && (
         <div className="card" style={{ marginBottom: 16 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+            <div className="dp-section-title" style={{ marginBottom: 0 }}>Elegibilidade do aviso</div>
+            <span className={"badge " + (data.eligibilidade?.estado === "validado" ? "badge-green" : data.eligibilidade ? "badge-warning" : "badge-muted")}>
+              {data.eligibilidade?.estado === "validado" ? "Validada" : data.eligibilidade ? "Por validar" : "Não definida"}
+            </span>
+          </div>
           <AvisoElegibilidadeEditor
             projectId={projectId}
             atual={data.eligibilidade}

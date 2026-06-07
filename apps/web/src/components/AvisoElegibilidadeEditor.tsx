@@ -20,7 +20,9 @@ export function AvisoElegibilidadeEditor({
   fonteUrlAviso?: string | null;
   onSaved: () => void;
 }) {
-  const [aberto, setAberto] = useState(false);
+  // Existindo PDF do aviso (ou elegibilidade já definida), abre por defeito —
+  // é uma secção de trabalho, não um detalhe escondido.
+  const [aberto, setAberto] = useState<boolean>(!!(atual || fonteUrlAviso));
   const [cae, setCae] = useState((atual?.caeElegiveis ?? []).join(", "));
   const [nuts2, setNuts2] = useState<string[]>(atual?.nuts2Elegiveis ?? []);
   const [baixa, setBaixa] = useState(atual?.exigeBaixaDensidade ?? false);
@@ -68,7 +70,6 @@ export function AvisoElegibilidadeEditor({
         notas: notas.trim() || null,
         fonteUrl: fonteUrl.trim() || null,
       });
-      setAberto(false);
       onSaved();
     } catch (e) {
       setErro(e instanceof ApiError ? e.message : "Erro ao guardar.");
@@ -82,7 +83,7 @@ export function AvisoElegibilidadeEditor({
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-        <span className="deadline-sub">Elegibilidade do aviso (admin): {resumo}</span>
+        <span className="deadline-sub">{resumo}</span>
         <button className="btn btn-secondary btn-sm" onClick={() => setAberto((v) => !v)}>
           {aberto ? "Fechar" : atual ? "Editar" : "Definir"}
         </button>
@@ -138,6 +139,9 @@ export function AvisoElegibilidadeEditor({
           <input className="login-input" value={notas} onChange={(e) => setNotas(e.target.value)} />
 
           <label className="login-label">Estado</label>
+          <p className="deadline-sub" style={{ margin: "0 0 6px" }}>
+            "Validada" liga o cruzamento: as condições de CAE/região passam a mostrar Provável PASSA/FALHA (a confirmar). "Por validar" deixa-as só com indício.
+          </p>
           <Dropdown
             block
             value={estado}
