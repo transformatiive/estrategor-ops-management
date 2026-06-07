@@ -213,11 +213,19 @@ export type DiagnosticResult =
   | "A_REVER"
   | "SEM_GRELHA";
 
+/** Sugestão da pré-análise (TRNSF-1029): indício recolhido ou dados em falta.
+ *  Nunca decide elegibilidade — o `status` continua a ser do consultor. */
+export type CondSugestao = "indicio" | "sem_dados";
+
 export interface ConditionStateDTO {
   key: string;
   label: string;
   status: ConditionStatus;
   note?: string;
+  /** sugestão calculada a partir do pré-diagnóstico (não persistida) */
+  sugestao?: CondSugestao | null;
+  /** evidência recolhida ou o que falta confirmar (não persistido) */
+  sugestaoNota?: string | null;
 }
 
 /** Grelha aplicável a um projecto/aviso (ou indicação de ausência). */

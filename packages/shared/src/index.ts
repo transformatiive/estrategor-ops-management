@@ -25,3 +25,4 @@ export * from "./dashboard.js";
 export * from "./clients.js";
 export * from "./search.js";
 export * from "./prediagnostico.js";
+export * from "./acesso.js";

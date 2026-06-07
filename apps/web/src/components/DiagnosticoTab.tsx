@@ -133,7 +133,17 @@ export function DiagnosticoTab({
             onClick={() => cycleCondition(c.key)}
             title="Clique para alternar"
           >
-            <span className="cond-label">{c.label}</span>
+            <span className="cond-main">
+              <span className="cond-label">{c.label}</span>
+              {c.sugestao && (
+                <span className="cond-sugestao">
+                  <span className={"badge " + (c.sugestao === "indicio" ? "badge-blue" : "badge-muted")}>
+                    {c.sugestao === "indicio" ? "Indício" : "Sem dados — confirmar"}
+                  </span>
+                  {c.sugestaoNota && <span className="deadline-sub">{c.sugestaoNota}</span>}
+                </span>
+              )}
+            </span>
             <span
               className={
                 "badge " +

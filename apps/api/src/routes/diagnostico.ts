@@ -3,11 +3,14 @@ import { z } from "zod";
 import {
   computeMerit,
   gridRegions,
+  sugerirCondicaoAcesso,
   type ConditionStateDTO,
+  type DadosAcesso,
   type DiagnosticDTO,
   type DiagnosticResult,
   type MeritGridData,
   type MeritGridSummaryDTO,
+  type PreDiagCampo,
 } from "@estrategor/shared";
 import { prisma } from "../db.js";
 import { requireAuth } from "../auth/guards.js";
@@ -93,6 +96,32 @@ function deriveResult(
   return { result: "A_REVER", eligible: false };
 }
 
+/** Extrai do pré-diagnóstico (TRNSF-967) os dados relevantes para as condições
+ *  de acesso. Só dados recolhidos; ausência → campos vazios (sem invenção). */
+async function dadosAcessoDoProjeto(projectId: string): Promise<DadosAcesso> {
+  const row = await prisma.preDiagnostico.findUnique({ where: { projectId }, select: { campos: true } });
+  const campos = Array.isArray(row?.campos) ? (row!.campos as unknown as PreDiagCampo[]) : [];
+  const valor = (key: string): string | null => {
+    const c = campos.find((x) => x.key === key);
+    return c && c.value != null ? String(c.value) : null;
+  };
+  return {
+    cae: valor("cae_principal") ?? valor("cae_provavel"),
+    concelho: valor("concelho"),
+    distrito: valor("distrito"),
+    naturezaJuridica: valor("natureza_juridica"),
+    setor: valor("setor"),
+  };
+}
+
+/** Anexa a sugestão da pré-análise a cada condição (não altera o estado). */
+function enriquecerCondicoes(conditions: ConditionStateDTO[], dados: DadosAcesso): ConditionStateDTO[] {
+  return conditions.map((c) => {
+    const s = sugerirCondicaoAcesso(c.label, dados);
+    return { ...c, sugestao: s?.sugestao ?? null, sugestaoNota: s?.nota ?? null };
+  });
+}
+
 async function buildDTO(projectId: string): Promise<DiagnosticDTO | null> {
   const project = await prisma.project.findUnique({
     where: { id: projectId },
@@ -103,13 +132,15 @@ async function buildDTO(projectId: string): Promise<DiagnosticDTO | null> {
   const grid = await findGridForProject(project);
   const diag = await prisma.diagnostic.findUnique({ where: { projectId } });
 
-  const conditions: ConditionStateDTO[] =
+  const baseConditions: ConditionStateDTO[] =
     (diag?.conditions as ConditionStateDTO[] | null) ??
     ((grid?.accessConditions as { key: string; label: string }[] | null) ?? []).map((c) => ({
       key: c.key,
       label: c.label,
       status: "NA" as const,
     }));
+  // Pré-análise recalculada na leitura (reflete o pré-diagnóstico atual).
+  const conditions = enriquecerCondicoes(baseConditions, await dadosAcessoDoProjeto(projectId));
 
   const meritSelection = (diag?.meritInputs as Record<string, number> | null) ?? {};
   const gridData = (grid?.grid as MeritGridData | null) ?? null;
