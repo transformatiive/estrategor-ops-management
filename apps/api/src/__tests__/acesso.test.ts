@@ -92,3 +92,30 @@ describe("verificação determinística com elegibilidade do aviso (TRNSF-1030)"
     expect(s?.sugestao).toBe("indicio");
   });
 });
+
+describe("baixa densidade ao nível da freguesia (TRNSF-1040)", () => {
+  const L = "Território de baixa densidade";
+
+  it("concelho integral → provável PASSA", () => {
+    const s = verificarCondicaoAcesso(L, {}, ELIG, { nuts2: "Norte", baixaDensidade: true });
+    expect(s?.sugestao).toBe("provavel_passa");
+  });
+
+  it("concelho parcial + freguesia desconhecida → 'a confirmar' (indício, não provável)", () => {
+    const s = verificarCondicaoAcesso(L, {}, ELIG, { nuts2: "Centro", baixaDensidade: "a_confirmar" });
+    expect(s?.sugestao).toBe("indicio");
+    expect(s?.sugestao).not.toBe("provavel_passa");
+    expect(s?.sugestao).not.toBe("provavel_falha");
+    expect(s?.nota).toContain("freguesia");
+  });
+
+  it("concelho parcial + freguesia listada (baixaDensidade=true) → provável PASSA", () => {
+    const s = verificarCondicaoAcesso(L, {}, ELIG, { nuts2: "Centro", baixaDensidade: true });
+    expect(s?.sugestao).toBe("provavel_passa");
+  });
+
+  it("concelho parcial + freguesia NÃO listada (baixaDensidade=false) → provável FALHA", () => {
+    const s = verificarCondicaoAcesso(L, {}, ELIG, { nuts2: "Centro", baixaDensidade: false });
+    expect(s?.sugestao).toBe("provavel_falha");
+  });
+});

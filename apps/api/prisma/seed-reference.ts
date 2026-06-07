@@ -15,6 +15,7 @@ import { PrismaClient } from "@prisma/client";
 import {
   ACCESS_CONDITIONS_MPR_2025_9,
   ANEXOS,
+  BAIXA_DENSIDADE_PARCIAL,
   CAE_AMOSTRA,
   CATEGORIAS_CUSTO,
   CONCELHOS,
@@ -125,6 +126,34 @@ export async function seedReference(): Promise<void> {
     if (existing) await prisma.catalogoGeo.update({ where: { id: existing.id }, data });
     else await prisma.catalogoGeo.create({ data });
   }
+  // Freguesias de baixa densidade em concelhos PARCIAIS (TRNSF-1040): uma linha
+  // por freguesia classificada (baixaDensidade:true), além da linha do concelho
+  // (que permanece baixaDensidade:false para estes concelhos). Idempotente por
+  // nuts2+nuts3+concelho+freguesia.
+  let freguesiasBD = 0;
+  for (const [concelho, freguesias] of Object.entries(BAIXA_DENSIDADE_PARCIAL)) {
+    const base = CONCELHOS.find((c) => c.concelho === concelho);
+    if (!base) {
+      console.warn(`⚠ BAIXA_DENSIDADE_PARCIAL: concelho desconhecido no catálogo: ${concelho}`);
+      continue;
+    }
+    for (const freguesia of freguesias) {
+      const existing = await prisma.catalogoGeo.findFirst({
+        where: { nuts2: base.nuts2, nuts3: base.nuts3, concelho, freguesia },
+      });
+      const data = {
+        nuts2: base.nuts2,
+        nuts3: base.nuts3,
+        concelho,
+        freguesia,
+        baixaDensidade: true,
+        regiaoPrograma: base.nuts2,
+      };
+      if (existing) await prisma.catalogoGeo.update({ where: { id: existing.id }, data });
+      else await prisma.catalogoGeo.create({ data });
+      freguesiasBD++;
+    }
+  }
   for (const r of RUBRICAS_SNC) {
     await prisma.catalogoRubricaSnc.upsert({
       where: { tipo_codigo: { tipo: r.tipo, codigo: r.codigo } },
@@ -175,7 +204,7 @@ export async function seedReference(): Promise<void> {
     `✓ Referência: ${programs} programas, ${docTypes} tipos de documento, ${grids} grelha(s) de mérito.`,
   );
   console.log(
-    `✓ Catálogos: ${cae} CAE, ${geo} concelhos, ${indic} indicadores, ${PAISES.length} países, ${RUBRICAS_SNC.length} rubricas SNC, ${CATEGORIAS_CUSTO.length} categorias custo, ${DOMINIOS_INTL.length} domínios intl, ${ANEXOS.length} anexos.`,
+    `✓ Catálogos: ${cae} CAE, ${geo} linhas geo (concelhos + ${freguesiasBD} freguesias de baixa densidade parcial), ${indic} indicadores, ${PAISES.length} países, ${RUBRICAS_SNC.length} rubricas SNC, ${CATEGORIAS_CUSTO.length} categorias custo, ${DOMINIOS_INTL.length} domínios intl, ${ANEXOS.length} anexos.`,
   );
 }
 

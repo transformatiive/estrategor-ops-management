@@ -244,10 +244,18 @@ export interface AvisoElegibilidade {
   fonteUrl?: string | null;
 }
 
-/** Geografia da empresa, resolvida do concelho via CatalogoGeo. */
+/**
+ * Geografia da empresa, resolvida do concelho (+ freguesia) via CatalogoGeo.
+ *
+ * `baixaDensidade` é tri-estado (TRNSF-1040):
+ *  - true/false    → concelho integral, ou freguesia conhecida num concelho parcial;
+ *  - "a_confirmar" → concelho de baixa densidade PARCIAL com freguesia desconhecida
+ *    (não decidível automaticamente — pede-se a freguesia da sede);
+ *  - null          → concelho não resolvido / sem dados.
+ */
 export interface GeoEmpresa {
   nuts2: string | null;
-  baixaDensidade: boolean | null;
+  baixaDensidade: boolean | "a_confirmar" | null;
 }
 
 /** Aviso (grelha) disponível para o consultor escolher no diagnóstico (TRNSF-1031). */

@@ -6,6 +6,7 @@
  * exige alterar este ficheiro. As grelhas reais são semeadas na BD (seed);
  * `QUALIFICACAO_MPR_2025_2` está aqui para o seed e os testes.
  */
+import { z } from "zod";
 
 /** Opção pontuável de um subcritério (o consultor escolhe uma). */
 export interface MeritOption {
@@ -96,7 +97,8 @@ export function gridRegions(grid: MeritGridData): string[] {
   const set = new Set<string>();
   for (const c of grid.criterios) {
     for (const s of c.subcriterios) {
-      if (s.regionalOptions) Object.keys(s.regionalOptions).forEach((r) => set.add(r));
+      if (s.regionalOptions)
+        Object.keys(s.regionalOptions).forEach((r) => set.add(r));
     }
   }
   return [...set];
@@ -104,12 +106,18 @@ export function gridRegions(grid: MeritGridData): string[] {
 
 /** true se a grelha tem subcritérios que variam por região (matriz regional). */
 export function gridHasRegionalMatrix(grid: MeritGridData): boolean {
-  return grid.criterios.some((c) => c.subcriterios.some((s) => Boolean(s.regionalOptions)));
+  return grid.criterios.some((c) =>
+    c.subcriterios.some((s) => Boolean(s.regionalOptions)),
+  );
 }
 
-function optionsFor(sub: MeritSubcriterion, regiao: string | null): MeritOption[] | undefined {
+function optionsFor(
+  sub: MeritSubcriterion,
+  regiao: string | null,
+): MeritOption[] | undefined {
   if (sub.regionalOptions) {
-    if (regiao && sub.regionalOptions[regiao]) return sub.regionalOptions[regiao];
+    if (regiao && sub.regionalOptions[regiao])
+      return sub.regionalOptions[regiao];
     return undefined; // matriz regional mas região não definida → sem opções
   }
   return sub.options;
@@ -176,7 +184,9 @@ export function computeMerit(
 
   const complete = missing.length === 0;
   const meetsMpMinimo = mp >= grid.mp_minimo;
-  const meetsAllCriteria = criteria.every((c) => c.score >= grid.minimo_por_criterio);
+  const meetsAllCriteria = criteria.every(
+    (c) => c.score >= grid.minimo_por_criterio,
+  );
   return {
     mp,
     criteria,
@@ -200,14 +210,35 @@ export interface AccessCondition {
 /** Condições de acesso do SI Inovação Produtiva — MPr-2025-9 (§7.1). */
 export const ACCESS_CONDITIONS_MPR_2025_9: AccessCondition[] = [
   { key: "pme_contab_organizada", label: "PME com contabilidade organizada" },
-  { key: "autonomia_financeira", label: "Autonomia financeira (Anexo III REITD, ano 2024)" },
-  { key: "capitais_proprios_25", label: "≥ 25% dos capitais próprios até ao 1.º pagamento" },
-  { key: "ii_10", label: "Indicador de Impacto do Investimento II ≥ 10% (PITD/Norte/Centro)" },
+  {
+    key: "autonomia_financeira",
+    label: "Autonomia financeira (Anexo III REITD, ano 2024)",
+  },
+  {
+    key: "capitais_proprios_25",
+    label: "≥ 25% dos capitais próprios até ao 1.º pagamento",
+  },
+  {
+    key: "ii_10",
+    label: "Indicador de Impacto do Investimento II ≥ 10% (PITD/Norte/Centro)",
+  },
   { key: "dnsh", label: "Princípio DNSH (não prejudicar significativamente)" },
-  { key: "tipologia_acao", label: "Tipologia de ação válida (novo estabelecimento / aumento ≥ 20% / diversificação ≥ 200% / alteração fundamental de processo)" },
-  { key: "localizacao", label: "Localização: estabelecimento do investimento; território de baixa densidade" },
+  {
+    key: "tipologia_acao",
+    label:
+      "Tipologia de ação válida (novo estabelecimento / aumento ≥ 20% / diversificação ≥ 200% / alteração fundamental de processo)",
+  },
+  {
+    key: "localizacao",
+    label:
+      "Localização: estabelecimento do investimento; território de baixa densidade",
+  },
   { key: "duracao_24m", label: "Duração da operação: 24 meses" },
-  { key: "regularizada_at_ss", label: "Situação regularizada AT e Segurança Social; sem duplo financiamento" },
+  {
+    key: "regularizada_at_ss",
+    label:
+      "Situação regularizada AT e Segurança Social; sem duplo financiamento",
+  },
 ];
 
 // ─── SEMENTE 1 (real, completa) — SICE Qualificação das PME · MPr-2025-2 ──────
@@ -222,7 +253,13 @@ export const QUALIFICACAO_MPR_2025_2: MeritGridData = {
   escala: {
     min: 1,
     max: 5,
-    descritores: { "1": "Muito insuficiente", "2": "Insuficiente", "3": "Suficiente", "4": "Bom", "5": "Muito bom" },
+    descritores: {
+      "1": "Muito insuficiente",
+      "2": "Insuficiente",
+      "3": "Suficiente",
+      "4": "Bom",
+      "5": "Muito bom",
+    },
   },
   mp_minimo: 3.0,
   minimo_por_criterio: 3.0,
@@ -245,7 +282,10 @@ export const QUALIFICACAO_MPR_2025_2: MeritGridData = {
             Lisboa: [
               { label: "Não se enquadra", pts: 1 },
               { label: "≥ 1 Domínio Temático OU 1 Transversal", pts: 3 },
-              { label: "≥ 1 Temático + 1-2 Transversal OU 2 Transversal", pts: 4 },
+              {
+                label: "≥ 1 Temático + 1-2 Transversal OU 2 Transversal",
+                pts: 4,
+              },
               { label: "Projeto/Programa Estruturante", pts: 5 },
             ],
             Alentejo: [
@@ -256,7 +296,10 @@ export const QUALIFICACAO_MPR_2025_2: MeritGridData = {
             Norte: [
               { label: "Sem enquadramento S3 Norte 2027", pts: 1 },
               { label: "Enquadrado num domínio S3 Norte 2027", pts: 3 },
-              { label: "Enquadramento setorial forte no racional do domínio", pts: 5 },
+              {
+                label: "Enquadramento setorial forte no racional do domínio",
+                pts: 5,
+              },
             ],
           },
         },
@@ -274,7 +317,11 @@ export const QUALIFICACAO_MPR_2025_2: MeritGridData = {
           options: [
             { label: "Muito bom", pts: 5 },
             { label: "Suficiente", pts: 3 },
-            { label: "Muito insuficiente", pts: 1, note: "determina não elegibilidade" },
+            {
+              label: "Muito insuficiente",
+              pts: 1,
+              note: "determina não elegibilidade",
+            },
           ],
         },
         {
@@ -348,3 +395,166 @@ export const QUALIFICACAO_MPR_2025_2: MeritGridData = {
     },
   ],
 };
+
+// ─── Validação Zod da grelha (TRNSF-1038) ────────────────────────────────────
+// Permite à API (e ao editor) validar uma grelha completa antes de a persistir.
+// O catálogo de avisos cria/edita grelhas do zero ou a partir da proposta da IA;
+// estes esquemas garantem que os DADOS estão coerentes (pesos finitos, códigos
+// não vazios, ao menos 1 critério/subcritério, opções ou matriz regional, etc).
+
+const numeroFinito = z
+  .number({ invalid_type_error: "Tem de ser um número." })
+  .refine((n) => Number.isFinite(n), "Tem de ser um número finito.");
+
+/** Padrão simples de fórmula "w*CODE + w*CODE + …" (igual ao parseFormulaWeights). */
+const FORMULA_RE =
+  /^\s*[0-9]*\.?[0-9]+\s*\*\s*[A-Za-z0-9.]+(\s*\+\s*[0-9]*\.?[0-9]+\s*\*\s*[A-Za-z0-9.]+)*\s*$/;
+const formulaSchema = z
+  .string()
+  .trim()
+  .min(1, "Fórmula vazia.")
+  .regex(FORMULA_RE, 'Fórmula inválida — use o formato "0.30*A + 0.30*B".');
+
+export const meritOptionSchema: z.ZodType<MeritOption> = z.object({
+  label: z.string().trim().min(1, "Etiqueta da opção vazia."),
+  pts: numeroFinito,
+  note: z.string().optional(),
+});
+
+export const meritSubcriterionSchema: z.ZodType<MeritSubcriterion> = z
+  .object({
+    codigo: z.string().trim().min(1, "Código do subcritério vazio."),
+    nome: z.string().trim().min(1, "Nome do subcritério vazio."),
+    weight: numeroFinito.optional(),
+    options: z
+      .array(meritOptionSchema)
+      .min(1, "Subcritério sem opções.")
+      .optional(),
+    regionalOptions: z
+      .record(
+        z.string(),
+        z.array(meritOptionSchema).min(1, "Região sem opções."),
+      )
+      .optional(),
+  })
+  .superRefine((s, ctx) => {
+    const temOptions = Array.isArray(s.options) && s.options.length > 0;
+    const regioes = s.regionalOptions ? Object.keys(s.regionalOptions) : [];
+    const temRegional = regioes.length > 0;
+    if (!temOptions && !temRegional) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Subcritério ${s.codigo}: defina opções ou uma matriz regional (≥1 região com ≥1 opção).`,
+      });
+    }
+  });
+
+export const meritCriterionSchema: z.ZodType<MeritCriterion> = z.object({
+  codigo: z.string().trim().min(1, "Código do critério vazio."),
+  nome: z.string().trim().min(1, "Nome do critério vazio."),
+  peso: numeroFinito,
+  formula: formulaSchema.optional(),
+  subcriterios: z
+    .array(meritSubcriterionSchema)
+    .min(1, "Critério sem subcritérios."),
+});
+
+export const meritScaleSchema: z.ZodType<MeritScale> = z.object({
+  min: numeroFinito,
+  max: numeroFinito,
+  descritores: z.record(z.string(), z.string()),
+});
+
+export const meritGridDataSchema: z.ZodType<MeritGridData> = z.object({
+  programa: z.string().trim().min(1, "Programa vazio."),
+  medida: z.string().trim().min(1, "Medida vazia."),
+  codigo_aviso: z.string().trim().min(1, "Código do aviso vazio."),
+  regiao: z.string().nullable(),
+  versao: z.string().trim().min(1, "Versão vazia."),
+  fonte_url: z.string().optional(),
+  escala: meritScaleSchema,
+  mp_minimo: numeroFinito,
+  minimo_por_criterio: numeroFinito,
+  formula_mp: formulaSchema,
+  desempate: z.array(z.string()).optional(),
+  criterios: z
+    .array(meritCriterionSchema)
+    .min(1, "A grelha tem de ter ≥1 critério."),
+});
+
+export const accessConditionSchema: z.ZodType<AccessCondition> = z.object({
+  key: z.string().trim().min(1, "Chave da condição vazia."),
+  label: z.string().trim().min(1, "Etiqueta da condição vazia."),
+});
+
+/** Resultado da validação da grelha (sem exceções). */
+export type ParseGridResult =
+  | { ok: true; data: MeritGridData }
+  | { ok: false; error: string };
+
+/**
+ * Valida (e devolve) uma grelha completa. Não lança: devolve `{ok:false,error}`
+ * com a 1.ª mensagem de erro legível, para o editor/admin corrigir.
+ */
+export function parseMeritGrid(input: unknown): ParseGridResult {
+  const r = meritGridDataSchema.safeParse(input);
+  if (r.success) return { ok: true, data: r.data };
+  const issue = r.error.issues[0];
+  const caminho = issue?.path?.length ? `${issue.path.join(".")}: ` : "";
+  return {
+    ok: false,
+    error: `${caminho}${issue?.message ?? "Grelha inválida."}`,
+  };
+}
+
+// ─── DTOs do catálogo de avisos (TRNSF-1038) ─────────────────────────────────
+
+/** Linha da lista de avisos no painel admin. */
+export interface AvisoAdminListItemDTO {
+  id: string;
+  programCode: string;
+  measure: string;
+  codigoAviso: string;
+  regiao: string | null;
+  versao: string;
+  fonteUrl: string | null;
+  /** true = publicado (visível aos consultores); false = rascunho. */
+  extracted: boolean;
+  mpMinimo: number | null;
+  nCriterios: number;
+  nCondicoes: number;
+  /** estado da elegibilidade estruturada: "validado" | "por_validar" | "nenhuma". */
+  eligibilidadeEstado: "validado" | "por_validar" | "nenhuma";
+  updatedAt: string | null;
+}
+
+/** Aviso completo (metadados + grelha + condições + elegibilidade) para o editor. */
+export interface AvisoFullDTO {
+  id: string;
+  programCode: string;
+  measure: string;
+  codigoAviso: string;
+  regiao: string | null;
+  versao: string;
+  fonteUrl: string | null;
+  mpMinimo: number | null;
+  minimoPorCriterio: number | null;
+  formulaMp: string | null;
+  grid: MeritGridData;
+  accessConditions: AccessCondition[];
+  eligibilidade: AvisoElegibilidadeLike | null;
+  extracted: boolean;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+/** Forma da elegibilidade estruturada do aviso (espelha AvisoElegibilidade do dto). */
+export interface AvisoElegibilidadeLike {
+  caeElegiveis: string[];
+  nuts2Elegiveis: string[];
+  exigeBaixaDensidade: boolean;
+  naturezasElegiveis: string[];
+  estado: "por_validar" | "validado";
+  notas?: string | null;
+  fonteUrl?: string | null;
+}

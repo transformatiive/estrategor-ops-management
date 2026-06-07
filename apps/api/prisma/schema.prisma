@@ -127,6 +127,7 @@ model User {
   validatedDocuments Document[]        @relation("ValidatedDocuments")
   validatedExtracoes Extracao[]        @relation("ValidatedExtracoes")
   validatedGeneratedFields GeneratedField[] @relation("ValidatedGeneratedFields")
+  createdMeritGrids  MeritGrid[]       @relation("CreatedMeritGrids")
 
   @@map("users")
 }
@@ -528,10 +529,13 @@ model MeritGrid {
   // baixa densidade, naturezas + estado (por_validar|validado). Vem do PDF do
   // aviso, validada por admin. Sem isto, não há "Provável PASSA/FALHA".
   eligibilidade    Json?    @map("eligibilidade")
-  extracted        Boolean  @default(true) // false = ainda só registo (a extrair)
+  extracted        Boolean  @default(true) // false = rascunho/por publicar; true = publicado (visível aos consultores)
+  createdByUserId  String?  @map("created_by_user_id")
   createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @default(now()) @map("updated_at")
 
   diagnostics Diagnostic[]
+  createdBy   User?        @relation("CreatedMeritGrids", fields: [createdByUserId], references: [id])
 
   @@unique([programCode, measure, codigoAviso, regiao, versao])
   @@map("merit_grids")
