@@ -203,6 +203,9 @@ export const api = {
   // importar a elegibilidade do PDF do aviso (TRNSF-1032, só admin)
   importarElegibilidade: (id: string, fonteUrl?: string) =>
     post<DiagnosticDTO>(`/api/projects/${id}/diagnostic/eligibilidade/importar`, { fonteUrl }),
+  // sugerir a pontuação de mérito (IA propõe, consultor valida — TRNSF-1039)
+  sugerirMerito: (id: string) =>
+    post<DiagnosticDTO>(`/api/projects/${id}/diagnostic/merito/sugerir`),
   advanceDiagnostic: (id: string) =>
     post<{ ok: boolean; state: string }>(`/api/projects/${id}/diagnostic/advance`),
 
