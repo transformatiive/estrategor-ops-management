@@ -8,11 +8,12 @@ export interface EmpresasResult {
   naturezaJuridica: string | null;
   capitalSocial: number | null;
   concelho: string | null;
+  freguesia: string | null;
   distrito: string | null;
   bruto: unknown;
 }
 
-const VAZIO = { cae: null, caeDescricao: null, naturezaJuridica: null, capitalSocial: null, concelho: null, distrito: null };
+const VAZIO = { cae: null, caeDescricao: null, naturezaJuridica: null, capitalSocial: null, concelho: null, freguesia: null, distrito: null };
 
 /**
  * Faixa B — API de empresas PT (nif.pt no arranque). Adaptador substituível
@@ -45,6 +46,7 @@ export async function consultarEmpresas(nif: string): Promise<EmpresasResult> {
       naturezaJuridica: str(structure?.nature),
       capitalSocial: num(structure?.capital),
       concelho: str(geo?.county),
+      freguesia: str(geo?.parish),
       distrito: str(geo?.region),
       bruto: json,
     };

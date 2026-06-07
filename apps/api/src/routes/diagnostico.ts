@@ -2,7 +2,9 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import {
   canManageUsers,
+  classificacaoBaixaDensidade,
   computeMerit,
+  freguesiaBaixaDensidade,
   gridRegions,
   verificarCondicaoAcesso,
   type AvisoElegibilidade,
@@ -160,22 +162,41 @@ async function dadosAcessoDoProjeto(projectId: string): Promise<DadosAcesso> {
   return {
     cae: valor("cae_principal") ?? valor("cae_provavel"),
     concelho: valor("concelho"),
+    freguesia: valor("freguesia"),
     distrito: valor("distrito"),
     naturezaJuridica: valor("natureza_juridica"),
     setor: valor("setor"),
   };
 }
 
-/** Resolve a geografia da empresa (NUTS II + baixa densidade) a partir do
- *  concelho recolhido, via CatalogoGeo (TRNSF-953). Sem concelho → vazio. */
-async function geoDoConcelho(concelho: string | null): Promise<GeoEmpresa | null> {
+/**
+ * Resolve a Localização da empresa (NUTS II + baixa densidade) a partir do
+ * concelho e da freguesia recolhidos (TRNSF-1040). Usa o catálogo `CatalogoGeo`
+ * para o NUTS II e a classificação de baixa densidade do partilhado para o
+ * tri-estado:
+ *  - concelho integral             → baixaDensidade = true;
+ *  - concelho não classificado     → false;
+ *  - concelho parcial + freguesia  → true/false conforme a lista oficial;
+ *  - concelho parcial sem freguesia → "a_confirmar" (não decide).
+ * Sem concelho → vazio.
+ */
+async function resolverLocalizacao(
+  concelho: string | null,
+  freguesia: string | null,
+): Promise<GeoEmpresa | null> {
   if (!concelho?.trim()) return null;
+  // NUTS II vem do catálogo (linha do concelho, freguesia null).
   const row = await prisma.catalogoGeo.findFirst({
     where: { concelho: { equals: concelho.trim(), mode: "insensitive" } },
-    select: { nuts2: true, baixaDensidade: true },
+    select: { nuts2: true },
   });
-  if (!row) return { nuts2: null, baixaDensidade: null };
-  return { nuts2: row.nuts2, baixaDensidade: row.baixaDensidade };
+  const nuts2 = row?.nuts2 ?? null;
+  const resolved = freguesiaBaixaDensidade(concelho, freguesia);
+  // null da helper num concelho PARCIAL = freguesia desconhecida → "a_confirmar".
+  // (Em concelhos integral/nenhuma a helper devolve sempre true/false.)
+  const baixaDensidade: GeoEmpresa["baixaDensidade"] =
+    resolved === null && classificacaoBaixaDensidade(concelho) === "parcial" ? "a_confirmar" : resolved;
+  return { nuts2, baixaDensidade };
 }
 
 /** Lê a elegibilidade estruturada do aviso (defensivo). */
@@ -230,7 +251,7 @@ async function buildDTO(projectId: string): Promise<DiagnosticDTO | null> {
   // elegibilidade estruturada do aviso, quando validada).
   const dados = await dadosAcessoDoProjeto(projectId);
   const eligibilidade = lerElegibilidade(grid?.eligibilidade);
-  const geo = await geoDoConcelho(dados.concelho ?? null);
+  const geo = await resolverLocalizacao(dados.concelho ?? null, dados.freguesia ?? null);
   const conditions = enriquecerCondicoes(baseConditions, dados, eligibilidade, geo);
 
   const meritSelection = (diag?.meritInputs as Record<string, number> | null) ?? {};

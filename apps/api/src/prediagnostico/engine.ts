@@ -71,6 +71,10 @@ export async function runPreDiagnostico(projectId: string): Promise<void> {
     if (emp.naturezaJuridica) campos.push({ key: "natureza_juridica", label: "Natureza jurídica", value: emp.naturezaJuridica, origem: "api_empresas", estado: "por_validar", fonte: "nif.pt" });
     if (emp.capitalSocial != null) campos.push({ key: "capital_social", label: "Capital social", value: emp.capitalSocial, origem: "api_empresas", estado: "por_validar", fonte: "nif.pt" });
     if (emp.concelho) campos.push({ key: "concelho", label: "Concelho", value: emp.concelho, origem: "api_empresas", estado: "por_validar", fonte: "nif.pt" });
+    // Freguesia (TRNSF-1040): essencial para resolver a baixa densidade em
+    // concelhos parciais. Quando a API não a devolve, deixa o campo editável
+    // (vazio) para o consultor indicar a freguesia da sede.
+    if (emp.concelho) campos.push({ key: "freguesia", label: "Freguesia", value: emp.freguesia, origem: "api_empresas", estado: "por_validar", fonte: "nif.pt" });
     if (emp.distrito) campos.push({ key: "distrito", label: "Distrito", value: emp.distrito, origem: "api_empresas", estado: "por_validar", fonte: "nif.pt" });
   }
   await prisma.preDiagnostico.update({
