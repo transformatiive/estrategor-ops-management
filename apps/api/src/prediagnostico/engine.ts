@@ -14,7 +14,7 @@ import { estruturarSonnet } from "./sonnet.js";
 const CHECKLIST_BASE: ChecklistAConfirmar[] = [
   { item: "Escalão PME (micro/pequena/média)", nota: "Confirmar oficialmente (Certificado PME / IAPMEI)." },
   { item: "Situação fiscal e contributiva", nota: "Confirmar com certidões AT e Segurança Social." },
-  { item: "Rácios financeiros (autonomia financeira, etc.)", nota: "Calcular a partir da IES validada (TRNSF-944)." },
+  { item: "Rácios financeiros (autonomia financeira, etc.)", nota: "Calcular a partir da IES validada." },
 ];
 
 /**

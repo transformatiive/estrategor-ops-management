@@ -52,8 +52,10 @@ export async function extrairElegibilidadeDoAviso(url: string): Promise<Proposta
 
   try {
     return await chamarIA(texto);
-  } catch {
-    return rascunho("Falha na extração por IA — preencher manualmente.");
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error("[aviso] extração por IA falhou:", msg);
+    return rascunho(`Falha na extração por IA (${msg}) — preencher manualmente.`);
   }
 }
 
@@ -106,11 +108,16 @@ async function chamarIA(texto: string): Promise<PropostaElegibilidade> {
       temperature: 0,
     }),
   });
-  if (!res.ok) throw new Error(`OpenRouter ${res.status}`);
+  if (!res.ok) {
+    const corpo = await res.text().catch(() => "");
+    throw new Error(`OpenRouter ${res.status} ${corpo.slice(0, 180)}`.trim());
+  }
   const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
   const raw = json.choices?.[0]?.message?.content;
   if (!raw) throw new Error("OpenRouter: resposta vazia.");
-  const p = JSON.parse(raw) as {
+  // alguns modelos devolvem o JSON dentro de ```json … ``` — remover a cerca
+  const cleaned = raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+  const p = JSON.parse(cleaned) as {
     caeElegiveis?: unknown;
     nuts2Elegiveis?: unknown;
     exigeBaixaDensidade?: unknown;

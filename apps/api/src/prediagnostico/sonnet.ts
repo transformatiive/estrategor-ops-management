@@ -39,7 +39,8 @@ export async function estruturarSonnet(input: {
     const user =
       `Dados:\n- NIF: ${input.nif}\n- Nome: ${input.nome ?? "—"}\n- CAE (API): ${input.caeApi ?? "—"} ${input.caeDescricao ?? ""}\n- Contexto: ${input.contextoSonar ?? "—"}\n\n` +
       'Devolve JSON: {"setor": string|null, "cae_provavel": string|null, "tipologia_aviso": string|null, "sinais": string|null, ' +
-      '"checklist_a_confirmar": [{"item": string, "nota": string|null}]}';
+      '"checklist_a_confirmar": [{"item": string, "nota": string|null}]}\n' +
+      'No campo "sinais", escreve 3 a 6 observações curtas, UMA POR LINHA (separadas por "\\n"), cada uma um ponto objetivo. Não uses parágrafos corridos.';
     const res = await fetch(`${env.OPENROUTER_BASE}/chat/completions`, {
       method: "POST",
       headers: { Authorization: `Bearer ${env.OPENROUTER_API_KEY}`, "Content-Type": "application/json", "X-Title": "Estrategor" },

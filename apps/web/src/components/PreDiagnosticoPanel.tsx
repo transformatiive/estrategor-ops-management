@@ -23,11 +23,16 @@ const FAIXAS: { key: keyof PreDiagnosticoDTO["faixas"]; nome: string; desc: stri
   { key: "sonnet", nome: "Análise", desc: "a estruturar a leitura e a checklist a confirmar" },
 ];
 
-/** Parte um texto corrido em pontos (bullets) para legibilidade. */
+/** Parte um texto corrido em pontos (bullets) para legibilidade. Divide por
+ *  linhas, ';', marcadores ('-', '•', '·') e, em último recurso, por frases. */
 function emBullets(texto: string): string[] {
-  return texto
-    .split(/\s*;\s+|\n+|(?:\.\s+)(?=\(\d+\))/)
-    .map((s) => s.trim().replace(/^[-•]\s*/, ""))
+  const base = texto.trim();
+  // 1) separadores explícitos: quebras de linha, ';', ou marcadores de lista
+  let partes = base.split(/\n+|\s*;\s+|\s+[-•·]\s+/);
+  // 2) sem separadores explícitos → tenta por frases (fim de frase + maiúscula)
+  if (partes.length === 1) partes = base.split(/(?<=[.;])\s+(?=[A-ZÀ-Ý])/);
+  return partes
+    .map((s) => s.trim().replace(/^[-•·]\s*/, ""))
     .filter(Boolean);
 }
 
@@ -211,7 +216,7 @@ function CampoRow({ projectId, campo, onChanged }: { projectId: string; campo: P
         </div>
       ) : (
         <div className="cand-field-value">
-          {partes.length > 1 ? (
+          {partes.length > 1 || (campo.key === "sinais" && partes.length === 1) ? (
             <ul className="prediag-bullets">{partes.map((p, i) => <li key={i}>{p}</li>)}</ul>
           ) : (
             <span>{String(campo.value ?? "—")}</span>
