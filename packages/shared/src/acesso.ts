@@ -81,7 +81,7 @@ export function sugerirCondicaoAcesso(label: string, d: DadosAcesso): SugestaoAc
 
   // Autonomia financeira / capitais próprios / rácios
   if (/(autonomia financeira|capitais\s+pr[óo]prios|capital\s+pr[óo]prio|r[áa]cio)/.test(l)) {
-    return { sugestao: "sem_dados", nota: "Calcula-se a partir da IES validada (componente financeira — TRNSF-944)." };
+    return { sugestao: "sem_dados", nota: "Calcula-se a partir da IES validada (componente financeira)." };
   }
 
   return null;

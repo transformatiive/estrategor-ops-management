@@ -1372,8 +1372,11 @@ body {
   margin: 2px 0 0;
   padding-left: 18px;
 }
+.prediag-bullets {
+  list-style: disc;
+}
 .prediag-bullets li {
-  margin-bottom: 2px;
+  margin-bottom: 3px;
 }
 .prediag-checklist {
   margin: 0;

@@ -179,6 +179,15 @@ export function DiagnosticoTab({
             Sugestão automática (não confirmada). Confirme o aviso para concluir o diagnóstico.
           </p>
         )}
+        {/* Elegibilidade do aviso (admin) — é dado do aviso, fica junto da escolha */}
+        {canManageUsers(user?.role ?? "CONSULTOR") && (
+          <AvisoElegibilidadeEditor
+            projectId={projectId}
+            atual={data.eligibilidade}
+            fonteUrlAviso={data.grid?.fonteUrl ?? null}
+            onSaved={reload}
+          />
+        )}
       </div>
 
       {/* ── Pré-diagnóstico assistido por IA (TRNSF-967) ── */}
@@ -218,14 +227,6 @@ export function DiagnosticoTab({
             </span>
           </div>
         ))}
-        {canManageUsers(user?.role ?? "CONSULTOR") && (
-          <AvisoElegibilidadeEditor
-            projectId={projectId}
-            atual={data.eligibilidade}
-            fonteUrlAviso={data.grid?.fonteUrl ?? null}
-            onSaved={reload}
-          />
-        )}
       </div>
 
       {/* ── Mérito ── */}
