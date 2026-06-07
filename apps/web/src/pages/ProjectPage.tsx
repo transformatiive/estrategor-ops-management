@@ -139,7 +139,18 @@ export function ProjectPage() {
       {vistaAtiva === "documentos" && <DocumentsTab projectId={id} />}
       {vistaAtiva === "recolha" && <RecolhaTab projectId={id} />}
       {vistaAtiva === "diagnostico" && (
-        <DiagnosticoTab projectId={id} onAdvanced={() => { reload(); reloadPipe(); }} />
+        <DiagnosticoTab
+          projectId={id}
+          onAdvanced={() => {
+            // Ao concluir o diagnóstico, a UI passa a seguir a nova fase do
+            // projeto: limpa a seleção manual de fase/vista para acompanhar o
+            // estado atualizado (A0 → A1 / Recolha), em vez de ficar presa.
+            setFaseSel(null);
+            setVista(null);
+            reload();
+            reloadPipe();
+          }}
+        />
       )}
       {vistaAtiva === "seguimento" && <SeguimentoTab projectId={id} />}
     </>
