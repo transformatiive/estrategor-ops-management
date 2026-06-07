@@ -6,6 +6,7 @@ import {
   computeMerit,
   freguesiaBaixaDensidade,
   gridRegions,
+  regiaoGrelhaParaNuts2,
   verificarCondicaoAcesso,
   type AvisoElegibilidade,
   type AvisoOpcaoDTO,
@@ -309,6 +310,14 @@ async function buildDTO(projectId: string): Promise<DiagnosticDTO | null> {
   const meritSelection = (diag?.meritInputs as Record<string, number> | null) ?? {};
   const gridData = (grid?.grid as MeritGridData | null) ?? null;
   const regiao = diag?.regiao ?? null;
+  const regioesGrelha = gridData ? gridRegions(gridData) : [];
+  // Sugestão: só quando o consultor ainda não escolheu a região (diag.regiao
+  // null) e a empresa tem NUTS II validado. Mapeia o NUTS II à matriz da grelha;
+  // null se não houver correspondência (nunca inventa região fora da grelha).
+  const regiaoSugerida =
+    !regiao && gridData && geo?.nuts2
+      ? regiaoGrelhaParaNuts2(geo.nuts2, regioesGrelha)
+      : null;
   const merit = gridData ? computeMerit(gridData, meritSelection, regiao) : null;
 
   return {
@@ -319,7 +328,8 @@ async function buildDTO(projectId: string): Promise<DiagnosticDTO | null> {
     mp: merit && merit.missing.length === 0 ? merit.mp : (diag?.mp ? Number(diag.mp) : null),
     gridVersion: grid?.versao ?? null,
     regiao,
-    availableRegions: gridData ? gridRegions(gridData) : [],
+    availableRegions: regioesGrelha,
+    regiaoSugerida,
     conditions,
     eligibilidade,
     selectedGridId: grid?.id ?? null,
@@ -476,7 +486,17 @@ export async function diagnosticoRoutes(app: FastifyInstance) {
         return reply.code(409).send({ error: "Sem grelha/aviso associado — escolha o aviso primeiro." });
       }
 
-      const regiao = current?.regiao ?? null;
+      // Região efetiva para a sugestão: a escolhida pelo consultor; na ausência,
+      // a sugerida a partir da localização validada da empresa (NUTS II → matriz
+      // da grelha), para a IA resolver as opções regionais de A.1. NÃO persiste
+      // `diag.regiao` — continua a ser uma sugestão que o consultor confirma ao
+      // guardar; só fica registada na própria proposta (`meritProposal.regiao`).
+      let regiao = current?.regiao ?? null;
+      if (!regiao) {
+        const dados = await dadosAcessoDoProjeto(project.id);
+        const geo = await resolverLocalizacao(dados.concelho ?? null, dados.freguesia ?? null);
+        regiao = regiaoGrelhaParaNuts2(geo?.nuts2 ?? null, gridRegions(gridData)) ?? null;
+      }
       const contexto = await contextoMeritoDoProjeto(project, project.id);
       const { selection, justificacoes, nota } = await extrairMeritoDoProjeto(gridData, contexto, regiao);
 
