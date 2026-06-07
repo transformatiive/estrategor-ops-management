@@ -431,6 +431,13 @@ model Diagnostic {
   regiao        String? // região do investimento (resolve a matriz regional A.1)
   meritInputs   Json?    @map("merit_inputs")
   meritBreakdown Json?   @map("merit_breakdown")
+  // Proposta de pontuação assistida por IA (TRNSF-1039) — SEPARADA da selecção
+  // do consultor (meritInputs). A IA PROPÕE (estado por_validar); o consultor
+  // revê, ajusta e guarda. Nunca inventa: sem evidência → proposta vazia + nota.
+  // { selection: Record<subcrit, indice>, justificacoes: Record<subcrit, texto>, regiao }
+  meritProposal Json?    @map("merit_proposal")
+  meritProposalEstado String? @map("merit_proposal_estado") // por_validar | validado
+  meritProposalNota   String? @map("merit_proposal_nota")
   mp            Decimal? @db.Decimal(5, 2)
   meritGridId   String?  @map("merit_grid_id")
   // TRNSF-1031: o aviso foi escolhido EXPLICITAMENTE pelo consultor (não pela

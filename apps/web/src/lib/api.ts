@@ -284,6 +284,9 @@ export const api = {
       `/api/projects/${id}/diagnostic/eligibilidade/importar`,
       { fonteUrl },
     ),
+  // sugerir a pontuação de mérito (IA propõe, consultor valida — TRNSF-1039)
+  sugerirMerito: (id: string) =>
+    post<DiagnosticDTO>(`/api/projects/${id}/diagnostic/merito/sugerir`),
   advanceDiagnostic: (id: string) =>
     post<{ ok: boolean; state: string }>(
       `/api/projects/${id}/diagnostic/advance`,

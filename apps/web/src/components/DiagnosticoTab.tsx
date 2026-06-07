@@ -56,18 +56,23 @@ export function DiagnosticoTab({
   const [selection, setSelection] = useState<Record<string, number>>({});
   const [regiao, setRegiao] = useState<string>("");
   const [saving, setSaving] = useState(false);
+  const [sugerindo, setSugerindo] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (data) {
       setConditions(data.conditions);
-      setSelection(data.meritSelection);
+      // Pré-preenche com a proposta da IA (por validar) quando existe, sobre a
+      // selecção do consultor — fica editável; Guardar é o que conta.
+      const proposta = data.meritProposal?.selection ?? {};
+      setSelection({ ...data.meritSelection, ...proposta });
       setRegiao(data.regiao ?? "");
     }
   }, [data]);
 
   const gridData = data?.gridData as MeritGridData | null;
   const breakdown = data?.meritBreakdown as MeritResult | null;
+  const meritProposal = data?.meritProposal ?? null;
 
   // recálculo local imediato para feedback (o servidor é a fonte de verdade ao guardar)
   const localResult = useMemo(() => breakdown, [breakdown]);
@@ -132,6 +137,20 @@ export function DiagnosticoTab({
       setMsg(e instanceof ApiError ? e.message : "Erro ao guardar.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function sugerirMerito() {
+    setSugerindo(true);
+    setMsg(null);
+    try {
+      await api.sugerirMerito(projectId);
+      reload();
+      setMsg("Pontuação proposta pela IA — reveja, ajuste e guarde.");
+    } catch (e) {
+      setMsg(e instanceof ApiError ? e.message : "Erro ao sugerir pontuação.");
+    } finally {
+      setSugerindo(false);
     }
   }
 
@@ -273,16 +292,44 @@ export function DiagnosticoTab({
 
       {/* ── Mérito ── */}
       <div className="card" style={{ marginBottom: 16 }}>
-        <div className="dp-section-title">Mérito</div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+          <div className="dp-section-title" style={{ marginBottom: 0 }}>Mérito</div>
+          {data.grid && gridData && (
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={sugerirMerito}
+              disabled={sugerindo || saving}
+              title="A IA propõe uma pontuação por subcritério a partir dos dados do projeto; reveja, ajuste e guarde"
+            >
+              {sugerindo ? "A sugerir…" : "Sugerir pontuação (IA)"}
+            </button>
+          )}
+        </div>
 
         {!data.grid && (
-          <p style={{ fontSize: 12.5, color: "var(--warning)" }}>
+          <p style={{ fontSize: 12.5, color: "var(--warning)", marginTop: 8 }}>
             Grelha não configurada para este aviso. Não é possível calcular a pontuação de mérito.
           </p>
         )}
 
         {data.grid && gridData && (
           <>
+            {meritProposal && Object.keys(meritProposal.selection).length > 0 && (
+              <div className="card" style={{ margin: "10px 0", background: "var(--surface-2, #fafafa)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <span className="badge badge-warning">Proposta da IA · por validar</span>
+                  {meritProposal.nota && <span className="deadline-sub">{meritProposal.nota}</span>}
+                </div>
+                <p className="deadline-sub" style={{ margin: "6px 0 0" }}>
+                  A IA propôs estas pontuações a partir dos dados do projeto — reveja, ajuste e guarde; a pontuação final é sua.
+                </p>
+              </div>
+            )}
+            {meritProposal && Object.keys(meritProposal.selection).length === 0 && meritProposal.nota && (
+              <p className="deadline-sub" style={{ margin: "10px 0 0" }}>
+                {meritProposal.nota}
+              </p>
+            )}
             <p className="login-sub" style={{ marginTop: 0 }}>
               {data.grid.measure} · {data.grid.codigoAviso} · v{data.grid.versao}
               {data.grid.fonteUrl && (
@@ -347,6 +394,11 @@ export function DiagnosticoTab({
                             placeholder="— escolher —"
                             options={opts.map((o, i) => ({ value: String(i), label: `${o.label} (${o.pts})` }))}
                           />
+                        )}
+                        {meritProposal?.justificacoes[sub.codigo] && (
+                          <p className="deadline-sub" style={{ margin: "4px 0 0" }}>
+                            IA: {meritProposal.justificacoes[sub.codigo]}
+                          </p>
                         )}
                       </div>
                     );

@@ -16,11 +16,13 @@ import {
   type GeoEmpresa,
   type MeritGridData,
   type MeritGridSummaryDTO,
+  type MeritProposalDTO,
   type PreDiagCampo,
 } from "@estrategor/shared";
 import { prisma } from "../db.js";
 import { requireAuth } from "../auth/guards.js";
 import { extrairElegibilidadeDoAviso } from "../extraction/aviso.js";
+import { extrairMeritoDoProjeto } from "../extraction/merito.js";
 
 const saveSchema = z.object({
   conditions: z
@@ -215,6 +217,56 @@ function lerElegibilidade(raw: unknown): AvisoElegibilidade | null {
   };
 }
 
+/** Lê a proposta de mérito (IA) persistida no diagnóstico (defensivo). */
+function lerPropostaMerito(
+  proposal: unknown,
+  estado: string | null,
+  nota: string | null,
+): MeritProposalDTO | null {
+  if (!proposal || typeof proposal !== "object") return null;
+  const p = proposal as Record<string, unknown>;
+  const selection: Record<string, number> = {};
+  if (p.selection && typeof p.selection === "object") {
+    for (const [k, v] of Object.entries(p.selection as Record<string, unknown>)) {
+      const n = typeof v === "number" ? v : Number(v);
+      if (Number.isInteger(n) && n >= 0) selection[k] = n;
+    }
+  }
+  const justificacoes: Record<string, string> = {};
+  if (p.justificacoes && typeof p.justificacoes === "object") {
+    for (const [k, v] of Object.entries(p.justificacoes as Record<string, unknown>)) {
+      if (typeof v === "string" && v.trim()) justificacoes[k] = v;
+    }
+  }
+  return {
+    selection,
+    justificacoes,
+    regiao: typeof p.regiao === "string" ? p.regiao : null,
+    estado: estado === "validado" ? "validado" : "por_validar",
+    nota: typeof nota === "string" ? nota : null,
+  };
+}
+
+/** Monta o contexto textual do projeto (dados do pré-diagnóstico, com rótulos)
+ *  para a sugestão de mérito por IA. Só dados recolhidos; ausência → linhas
+ *  omitidas (sem invenção). */
+async function contextoMeritoDoProjeto(
+  project: { title: string; measureLabel: string | null },
+  projectId: string,
+): Promise<string> {
+  const linhas: string[] = [];
+  if (project.title?.trim()) linhas.push(`Projeto: ${project.title.trim()}`);
+  if (project.measureLabel?.trim()) linhas.push(`Medida/Aviso: ${project.measureLabel.trim()}`);
+
+  const row = await prisma.preDiagnostico.findUnique({ where: { projectId }, select: { campos: true } });
+  const campos = Array.isArray(row?.campos) ? (row!.campos as unknown as PreDiagCampo[]) : [];
+  for (const c of campos) {
+    if (c.value == null || String(c.value).trim() === "") continue;
+    linhas.push(`${c.label}: ${String(c.value).trim()}`);
+  }
+  return linhas.join("\n");
+}
+
 /** Anexa a sugestão (determinística onde possível) a cada condição; não altera
  *  o estado, que continua a ser do consultor. */
 function enriquecerCondicoes(
@@ -277,6 +329,11 @@ async function buildDTO(projectId: string): Promise<DiagnosticDTO | null> {
     gridData,
     meritSelection,
     meritBreakdown: merit ?? null,
+    meritProposal: lerPropostaMerito(
+      diag?.meritProposal ?? null,
+      diag?.meritProposalEstado ?? null,
+      diag?.meritProposalNota ?? null,
+    ),
     updatedAt: diag?.updatedAt.toISOString() ?? null,
   };
 }
@@ -393,6 +450,53 @@ export async function diagnosticoRoutes(app: FastifyInstance) {
       const elig: AvisoElegibilidade = { ...proposta, fonteUrl: url };
       await prisma.meritGrid.update({ where: { id: grid.id }, data: { eligibilidade: elig as object } });
       void atual;
+      return buildDTO(project.id);
+    },
+  );
+
+  // TRNSF-1039 — sugerir a pontuação de mérito (IA propõe, consultor valida).
+  // Trabalho do consultor (só requireAuth, não admin) — espelha o save handler.
+  // A IA PROPÕE uma opção/score + justificação por subcritério a partir dos
+  // dados do projeto + da grelha; entra como `por_validar`. NÃO toca em
+  // meritInputs (a selecção real do consultor) — a proposta é separada até o
+  // consultor a aceitar e guardar. A pontuação final é sempre do consultor.
+  app.post<{ Params: { id: string } }>(
+    "/api/projects/:id/diagnostic/merito/sugerir",
+    async (req, reply) => {
+      const project = await prisma.project.findUnique({
+        where: { id: req.params.id },
+        include: { program: true },
+      });
+      if (!project) return reply.code(404).send({ error: "Projeto não encontrado." });
+
+      const current = await prisma.diagnostic.findUnique({ where: { projectId: project.id } });
+      const grid = await resolveGrid(project, current?.meritGridId ?? null);
+      const gridData = (grid?.grid as MeritGridData | null) ?? null;
+      if (!grid || !gridData) {
+        return reply.code(409).send({ error: "Sem grelha/aviso associado — escolha o aviso primeiro." });
+      }
+
+      const regiao = current?.regiao ?? null;
+      const contexto = await contextoMeritoDoProjeto(project, project.id);
+      const { selection, justificacoes, nota } = await extrairMeritoDoProjeto(gridData, contexto, regiao);
+
+      await prisma.diagnostic.upsert({
+        where: { projectId: project.id },
+        create: {
+          projectId: project.id,
+          programId: project.programId,
+          meritGridId: grid.id,
+          gridVersion: grid.versao,
+          meritProposal: { selection, justificacoes, regiao } as object,
+          meritProposalEstado: "por_validar",
+          meritProposalNota: nota,
+        },
+        update: {
+          meritProposal: { selection, justificacoes, regiao } as object,
+          meritProposalEstado: "por_validar",
+          meritProposalNota: nota,
+        },
+      });
       return buildDTO(project.id);
     },
   );

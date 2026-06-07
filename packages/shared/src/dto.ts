@@ -269,6 +269,22 @@ export interface AvisoOpcaoDTO {
   eligibilidadeEstado: "validado" | "por_validar" | "nenhuma";
 }
 
+/** Proposta de pontuação de mérito assistida por IA (TRNSF-1039). A IA PROPÕE
+ *  uma opção (índice) por subcritério COM justificação, a partir dos dados do
+ *  projeto + da grelha do aviso; entra sempre como `por_validar`. O consultor
+ *  revê, ajusta e guarda — a pontuação final é sempre dele. Nunca inventa: sem
+ *  evidência, o subcritério fica de fora (proposta vazia + nota). */
+export interface MeritProposalDTO {
+  /** subcritério (codigo) → índice da opção proposta */
+  selection: Record<string, number>;
+  /** subcritério (codigo) → justificação curta da IA */
+  justificacoes: Record<string, string>;
+  /** região com que a proposta foi resolvida (matriz regional A.1) */
+  regiao?: string | null;
+  estado: "por_validar" | "validado";
+  nota: string | null;
+}
+
 /** Grelha aplicável a um projecto/aviso (ou indicação de ausência). */
 export interface MeritGridSummaryDTO {
   id: string;
@@ -310,6 +326,8 @@ export interface DiagnosticDTO {
   meritSelection: Record<string, number>;
   // breakdown calculado (null enquanto incompleto)
   meritBreakdown: unknown | null;
+  // proposta de pontuação assistida por IA (TRNSF-1039), null se ainda não sugerida
+  meritProposal?: MeritProposalDTO | null;
   updatedAt: string | null;
 }
 
