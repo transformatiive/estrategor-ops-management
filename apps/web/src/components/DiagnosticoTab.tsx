@@ -219,7 +219,12 @@ export function DiagnosticoTab({
           </div>
         ))}
         {canManageUsers(user?.role ?? "CONSULTOR") && (
-          <AvisoElegibilidadeEditor projectId={projectId} atual={data.eligibilidade} onSaved={reload} />
+          <AvisoElegibilidadeEditor
+            projectId={projectId}
+            atual={data.eligibilidade}
+            fonteUrlAviso={data.grid?.fonteUrl ?? null}
+            onSaved={reload}
+          />
         )}
       </div>
 

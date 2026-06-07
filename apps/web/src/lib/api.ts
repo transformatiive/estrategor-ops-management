@@ -200,6 +200,9 @@ export const api = {
   // elegibilidade estruturada do aviso (TRNSF-1030, só admin)
   setEligibilidade: (id: string, data: AvisoElegibilidade) =>
     put<DiagnosticDTO>(`/api/projects/${id}/diagnostic/eligibilidade`, data),
+  // importar a elegibilidade do PDF do aviso (TRNSF-1032, só admin)
+  importarElegibilidade: (id: string, fonteUrl?: string) =>
+    post<DiagnosticDTO>(`/api/projects/${id}/diagnostic/eligibilidade/importar`, { fonteUrl }),
   advanceDiagnostic: (id: string) =>
     post<{ ok: boolean; state: string }>(`/api/projects/${id}/diagnostic/advance`),
 
