@@ -33,6 +33,9 @@ export const PROJECT_STATES = [
   "B0",
   "B1",
   "B2",
+  // Estado terminal reversível "Não prosseguiu" (TRNSF-1044): um diagnóstico A0
+  // que não passa pode ser encerrado com justificação; gestor/admin reabre → A0.
+  "ENCERRADO",
 ] as const;
 export type ProjectState = (typeof PROJECT_STATES)[number];
 
@@ -46,6 +49,7 @@ export const PROJECT_STATE_LABELS: Record<ProjectState, string> = {
   B0: "B0 · Arranque",
   B1: "B1 · Execução",
   B2: "B2 · Encerramento",
+  ENCERRADO: "Não prosseguiu",
 };
 
 /**
@@ -58,6 +62,8 @@ export const KANBAN_COLUMNS = [
   "Aprovado",
   "Execução",
   "Encerramento",
+  // Estado terminal reversível de um diagnóstico A0 que não passa (TRNSF-1044).
+  "Não prosseguiu",
 ] as const;
 export type KanbanColumn = (typeof KANBAN_COLUMNS)[number];
 
@@ -70,6 +76,7 @@ const STATE_TO_COLUMN: Record<ProjectState, KanbanColumn> = {
   B0: "Aprovado",
   B1: "Execução",
   B2: "Encerramento",
+  ENCERRADO: "Não prosseguiu",
 };
 
 /** Devolve a coluna do kanban PT2030 para um dado estado. */

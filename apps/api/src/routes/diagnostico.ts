@@ -40,6 +40,13 @@ const saveSchema = z.object({
   regiao: z.string().nullable().optional(),
 });
 
+const encerrarSchema = z.object({
+  motivo: z
+    .string()
+    .trim()
+    .min(1, "Indique o motivo do encerramento."),
+});
+
 const eligSchema = z.object({
   caeElegiveis: z.array(z.string()).default([]),
   nuts2Elegiveis: z.array(z.string()).default([]),
@@ -323,6 +330,7 @@ async function buildDTO(projectId: string): Promise<DiagnosticDTO | null> {
   return {
     projectId,
     programCode: project.program.code,
+    projectState: project.state,
     result: (diag?.result as DiagnosticResult) ?? (grid ? "POR_INICIAR" : "SEM_GRELHA"),
     eligible: diag?.eligible ?? null,
     mp: merit && merit.missing.length === 0 ? merit.mp : (diag?.mp ? Number(diag.mp) : null),
@@ -344,6 +352,7 @@ async function buildDTO(projectId: string): Promise<DiagnosticDTO | null> {
       diag?.meritProposalEstado ?? null,
       diag?.meritProposalNota ?? null,
     ),
+    encerradoMotivo: diag?.encerradoMotivo ?? null,
     updatedAt: diag?.updatedAt.toISOString() ?? null,
   };
 }
@@ -625,6 +634,94 @@ export async function diagnosticoRoutes(app: FastifyInstance) {
         }),
       ]);
       return { ok: true, state: "A1" };
+    },
+  );
+
+  // TRNSF-1044 — encerrar um diagnóstico A0 que NÃO passa, com justificação.
+  // Estado terminal reversível "Não prosseguiu". Trabalho do consultor
+  // (requireAuth, adicionado como preHandler do ficheiro). Só é possível quando
+  // o mérito está abaixo do mínimo (A_REVER) ou uma condição de acesso falhou
+  // (NAO_ELEGIVEL). Tudo fica registado em StateTransition + ActivityLog.
+  app.post<{ Params: { id: string }; Body: { motivo?: string } }>(
+    "/api/projects/:id/diagnostic/encerrar",
+    async (req, reply) => {
+      const parsed = encerrarSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return reply
+          .code(400)
+          .send({ error: parsed.error.errors[0]?.message ?? "Indique o motivo do encerramento." });
+      }
+      const motivo = parsed.data.motivo;
+
+      const project = await prisma.project.findUnique({ where: { id: req.params.id } });
+      if (!project) return reply.code(404).send({ error: "Projeto não encontrado." });
+      if (project.state !== "A0") {
+        return reply.code(409).send({ error: "O projeto não está na fase A0." });
+      }
+      const diag = await prisma.diagnostic.findUnique({ where: { projectId: project.id } });
+      const naoPassa = diag?.result === "A_REVER" || diag?.result === "NAO_ELEGIVEL";
+      if (!naoPassa) {
+        return reply.code(409).send({
+          error:
+            "Só é possível encerrar um diagnóstico que não passa (mérito abaixo do mínimo ou condição falhada).",
+        });
+      }
+
+      await prisma.$transaction([
+        prisma.project.update({ where: { id: project.id }, data: { state: "ENCERRADO" } }),
+        prisma.stateTransition.create({
+          data: { projectId: project.id, fromState: "A0", toState: "ENCERRADO", byUserId: req.user!.id },
+        }),
+        prisma.diagnostic.update({
+          where: { projectId: project.id },
+          data: { encerradoMotivo: motivo, decidedByUserId: req.user!.id },
+        }),
+        prisma.activityLog.create({
+          data: {
+            projectId: project.id,
+            userId: req.user!.id,
+            type: "state_transition",
+            description: `Diagnóstico encerrado (não prosseguiu): ${motivo}`,
+          },
+        }),
+      ]);
+      return { ok: true, state: "ENCERRADO" };
+    },
+  );
+
+  // TRNSF-1044 — reabrir um projeto encerrado, devolvendo-o a A0 (gestor/admin).
+  // Limpa a justificação do encerramento e regista a transição inversa.
+  app.post<{ Params: { id: string } }>(
+    "/api/projects/:id/reopen",
+    async (req, reply) => {
+      if (!canManageUsers(req.user!.role)) {
+        return reply.code(403).send({ error: "Só um gestor ou administrador pode reabrir um projeto." });
+      }
+      const project = await prisma.project.findUnique({ where: { id: req.params.id } });
+      if (!project) return reply.code(404).send({ error: "Projeto não encontrado." });
+      if (project.state !== "ENCERRADO") {
+        return reply.code(409).send({ error: "O projeto não está encerrado." });
+      }
+
+      await prisma.$transaction([
+        prisma.project.update({ where: { id: project.id }, data: { state: "A0" } }),
+        prisma.stateTransition.create({
+          data: { projectId: project.id, fromState: "ENCERRADO", toState: "A0", byUserId: req.user!.id },
+        }),
+        prisma.diagnostic.updateMany({
+          where: { projectId: project.id },
+          data: { encerradoMotivo: null },
+        }),
+        prisma.activityLog.create({
+          data: {
+            projectId: project.id,
+            userId: req.user!.id,
+            type: "state_transition",
+            description: "Projeto reaberto para diagnóstico (A0).",
+          },
+        }),
+      ]);
+      return { ok: true, state: "A0" };
     },
   );
 }

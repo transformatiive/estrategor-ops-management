@@ -22,6 +22,7 @@ export function Pt2030() {
     Aprovado: [],
     Execução: [],
     Encerramento: [],
+    "Não prosseguiu": [],
   };
   for (const p of pt) byColumn[kanbanColumnForState(p.state)].push(p);
 

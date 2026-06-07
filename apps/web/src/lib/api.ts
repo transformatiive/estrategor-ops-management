@@ -291,6 +291,15 @@ export const api = {
     post<{ ok: boolean; state: string }>(
       `/api/projects/${id}/diagnostic/advance`,
     ),
+  // encerrar um diagnóstico A0 que não passa, com justificação (TRNSF-1044)
+  encerrarDiagnostico: (id: string, motivo: string) =>
+    post<{ ok: boolean; state: string }>(
+      `/api/projects/${id}/diagnostic/encerrar`,
+      { motivo },
+    ),
+  // reabrir um projeto encerrado → A0 (gestor/admin — TRNSF-1044)
+  reopenProject: (id: string) =>
+    post<{ ok: boolean; state: string }>(`/api/projects/${id}/reopen`),
 
   // catálogo de avisos (TRNSF-1038, só admin)
   listAvisos: () => get<AvisoAdminListItemDTO[]>("/api/avisos"),

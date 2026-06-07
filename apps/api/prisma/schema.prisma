@@ -33,6 +33,7 @@ enum ProjectState {
   B0
   B1
   B2
+  ENCERRADO // estado terminal reversível "Não prosseguiu" (TRNSF-1044)
 }
 
 enum ChecklistStatus {
@@ -447,6 +448,9 @@ model Diagnostic {
   // ELEGIVEL | NAO_ELEGIVEL | A_REVER | SEM_GRELHA | POR_INICIAR
   result        String   @default("POR_INICIAR")
   eligible      Boolean?
+  // Justificação do encerramento "Não prosseguiu" (TRNSF-1044). Preenchida ao
+  // encerrar um diagnóstico que não passa; limpa ao reabrir.
+  encerradoMotivo String? @map("encerrado_motivo")
   decidedByUserId String? @map("decided_by_user_id")
   updatedAt     DateTime @updatedAt @map("updated_at")
   createdAt     DateTime @default(now()) @map("created_at")
