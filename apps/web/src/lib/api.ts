@@ -194,6 +194,9 @@ export const api = {
   diagnostic: (id: string) => get<DiagnosticDTO>(`/api/projects/${id}/diagnostic`),
   saveDiagnostic: (id: string, data: SaveDiagnosticRequest) =>
     put<DiagnosticDTO>(`/api/projects/${id}/diagnostic`, data),
+  // ligar EXPLICITAMENTE o projeto a um aviso do programa (TRNSF-1031)
+  setAviso: (id: string, meritGridId: string) =>
+    put<DiagnosticDTO>(`/api/projects/${id}/diagnostic/aviso`, { meritGridId }),
   // elegibilidade estruturada do aviso (TRNSF-1030, só admin)
   setEligibilidade: (id: string, data: AvisoElegibilidade) =>
     put<DiagnosticDTO>(`/api/projects/${id}/diagnostic/eligibilidade`, data),

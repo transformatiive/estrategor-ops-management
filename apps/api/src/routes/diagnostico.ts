@@ -6,6 +6,7 @@ import {
   gridRegions,
   verificarCondicaoAcesso,
   type AvisoElegibilidade,
+  type AvisoOpcaoDTO,
   type ConditionStateDTO,
   type DadosAcesso,
   type DiagnosticDTO,
@@ -64,6 +65,43 @@ async function findGridForProject(project: {
     if (match) return match;
   }
   return grids[0]!;
+}
+
+type GridRow = Awaited<ReturnType<typeof findGridForProject>>;
+
+/** Resolve o aviso (grelha) do projeto: prefere o escolhido EXPLICITAMENTE
+ *  (TRNSF-1031); na ausência, recai na heurística (apenas sugestão). */
+async function resolveGrid(
+  project: { measureLabel: string | null; program: { code: string } },
+  meritGridId: string | null,
+): Promise<GridRow> {
+  if (meritGridId) {
+    const chosen = await prisma.meritGrid.findFirst({
+      where: { id: meritGridId, programCode: project.program.code },
+    });
+    if (chosen) return chosen;
+  }
+  return findGridForProject(project);
+}
+
+/** Avisos (grelhas) disponíveis no programa, para o consultor escolher. */
+async function listAvisos(programCode: string): Promise<AvisoOpcaoDTO[]> {
+  const grids = await prisma.meritGrid.findMany({
+    where: { programCode, extracted: true },
+    orderBy: [{ measure: "asc" }, { codigoAviso: "asc" }],
+    select: { id: true, codigoAviso: true, measure: true, regiao: true, versao: true, eligibilidade: true },
+  });
+  return grids.map((g) => {
+    const e = lerElegibilidade(g.eligibilidade);
+    return {
+      id: g.id,
+      codigoAviso: g.codigoAviso,
+      measure: g.measure,
+      regiao: g.regiao,
+      versao: g.versao,
+      eligibilidadeEstado: e ? e.estado : "nenhuma",
+    };
+  });
 }
 
 function gridSummary(g: {
@@ -176,8 +214,9 @@ async function buildDTO(projectId: string): Promise<DiagnosticDTO | null> {
   });
   if (!project) return null;
 
-  const grid = await findGridForProject(project);
   const diag = await prisma.diagnostic.findUnique({ where: { projectId } });
+  const avisoConfirmado = diag?.avisoConfirmado ?? false;
+  const grid = await resolveGrid(project, diag?.meritGridId ?? null);
 
   const baseConditions: ConditionStateDTO[] =
     (diag?.conditions as ConditionStateDTO[] | null) ??
@@ -209,6 +248,9 @@ async function buildDTO(projectId: string): Promise<DiagnosticDTO | null> {
     availableRegions: gridData ? gridRegions(gridData) : [],
     conditions,
     eligibilidade,
+    selectedGridId: grid?.id ?? null,
+    avisoConfirmado,
+    avisos: await listAvisos(project.program.code),
     grid: grid ? gridSummary(grid) : null,
     gridData,
     meritSelection,
@@ -226,6 +268,52 @@ export async function diagnosticoRoutes(app: FastifyInstance) {
     if (!dto) return reply.code(404).send({ error: "Projeto não encontrado." });
     return dto;
   });
+
+  // TRNSF-1031 — ligar EXPLICITAMENTE o projeto a um aviso (grelha) do programa.
+  // É a escolha que dá a certeza de que o cliente está no aviso certo; sem ela
+  // o diagnóstico não avança. Mudar de aviso repõe as condições de acesso.
+  app.put<{ Params: { id: string }; Body: { meritGridId?: string } }>(
+    "/api/projects/:id/diagnostic/aviso",
+    async (req, reply) => {
+      const meritGridId = typeof req.body?.meritGridId === "string" ? req.body.meritGridId : null;
+      if (!meritGridId) return reply.code(400).send({ error: "Indique o aviso a associar." });
+      const project = await prisma.project.findUnique({ where: { id: req.params.id }, include: { program: true } });
+      if (!project) return reply.code(404).send({ error: "Projeto não encontrado." });
+      const grid = await prisma.meritGrid.findFirst({
+        where: { id: meritGridId, programCode: project.program.code },
+      });
+      if (!grid) return reply.code(400).send({ error: "Aviso inválido para o programa deste projeto." });
+
+      const current = await prisma.diagnostic.findUnique({ where: { projectId: project.id } });
+      const mudouAviso = current?.meritGridId !== grid.id;
+      // Ao trocar de aviso, as condições de acesso passam a ser as do novo aviso.
+      const conditions = mudouAviso
+        ? ((grid.accessConditions as { key: string; label: string }[] | null) ?? []).map((c) => ({
+            key: c.key, label: c.label, status: "NA" as const,
+          }))
+        : (current?.conditions ?? []);
+
+      await prisma.diagnostic.upsert({
+        where: { projectId: project.id },
+        create: {
+          projectId: project.id,
+          programId: project.programId,
+          meritGridId: grid.id,
+          gridVersion: grid.versao,
+          avisoConfirmado: true,
+          conditions: conditions as object,
+          result: "POR_INICIAR",
+        },
+        update: {
+          meritGridId: grid.id,
+          gridVersion: grid.versao,
+          avisoConfirmado: true,
+          ...(mudouAviso ? { conditions: conditions as object, meritInputs: undefined, meritBreakdown: undefined, mp: null, result: "EM_PREENCHIMENTO", eligible: null } : {}),
+        },
+      });
+      return buildDTO(project.id);
+    },
+  );
 
   // TRNSF-1030 — definir/validar a elegibilidade estruturada do aviso (admin).
   // Afeta o aviso (grelha), não só este projeto — é dado do aviso.
@@ -267,8 +355,8 @@ export async function diagnosticoRoutes(app: FastifyInstance) {
     });
     if (!project) return reply.code(404).send({ error: "Projeto não encontrado." });
 
-    const grid = await findGridForProject(project);
     const current = await prisma.diagnostic.findUnique({ where: { projectId: project.id } });
+    const grid = await resolveGrid(project, current?.meritGridId ?? null);
 
     const conditions =
       parsed.data.conditions ??
@@ -328,6 +416,11 @@ export async function diagnosticoRoutes(app: FastifyInstance) {
         return reply.code(409).send({ error: "O projecto não está na fase A0." });
       }
       const diag = await prisma.diagnostic.findUnique({ where: { projectId: project.id } });
+      if (!diag?.avisoConfirmado) {
+        return reply.code(409).send({
+          error: "Escolha (e confirme) o aviso do projeto antes de concluir o diagnóstico.",
+        });
+      }
       const concluded =
         diag && (diag.result === "ELEGIVEL" || diag.result === "A_REVER");
       if (!concluded) {
