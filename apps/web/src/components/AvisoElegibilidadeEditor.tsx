@@ -80,6 +80,11 @@ export function AvisoElegibilidadeEditor({
     ? `${atual.caeElegiveis.length} CAE · ${atual.nuts2Elegiveis.length} região(ões)${atual.exigeBaixaDensidade ? " · baixa densidade" : ""} · ${atual.estado === "validado" ? "validada" : "por validar"}`
     : "não definida";
 
+  // O PDF do aviso é lido automaticamente no pré-diagnóstico (TRNSF-1034). Se a
+  // elegibilidade já está preenchida a partir de uma fonte, a importação manual
+  // aqui passa a ser apenas um recurso (falha de leitura ou aviso sem PDF).
+  const jaLido = !!atual && !!(atual.fonteUrl || fonteUrlAviso);
+
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
@@ -95,15 +100,43 @@ export function AvisoElegibilidadeEditor({
             Dados do aviso (do PDF oficial). Só com estado "Validada" geram Provável PASSA/FALHA. Nunca decidem — o estado de cada condição continua do consultor.
           </p>
 
-          {/* TRNSF-1032 — importar do PDF do aviso (a IA propõe, o admin valida) */}
+          {/* TRNSF-1032/1034 — o PDF do aviso é lido automaticamente no
+              pré-diagnóstico; a importação manual aqui é um recurso. */}
+          {jaLido && (
+            <div
+              className="deadline-sub"
+              style={{
+                display: "flex",
+                gap: 8,
+                marginBottom: 10,
+                padding: "8px 10px",
+                borderRadius: 6,
+                background: "var(--success-bg, #f0f9f4)",
+                border: "1px solid var(--success-border, #cdebd6)",
+                color: "var(--success-text, #1a7f4b)",
+              }}
+            >
+              <span aria-hidden>✓</span>
+              <span>
+                O PDF do aviso já foi lido automaticamente no pré-diagnóstico — basta rever e validar abaixo.
+                Só precisa de <strong>re-importar</strong> se a leitura falhou ou se o aviso não tinha PDF.
+              </span>
+            </div>
+          )}
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
             <button className="btn btn-secondary btn-sm" onClick={importar} disabled={importando || busy}>
-              {importando ? "A importar do PDF…" : "Importar do PDF do aviso"}
+              {importando
+                ? "A importar do PDF…"
+                : jaLido
+                  ? "Re-importar do PDF do aviso"
+                  : "Importar do PDF do aviso"}
             </button>
             <span className="deadline-sub">
-              {fonteUrlAviso || fonteUrl.trim()
-                ? "Usa o PDF do aviso e propõe a elegibilidade (rascunho a validar)."
-                : "Sem URL no aviso — cole o link do PDF no campo \"Fonte\" abaixo e importe."}
+              {jaLido
+                ? "Recurso: re-importa só em caso de falha de leitura ou se o aviso não tinha PDF."
+                : fonteUrlAviso || fonteUrl.trim()
+                  ? "Usa o PDF do aviso e propõe a elegibilidade (rascunho a validar)."
+                  : "Sem URL no aviso — cole o link do PDF no campo \"Fonte\" abaixo e importe."}
             </span>
           </div>
 
