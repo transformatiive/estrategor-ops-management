@@ -220,19 +220,29 @@ function QueueRow({ doc, onChanged }: { doc: DocumentDTO; onChanged: () => void 
         </a>
       </div>
 
-      {/* Pré-validação: proposta da IA + confiança */}
-      <div className={"queue-ai " + (low ? "queue-ai-low" : "")}>
-        <span className="queue-ai-label">Proposta da IA:</span>{" "}
-        <b>{proposedName ?? "—"}</b>
-        {pct !== null && (
-          <span className={"badge " + (low ? "badge-danger" : "badge-green")} style={{ marginLeft: 8 }}>
-            {low ? "⚠ confiança baixa" : "confiança"} {pct}%
-          </span>
-        )}
-        {low && (
-          <div className="queue-ai-hint">Confirme o tipo e veja o documento antes de arquivar.</div>
-        )}
-      </div>
+      {/* Pré-validação: proposta da IA + confiança. Sem tipo proposto (confiança
+          abaixo do limiar) → "Por identificar", o consultor escolhe (TRNSF-1049). */}
+      {doc.proposedTypeKey ? (
+        <div className={"queue-ai " + (low ? "queue-ai-low" : "")}>
+          <span className="queue-ai-label">Proposta da IA:</span>{" "}
+          <b>{proposedName ?? "—"}</b>
+          {pct !== null && (
+            <span className={"badge " + (low ? "badge-danger" : "badge-green")} style={{ marginLeft: 8 }}>
+              {low ? "⚠ confiança baixa" : "confiança"} {pct}%
+            </span>
+          )}
+          {low && (
+            <div className="queue-ai-hint">Confirme o tipo e veja o documento antes de arquivar.</div>
+          )}
+        </div>
+      ) : (
+        <div className="queue-ai queue-ai-low">
+          <span className="queue-ai-label">Por identificar</span>
+          <div className="queue-ai-hint">
+            A IA não identificou o tipo com confiança suficiente — veja o documento e selecione o tipo antes de arquivar.
+          </div>
+        </div>
+      )}
 
       <div className="queue-actions">
         <Dropdown block value={type} onChange={setType} placeholder="— tipo de documento —" options={DOCUMENT_TAXONOMY.map((d) => ({ value: d.key, label: d.name }))} />
