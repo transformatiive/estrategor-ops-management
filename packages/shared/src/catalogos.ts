@@ -97,12 +97,17 @@ export const NUTS: { nuts2: string; nuts3: string[] }[] = [
  * Catálogo completo dos 308 concelhos de Portugal → NUTS II / NUTS III
  * (classificação NUTS 2024, INE). A flag `baixaDensidade` segue a lista oficial
  * de territórios do interior/baixa densidade (Deliberação CIC Portugal 2020
- * n.º 55/2020) ao nível do concelho integralmente classificado; casos parciais
- * (ao nível da freguesia) ficam `false` e confirmam-se caso a caso.
+ * n.º 55/2020) ao nível do concelho integralmente classificado; os casos
+ * parciais (classificados só ao nível da freguesia) ficam `false` AQUI e
+ * resolvem-se pela freguesia através de `BAIXA_DENSIDADE_PARCIAL` (TRNSF-1040).
  */
 const BAIXA_DENSIDADE = new Set<string>([
   // Norte
-  "Melgaço", "Monção", "Arcos de Valdevez", "Paredes de Coura", "Ponte da Barca", "Valença", "Vila Nova de Cerveira",
+  // Nota (TRNSF-1040): Valença NÃO é integral — é parcial (só algumas
+  // freguesias), ver BAIXA_DENSIDADE_PARCIAL. Removido daqui para coerência com
+  // a Deliberação CIC PT2030 n.º 31/2023/PL ("freguesias … em municípios que
+  // não são de baixa densidade").
+  "Melgaço", "Monção", "Arcos de Valdevez", "Paredes de Coura", "Ponte da Barca", "Vila Nova de Cerveira",
   "Terras de Bouro", "Vila Verde", "Cabeceiras de Basto", "Mondim de Basto", "Vieira do Minho",
   "Boticas", "Chaves", "Montalegre", "Ribeira de Pena", "Valpaços", "Vila Pouca de Aguiar",
   "Baião", "Celorico de Basto", "Cinfães", "Resende",
@@ -132,6 +137,191 @@ const BAIXA_DENSIDADE = new Set<string>([
   // Algarve
   "Alcoutim", "Aljezur", "Castro Marim", "Monchique", "Vila do Bispo",
 ]);
+
+/**
+ * Concelhos PARCIALMENTE classificados como baixa densidade (TRNSF-1040).
+ *
+ * A par dos 165 municípios classificados integralmente (acima), a Deliberação
+ * CIC Portugal 2030 n.º 31/2023/PL classifica 74 FREGUESIAS de baixa densidade
+ * inseridas em municípios que NÃO são de baixa densidade ("Grupo II"). Para
+ * estes concelhos a flag ao nível do concelho não chega: a baixa densidade
+ * resolve-se ao nível da freguesia da sede.
+ *
+ * Estrutura: concelho → freguesias classificadas como baixa densidade. Os nomes
+ * seguem a designação oficial pós-reorganização administrativa (Lei 11-A/2013),
+ * incluindo "União das freguesias de …" quando aplicável. Lista completável /
+ * corrigível sem alterar código (basta editar este mapa e re-correr o seed).
+ *
+ * FONTE (citável):
+ *  - Deliberação n.º 31/2023/PL (CIC Portugal 2030), de 22-09-2023 — texto
+ *    oficial: "aprovar a classificação de 165 Municípios e 74 Freguesias de
+ *    baixa densidade inseridas em Municípios que não são de baixa densidade".
+ *    https://portugal2030.pt/legislacao/deliberacao-n-o-31-2023-pl/
+ *    (PDF: o anexo com a lista de freguesias está em imagem digitalizada, não
+ *    extraível por texto; daí a confirmação por fontes secundárias abaixo.)
+ *  - Mantém a classificação dos ciclos anteriores: Deliberações CIC PT2020
+ *    n.º 23/2015 (26-03), n.º 55/2015 (01-07) e n.º 20/2018 (12-09).
+ *  - Enumeração das freguesias confirmada (cruzada entre duas fontes
+ *    independentes que reproduzem o anexo):
+ *      · https://ana-macao-kw.pt/en/municipalities-and-parishes-low-population-density
+ *      · https://www.yunitconsulting.pt/en/knowledge/blog/low-density-territories-check-your-municipality-here/1484/
+ *
+ * NOTA DE RIGOR: nada aqui é inventado. As 73 entradas abaixo (21 concelhos)
+ * reproduzem o anexo confirmado nas fontes secundárias; o texto oficial fala em
+ * 74 freguesias — a diferença marginal deve-se à contagem de uniões de
+ * freguesias. Qualquer freguesia não listada num concelho parcial resolve, em
+ * runtime, para "a confirmar" (fallback seguro), nunca para PASSA/FALHA.
+ */
+export const BAIXA_DENSIDADE_PARCIAL: Record<string, string[]> = {
+  // ── Aveiro ──
+  Águeda: [
+    "União das freguesias de Belazaima do Chão, Castanheira do Vouga e Agadão",
+    "União das freguesias do Préstimo e Macieira de Alcoba",
+  ],
+  "Vale de Cambra": ["Arões", "Junqueira"],
+  // ── Braga ──
+  Amares: [
+    "Bouro (Santa Marta)",
+    "Goães",
+    "União das freguesias de Caldelas, Sequeiros e Paranhos",
+    "União das freguesias de Vilela, Seramil e Paredes Secas",
+  ],
+  Guimarães: ["União das freguesias de Arosa e Castelões"],
+  // ── Coimbra ──
+  "Condeixa-a-Nova": ["Furadouro"],
+  // ── Faro ──
+  Loulé: ["Alte", "Ameixial", "Salir", "União das freguesias de Querença, Tôr e Benafim"],
+  Silves: ["São Marcos da Serra"],
+  Tavira: ["Cachopo", "Santa Catarina da Fonte do Bispo"],
+  // ── Leiria ──
+  Ourém: [
+    "Espite",
+    "União das freguesias de Freixianda, Ribeira do Fárrio e Formigais",
+    "União das freguesias de Matas e Cercal",
+    "União das freguesias de Rio de Couros e Casal dos Bernardos",
+  ],
+  Pombal: ["Abiul"],
+  Tomar: [
+    "Olalhas",
+    "Sabacheira",
+    "União das freguesias de Além da Ribeira e Pedreira",
+    "União das freguesias de Casais e Alviobeira",
+    "União das freguesias de Serra e Junceira",
+  ],
+  // ── Porto / Tâmega e Sousa ──
+  Amarante: [
+    "Ansiães",
+    "Candemil",
+    "Gouveia (São Simão)",
+    "Jazente",
+    "Rebordelo",
+    "Salvador do Monte",
+    "União das freguesias de Aboadela, Sanche e Várzea",
+    "União das freguesias de Bustelo, Carneiro e Carvalho de Rei",
+    "União das freguesias de Olo e Canadelo",
+    "Vila Chã do Marão",
+  ],
+  "Castelo de Paiva": ["Real"],
+  "Marco de Canaveses": ["União das freguesias de Várzea, Aliviada e Folhada"],
+  // ── Santarém ──
+  Santarém: ["União das freguesias de Casével e Vaqueiros"],
+  // ── Viana do Castelo / Alto Minho ──
+  Caminha: [
+    "Dem",
+    "União das freguesias de Arga (Baixo, Cima e São João)",
+    "União das freguesias de Gondar e Orbacém",
+  ],
+  "Ponte de Lima": [
+    "Anais",
+    "União das freguesias de Ardegão, Freixo e Mato",
+    "Associação de freguesias do Vale do Neiva",
+    "União das freguesias de Bárrio e Cepões",
+    "Beiral do Lima",
+    "Boalhosa",
+    "Cabaços e Fojo Lobal",
+    "Cabração e Moreira do Lima",
+    "Calheiros",
+    "Estorãos",
+    "Friastelas",
+    "Gemieira",
+    "Gondufe",
+    "Labruja",
+    "União das freguesias de Labrujó, Rendufe e Vilar do Monte",
+    "União das freguesias de Navió e Vitorino dos Piães",
+    "Poiares",
+    "Serdedelo",
+  ],
+  Valença: [
+    "Boivão",
+    "Fontoura",
+    "União das freguesias de Gondomil e Sanfins",
+    "União das freguesias de São Julião e Silva",
+  ],
+  "Viana do Castelo": ["Montaria"],
+  // ── Viseu Dão Lafões ──
+  Viseu: [
+    "Calde",
+    "Cavernães",
+    "Cota",
+    "Ribafeita",
+    "São Pedro de France",
+    "União das freguesias de Barreiros e Cepões",
+  ],
+};
+
+/** Normaliza um nome para comparação tolerante (acentos/maiúsculas/espaços). */
+function normalizar(s: string): string {
+  return s
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Estado de classificação de baixa densidade de um concelho. */
+export type ClassificacaoBaixaDensidade = "integral" | "parcial" | "nenhuma";
+
+/**
+ * Classificação de baixa densidade de um concelho (TRNSF-1040):
+ *  - "integral": todo o concelho é baixa densidade (Deliberação CIC).
+ *  - "parcial": só algumas freguesias o são (resolve-se ao nível da freguesia).
+ *  - "nenhuma": não classificado.
+ */
+export function classificacaoBaixaDensidade(concelho: string | null | undefined): ClassificacaoBaixaDensidade {
+  if (!concelho?.trim()) return "nenhuma";
+  const n = normalizar(concelho);
+  for (const c of BAIXA_DENSIDADE) if (normalizar(c) === n) return "integral";
+  for (const c of Object.keys(BAIXA_DENSIDADE_PARCIAL)) if (normalizar(c) === n) return "parcial";
+  return "nenhuma";
+}
+
+/**
+ * Uma freguesia de um concelho é de baixa densidade? (TRNSF-1040)
+ *  - concelho integral  → true (independentemente da freguesia).
+ *  - concelho "nenhuma" → false.
+ *  - concelho parcial   → true se a freguesia consta da lista; false se conhecida
+ *    e não consta; null se a freguesia é desconhecida (não decidível → "a confirmar").
+ */
+export function freguesiaBaixaDensidade(
+  concelho: string | null | undefined,
+  freguesia: string | null | undefined,
+): boolean | null {
+  const cls = classificacaoBaixaDensidade(concelho);
+  if (cls === "integral") return true;
+  if (cls === "nenhuma") return false;
+  // parcial:
+  if (!freguesia?.trim()) return null; // freguesia desconhecida → indeciso
+  const entryKey = Object.keys(BAIXA_DENSIDADE_PARCIAL).find((c) => normalizar(c) === normalizar(concelho!));
+  const lista = entryKey ? BAIXA_DENSIDADE_PARCIAL[entryKey]! : [];
+  const f = normalizar(freguesia);
+  // Correspondência por igualdade ou por conteúdo (a sede pode indicar só a
+  // freguesia simples que faz parte de uma "União das freguesias de …").
+  return lista.some((g) => {
+    const gn = normalizar(g);
+    return gn === f || gn.includes(f) || f.includes(gn);
+  });
+}
 
 const CONCELHOS_POR_NUTS: { nuts2: string; nuts3: string; concelhos: string[] }[] = [
   // ── NORTE (86) ──

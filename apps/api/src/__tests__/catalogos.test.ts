@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   ANEXOS,
+  BAIXA_DENSIDADE_PARCIAL,
   CATEGORIAS_CUSTO,
   CONCELHOS,
   DOMINIOS_INTL,
   INDICADORES,
+  classificacaoBaixaDensidade,
+  freguesiaBaixaDensidade,
 } from "@estrategor/shared";
 
 describe("catálogo de concelhos → NUTS II (TRNSF-1037)", () => {
@@ -21,6 +24,59 @@ describe("catálogo de concelhos → NUTS II (TRNSF-1037)", () => {
   it("todos têm um NUTS II válido", () => {
     const validos = new Set(["Norte", "Centro", "Área Metropolitana de Lisboa", "Alentejo", "Algarve", "Região Autónoma dos Açores", "Região Autónoma da Madeira"]);
     expect(CONCELHOS.every((c) => validos.has(c.nuts2))).toBe(true);
+  });
+});
+
+describe("baixa densidade ao nível da freguesia (TRNSF-1040)", () => {
+  it("concelho integral (Bragança) → 'integral'", () => {
+    expect(classificacaoBaixaDensidade("Bragança")).toBe("integral");
+  });
+
+  it("concelho parcial (Tomar) → 'parcial'; não está no catálogo como integral", () => {
+    expect(classificacaoBaixaDensidade("Tomar")).toBe("parcial");
+    // confirma que é mesmo um concelho parcial (não integral)
+    expect(BAIXA_DENSIDADE_PARCIAL.Tomar?.length ?? 0).toBeGreaterThan(0);
+  });
+
+  it("concelho não classificado (Lisboa / Oeiras) → 'nenhuma'", () => {
+    expect(classificacaoBaixaDensidade("Lisboa")).toBe("nenhuma");
+    expect(classificacaoBaixaDensidade("Oeiras")).toBe("nenhuma");
+  });
+
+  it("classificação é tolerante a acentos/maiúsculas", () => {
+    expect(classificacaoBaixaDensidade("braganca")).toBe("integral");
+    expect(classificacaoBaixaDensidade("TOMAR")).toBe("parcial");
+  });
+
+  it("freguesiaBaixaDensidade: concelho integral → true para qualquer freguesia", () => {
+    expect(freguesiaBaixaDensidade("Bragança", "Sé")).toBe(true);
+    expect(freguesiaBaixaDensidade("Bragança", null)).toBe(true);
+  });
+
+  it("freguesiaBaixaDensidade: concelho 'nenhuma' → false", () => {
+    expect(freguesiaBaixaDensidade("Oeiras", "Algés")).toBe(false);
+  });
+
+  it("freguesiaBaixaDensidade: parcial + freguesia listada → true", () => {
+    // Tomar: "Sabacheira" e "Olalhas" constam da lista oficial.
+    expect(freguesiaBaixaDensidade("Tomar", "Sabacheira")).toBe(true);
+    expect(freguesiaBaixaDensidade("Tomar", "Olalhas")).toBe(true);
+  });
+
+  it("freguesiaBaixaDensidade: parcial + freguesia NÃO listada → false", () => {
+    // Tomar (sede) e São João Baptista não constam da lista de baixa densidade.
+    expect(freguesiaBaixaDensidade("Tomar", "São João Baptista")).toBe(false);
+  });
+
+  it("freguesiaBaixaDensidade: parcial + freguesia desconhecida → null (a confirmar)", () => {
+    expect(freguesiaBaixaDensidade("Tomar", null)).toBeNull();
+    expect(freguesiaBaixaDensidade("Tomar", "")).toBeNull();
+  });
+
+  it("nenhum concelho parcial é simultaneamente classificado integralmente", () => {
+    for (const c of Object.keys(BAIXA_DENSIDADE_PARCIAL)) {
+      expect(classificacaoBaixaDensidade(c)).toBe("parcial");
+    }
   });
 });
 

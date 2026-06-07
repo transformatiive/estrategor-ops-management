@@ -13,6 +13,7 @@ import type { AvisoElegibilidade, CondSugestao, GeoEmpresa } from "./dto.js";
 export interface DadosAcesso {
   cae?: string | null; // ex.: "74900 — Consultoria…"
   concelho?: string | null;
+  freguesia?: string | null; // sede ao nível da freguesia (TRNSF-1040)
   distrito?: string | null;
   naturezaJuridica?: string | null;
   setor?: string | null; // leitura da IA (atividade aparente)
@@ -113,9 +114,17 @@ export function verificarCondicaoAcesso(
   // Localização / região / baixa densidade
   if (/(localiza|territ[óo]rio|regi[ãa]o|baixa densidade)/.test(l) && validada && geo) {
     if (/baixa densidade/.test(l) && elig!.exigeBaixaDensidade && geo.baixaDensidade !== null) {
+      // Concelho de baixa densidade PARCIAL com freguesia desconhecida: não
+      // decide — pede a freguesia da sede (TRNSF-1040). Nunca PASSA/FALHA aqui.
+      if (geo.baixaDensidade === "a_confirmar") {
+        return {
+          sugestao: "indicio",
+          nota: "Concelho de baixa densidade parcial — indique a freguesia da sede para confirmar.",
+        };
+      }
       return geo.baixaDensidade
-        ? { sugestao: "provavel_passa", nota: "O concelho da sede está classificado como território de baixa densidade. A confirmar." }
-        : { sugestao: "provavel_falha", nota: "O concelho da sede não consta como baixa densidade (exigida pelo aviso). A confirmar." };
+        ? { sugestao: "provavel_passa", nota: "A sede está classificada como território de baixa densidade. A confirmar." }
+        : { sugestao: "provavel_falha", nota: "A sede não consta como baixa densidade (exigida pelo aviso). A confirmar." };
     }
     if (elig!.nuts2Elegiveis.length && tem(geo.nuts2)) {
       return elig!.nuts2Elegiveis.includes(geo.nuts2!)
