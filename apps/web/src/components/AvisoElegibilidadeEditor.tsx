@@ -80,7 +80,7 @@ export function AvisoElegibilidadeEditor({
     : "não definida";
 
   return (
-    <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--border)" }}>
+    <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
         <span className="deadline-sub">Elegibilidade do aviso (admin): {resumo}</span>
         <button className="btn btn-secondary btn-sm" onClick={() => setAberto((v) => !v)}>

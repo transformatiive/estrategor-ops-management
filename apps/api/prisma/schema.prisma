@@ -466,6 +466,10 @@ model PreDiagnostico {
   estadoApiEmpresas String @default("pendente") @map("estado_api_empresas")
   estadoSonar       String @default("pendente") @map("estado_sonar")
   estadoSonnet      String @default("pendente") @map("estado_sonnet")
+  // Passo automático da elegibilidade do aviso (TRNSF-1034): importa do PDF do
+  // aviso escolhido como parte do progresso. pendente|ok|falhou|indisponivel.
+  estadoElegibilidade String @default("pendente") @map("estado_elegibilidade")
+  elegibilidadeDetalhe String? @map("elegibilidade_detalhe")
   // [{ key, label, value, origem, estado, fonte }] — campos com proveniência
   campos            Json?
   // [{ item, nota }] — checklist "a confirmar oficialmente" (a IA não garante)

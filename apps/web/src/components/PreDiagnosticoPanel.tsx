@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   FAIXA_ESTADO_LABEL,
   FIELD_ORIGIN_LABELS,
@@ -21,6 +21,7 @@ const FAIXAS: { key: keyof PreDiagnosticoDTO["faixas"]; nome: string; desc: stri
   { key: "apiEmpresas", nome: "Dados da empresa", desc: "a obter CAE, natureza jurídica, capital e localização" },
   { key: "sonar", nome: "Contexto público", desc: "a recolher contexto e fontes na web" },
   { key: "sonnet", nome: "Análise", desc: "a estruturar a leitura e a checklist a confirmar" },
+  { key: "elegibilidade", nome: "Elegibilidade do aviso", desc: "a extrair CAE/regiões do PDF do aviso escolhido" },
 ];
 
 /** Parte um texto corrido em pontos (bullets) para legibilidade. Divide por
@@ -41,7 +42,7 @@ function emBullets(texto: string): string[] {
  * Rascunho com proveniência e fonte por campo; corrigível campo a campo.
  * Enquanto não validado, NÃO tem efeito (não altera estado nem elegibilidade).
  */
-export function PreDiagnosticoPanel({ projectId }: { projectId: string }) {
+export function PreDiagnosticoPanel({ projectId, onConcluido }: { projectId: string; onConcluido?: () => void }) {
   const { data, reload } = useAsync<PreDiagnosticoDTO>(() => api.prediagnostico(projectId), [projectId]);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -53,6 +54,17 @@ export function PreDiagnosticoPanel({ projectId }: { projectId: string }) {
     const t = setInterval(() => reload(), 2000);
     return () => clearInterval(t);
   }, [aCorrer, reload]);
+
+  // Ao concluir (transição de "a correr" → terminado), avisa o pai para
+  // recarregar o diagnóstico (a elegibilidade importada aparece no editor).
+  const correuRef = useRef(false);
+  useEffect(() => {
+    if (aCorrer) correuRef.current = true;
+    else if (correuRef.current) {
+      correuRef.current = false;
+      onConcluido?.();
+    }
+  }, [aCorrer, onConcluido]);
 
   // Só esconde no arranque (sem dados ainda); durante o polling mantém-se visível.
   if (!data) return null;
@@ -119,6 +131,13 @@ export function PreDiagnosticoPanel({ projectId }: { projectId: string }) {
             <p className="deadline-sub" style={{ marginTop: 0, marginBottom: 8 }}>
               {data.faixasDetalhe?.vies && <span>Registo oficial: {data.faixasDetalhe.vies}. </span>}
               {data.faixasDetalhe?.apiEmpresas && <span>Dados da empresa: {data.faixasDetalhe.apiEmpresas}.</span>}
+            </p>
+          )}
+          {/* Resumo da elegibilidade do aviso (importada do PDF) */}
+          {data.faixasDetalhe?.elegibilidade && (
+            <p className="deadline-sub" style={{ marginTop: 0, marginBottom: 8 }}>
+              Elegibilidade do aviso: {data.faixasDetalhe.elegibilidade}
+              {data.faixas.elegibilidade === "ok" && " — reveja e valide abaixo."}
             </p>
           )}
           {/* Faixas sem chave: nota de configuração (não é erro) */}

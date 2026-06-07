@@ -9,13 +9,14 @@
 import type { FieldOrigin, FieldState } from "./candidatura.js";
 
 /** Estado de cada faixa (fonte) do pré-diagnóstico. */
-export type FaixaEstado = "pendente" | "ok" | "falhou" | "sem_chave";
+export type FaixaEstado = "pendente" | "ok" | "falhou" | "sem_chave" | "indisponivel";
 
 export const FAIXA_ESTADO_LABEL: Record<FaixaEstado, string> = {
   pendente: "Pendente",
   ok: "OK",
   falhou: "Falhou",
   sem_chave: "Sem chave",
+  indisponivel: "N/A",
 };
 
 /** Campo pré-preenchido, com proveniência e fonte visíveis. */
@@ -41,9 +42,9 @@ export interface PreDiagnosticoDTO {
   projectId: string;
   /** inexistente = não correu (ex.: cliente sem NIF) */
   estado: "pendente" | "concluido" | "falhou" | "inexistente";
-  faixas: { vies: FaixaEstado; apiEmpresas: FaixaEstado; sonar: FaixaEstado; sonnet: FaixaEstado };
-  /** Razão curta de falha por faixa (diagnóstico/auditoria), quando "falhou". */
-  faixasDetalhe?: { vies?: string | null; apiEmpresas?: string | null };
+  faixas: { vies: FaixaEstado; apiEmpresas: FaixaEstado; sonar: FaixaEstado; sonnet: FaixaEstado; elegibilidade: FaixaEstado };
+  /** Razão curta de falha/resumo por faixa (diagnóstico/auditoria). */
+  faixasDetalhe?: { vies?: string | null; apiEmpresas?: string | null; elegibilidade?: string | null };
   campos: PreDiagCampo[];
   checklistAConfirmar: ChecklistAConfirmar[];
   fontesSonar: string[];

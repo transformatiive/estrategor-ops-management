@@ -179,19 +179,24 @@ export function DiagnosticoTab({
             Sugestão automática (não confirmada). Confirme o aviso para concluir o diagnóstico.
           </p>
         )}
-        {/* Elegibilidade do aviso (admin) — é dado do aviso, fica junto da escolha */}
-        {canManageUsers(user?.role ?? "CONSULTOR") && (
+      </div>
+
+      {/* ── Pré-diagnóstico assistido por IA (TRNSF-967) — recolhe dados da
+           empresa e importa a elegibilidade do aviso (TRNSF-1034) ── */}
+      <PreDiagnosticoPanel projectId={projectId} onConcluido={reload} />
+
+      {/* ── Elegibilidade do aviso (admin) — depois do pré-diagnóstico, que a
+           propõe automaticamente; aqui revê-se e valida-se ── */}
+      {canManageUsers(user?.role ?? "CONSULTOR") && (
+        <div className="card" style={{ marginBottom: 16 }}>
           <AvisoElegibilidadeEditor
             projectId={projectId}
             atual={data.eligibilidade}
             fonteUrlAviso={data.grid?.fonteUrl ?? null}
             onSaved={reload}
           />
-        )}
-      </div>
-
-      {/* ── Pré-diagnóstico assistido por IA (TRNSF-967) ── */}
-      <PreDiagnosticoPanel projectId={projectId} />
+        </div>
+      )}
 
       {/* ── Condições de acesso ── */}
       <div className="card" style={{ marginBottom: 16 }}>
