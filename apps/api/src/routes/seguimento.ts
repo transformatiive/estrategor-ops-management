@@ -2,7 +2,9 @@ import type { FastifyInstance } from "fastify";
 import {
   DOCUMENT_TAXONOMY,
   daysBetween,
+  deriveChecklistStatus,
   documentTypesForProgram,
+  isDelivered,
   type FollowupDTO,
   type ProjectTrackingDTO,
   type ReminderState,
@@ -49,21 +51,34 @@ export async function seguimentoRoutes(app: FastifyInstance) {
         project.program.code as ProgramParam,
       ).map((d) => d.key);
       const docTypes = await prisma.documentType.findMany({ where: { key: { in: applicable } } });
-      const items = await prisma.checklistItem.findMany({
-        where: { projectId: project.id, documentTypeId: { in: docTypes.map((t) => t.id) } },
-        include: { documents: true },
+
+      // TRNSF-1050 — o estado da checklist é DERIVADO dos documentos do projecto,
+      // para refletir sempre a realidade: arquivado → VALIDADO (verde); na fila
+      // (a_validar/em_analise) → RECEBIDO (amarelo); senão EM_FALTA (vermelho).
+      // Um documento mapeia a um tipo pelo tipo confirmado (arquivado) ou, na fila,
+      // pelo tipo proposto pela IA.
+      const docs = await prisma.document.findMany({
+        where: { projectId: project.id, status: { in: ["arquivado", "a_validar", "em_analise"] } },
+        orderBy: { createdAt: "desc" },
       });
-      const byType = new Map(items.map((i) => [i.documentTypeId, i]));
+      const docsByType = new Map<string, typeof docs>();
+      for (const d of docs) {
+        const typeId = d.status === "arquivado" ? d.documentTypeId : d.documentTypeId ?? d.proposedTypeId;
+        if (!typeId) continue;
+        const arr = docsByType.get(typeId) ?? [];
+        arr.push(d);
+        docsByType.set(typeId, arr);
+      }
 
       const tracking: TrackingItemDTO[] = docTypes.map((dt) => {
-        const it = byType.get(dt.id);
-        const doc = it?.documents.find((d) => d.status === "arquivado") ?? it?.documents[0];
-        const status = it?.status ?? "EM_FALTA";
+        const typeDocs = docsByType.get(dt.id) ?? [];
+        const status = deriveChecklistStatus(typeDocs.map((d) => d.status));
+        const doc = typeDocs.find((d) => d.status === "arquivado") ?? typeDocs[0];
         return {
           documentTypeKey: dt.key,
           documentTypeName: dt.name,
           status,
-          delivered: status === "RECEBIDO",
+          delivered: isDelivered(status),
           documentId: doc?.id ?? null,
           workdriveUrl: doc?.workdriveUrl ?? null,
         };

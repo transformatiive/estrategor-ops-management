@@ -3,8 +3,39 @@ import {
   REMINDER_ROUNDS,
   addBusinessDays,
   daysBetween,
+  deriveChecklistStatus,
+  isDelivered,
   reminderEmail,
 } from "@estrategor/shared";
+
+describe("deriveChecklistStatus (TRNSF-1050)", () => {
+  it("sem documentos → EM_FALTA (vermelho)", () => {
+    expect(deriveChecklistStatus([])).toBe("EM_FALTA");
+  });
+  it("documento na fila de validação → RECEBIDO (amarelo)", () => {
+    expect(deriveChecklistStatus(["a_validar"])).toBe("RECEBIDO");
+    expect(deriveChecklistStatus(["em_analise"])).toBe("RECEBIDO");
+  });
+  it("documento arquivado → VALIDADO (verde), mesmo com outros na fila", () => {
+    expect(deriveChecklistStatus(["arquivado"])).toBe("VALIDADO");
+    expect(deriveChecklistStatus(["a_validar", "arquivado"])).toBe("VALIDADO");
+  });
+  it("estados irrelevantes (rejeitado/dividido) não contam como entregue", () => {
+    expect(deriveChecklistStatus(["rejeitado"])).toBe("EM_FALTA");
+    expect(deriveChecklistStatus(["dividido"])).toBe("EM_FALTA");
+  });
+});
+
+describe("isDelivered (TRNSF-1050/1051)", () => {
+  it("RECEBIDO e VALIDADO contam como entregue; EM_FALTA não", () => {
+    expect(isDelivered("RECEBIDO")).toBe(true);
+    expect(isDelivered("VALIDADO")).toBe(true);
+    expect(isDelivered("EM_FALTA")).toBe(false);
+  });
+  it("o rótulo legado EM_REVISAO conta como entregue", () => {
+    expect(isDelivered("EM_REVISAO")).toBe(true);
+  });
+});
 
 describe("addBusinessDays (§9)", () => {
   it("sexta + 1 dia útil = segunda", () => {

@@ -88,9 +88,23 @@ export function kanbanColumnForState(state: ProjectState): KanbanColumn {
 export const MILESTONE_STATUSES = ["FEITO", "ATIVO", "POR_FAZER"] as const;
 export type MilestoneStatus = (typeof MILESTONE_STATUSES)[number];
 
-/** Estado de cada item da checklist documental (Épicos D/F). */
-export const CHECKLIST_STATUSES = ["EM_FALTA", "RECEBIDO", "EM_REVISAO"] as const;
+/**
+ * Estado de cada item da checklist documental (Épicos D/F · TRNSF-1050).
+ * Três estados com cores: EM_FALTA (vermelho — pedido, não entregue),
+ * RECEBIDO (amarelo — documento submetido, na fila de validação),
+ * VALIDADO (verde — documento validado/arquivado nos Documentos).
+ * Nota: o enum Prisma mantém o rótulo legado `EM_REVISAO` (não usado) porque
+ * remover um valor de enum em Postgres é inseguro.
+ */
+export const CHECKLIST_STATUSES = ["EM_FALTA", "RECEBIDO", "VALIDADO"] as const;
 export type ChecklistStatus = (typeof CHECKLIST_STATUSES)[number];
+
+/** Cor/realce de cada estado da checklist (UI). */
+export const CHECKLIST_STATUS_LABELS: Record<ChecklistStatus, string> = {
+  EM_FALTA: "Em falta",
+  RECEBIDO: "Recebido",
+  VALIDADO: "Validado",
+};
 
 /** Confiança da classificação por IA (Épico E). */
 export const DOC_CONFIDENCE = ["ALTA", "BAIXA"] as const;

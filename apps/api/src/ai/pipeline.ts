@@ -25,6 +25,21 @@ async function ensureChecklistItem(projectId: string, documentTypeId: string) {
   });
 }
 
+/**
+ * Marca o item de checklist de um tipo como RECEBIDO (amarelo — TRNSF-1050):
+ * um documento desse tipo entrou na fila de validação. Não rebaixa um item já
+ * VALIDADO (verde). Best-effort: nunca bloqueia a ingestão.
+ */
+async function markChecklistReceived(projectId: string, documentTypeKey: string): Promise<void> {
+  const docType = await prisma.documentType.findUnique({ where: { key: documentTypeKey } });
+  if (!docType) return;
+  const item = await ensureChecklistItem(projectId, docType.id);
+  if (item.status === "VALIDADO") return;
+  if (item.status !== "RECEBIDO") {
+    await prisma.checklistItem.update({ where: { id: item.id }, data: { status: "RECEBIDO" } });
+  }
+}
+
 export interface IngestInput {
   projectId: string;
   originalFilename: string;
@@ -97,6 +112,15 @@ export async function ingestDocument(input: IngestInput): Promise<IngestResult> 
   // entre deploys e o "Ver documento" servir o ficheiro real.
   await prisma.documentBlob.create({ data: { documentId: original.id, bytes: new Uint8Array(input.content) } });
 
+  // TRNSF-1050 — os tipos que devem passar a RECEBIDO (amarelo) ao chegar à fila
+  // de validação. Se veio de um link de recolha, limita aos tipos pedidos; caso
+  // contrário (upload manual) aceita qualquer tipo proposto.
+  const requestedKeys = input.collectionLinkId
+    ? (await prisma.collectionLink.findUnique({ where: { id: input.collectionLinkId } }))?.requestedKeys ?? []
+    : null;
+  const shouldMark = (key: string | undefined | null): key is string =>
+    !!key && (requestedKeys === null || requestedKeys.includes(key));
+
   // 3) multi-documento → divisão física, um Documento por parte
   if (result.multiDocument && result.parts && result.parts.length > 1 && input.mimeType === "application/pdf") {
     let created = 0;
@@ -125,6 +149,7 @@ export async function ingestDocument(input: IngestInput): Promise<IngestResult> 
         },
       });
       await prisma.documentBlob.create({ data: { documentId: partDoc.id, bytes: new Uint8Array(partBuffer) } });
+      if (shouldMark(part.typeKey)) await markChecklistReceived(project.id, part.typeKey);
       created += 1;
     }
     await prisma.document.update({ where: { id: original.id }, data: { status: "dividido" } });
@@ -151,6 +176,12 @@ export async function ingestDocument(input: IngestInput): Promise<IngestResult> 
       status: "a_validar",
     },
   });
+  // TRNSF-1050 — o documento entrou na fila: marca o tipo proposto (ou, se houver
+  // um único tipo pedido, esse) como RECEBIDO (amarelo) na checklist.
+  const markKey =
+    result.proposedTypeKey ??
+    (requestedKeys && requestedKeys.length === 1 ? requestedKeys[0] : undefined);
+  if (shouldMark(markKey)) await markChecklistReceived(project.id, markKey);
   await prisma.activityLog.create({
     data: {
       projectId: project.id,
@@ -164,7 +195,7 @@ export async function ingestDocument(input: IngestInput): Promise<IngestResult> 
 /**
  * Confirma a classificação de um documento e arquiva-o na pasta WorkDrive correcta
  * com o nome §11 (TRNSF-938). Só aqui o documento é arquivado e o item de
- * checklist passa a RECEBIDO.
+ * checklist passa a VALIDADO (verde — TRNSF-1050).
  */
 export async function validateDocument(
   documentId: string,
@@ -217,9 +248,10 @@ export async function validateDocument(
     },
   });
 
+  // TRNSF-1050 — documento validado e arquivado → checklist VALIDADO (verde).
   await prisma.checklistItem.update({
     where: { id: checklistItem.id },
-    data: { status: "RECEBIDO" },
+    data: { status: "VALIDADO" },
   });
 
   await prisma.activityLog.create({

@@ -165,7 +165,7 @@ export interface CreateCollectionRequest {
 export interface CollectionItemDTO {
   documentTypeKey: string;
   documentTypeName: string;
-  status: ChecklistStatus; // EM_FALTA | RECEBIDO | EM_REVISAO
+  status: ChecklistStatus; // EM_FALTA | RECEBIDO | VALIDADO
   documentId: string | null;
   fileName: string | null;
   workdriveUrl: string | null;
@@ -198,6 +198,12 @@ export interface PublicCollectionDTO {
   items: {
     documentTypeKey: string;
     documentTypeName: string;
+    /**
+     * Já recebido? (TRNSF-1051) true se já existe um documento deste tipo no
+     * projecto — na fila de validação (RECEBIDO) ou já arquivado (VALIDADO).
+     * O formulário público mostra-o como "Recebido ✓" e não volta a pedir,
+     * evitando duplicados na fila.
+     */
     delivered: boolean;
   }[];
 }

@@ -36,10 +36,15 @@ enum ProjectState {
   ENCERRADO // estado terminal reversível "Não prosseguiu" (TRNSF-1044)
 }
 
+// Estado da checklist documental por cores (TRNSF-1050):
+// EM_FALTA (vermelho) · RECEBIDO (amarelo, na fila de validação) · VALIDADO (verde).
+// EM_REVISAO é um rótulo legado mantido (não usado); remover um valor de enum em
+// Postgres é inseguro.
 enum ChecklistStatus {
   EM_FALTA
   RECEBIDO
   EM_REVISAO
+  VALIDADO
 }
 
 enum DocConfidence {

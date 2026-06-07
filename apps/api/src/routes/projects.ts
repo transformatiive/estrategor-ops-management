@@ -325,7 +325,8 @@ export async function projectRoutes(app: FastifyInstance) {
         id: it.id,
         documentTypeKey: it.documentType.key,
         documentTypeName: it.documentType.name,
-        status: it.status,
+        // TRNSF-1050 — o rótulo legado EM_REVISAO (na fila) mapeia para RECEBIDO.
+        status: it.status === "EM_REVISAO" ? "RECEBIDO" : it.status,
         responsible: it.responsible?.fullName ?? null,
         workdriveUrl: it.documents[0]?.workdriveUrl ?? null,
       }));
