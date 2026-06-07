@@ -12,6 +12,7 @@ import { CandidaturaTab } from "../components/CandidaturaTab.js";
 import { ExtracaoTab } from "../components/ExtracaoTab.js";
 import { PipelinePanel } from "../components/PipelinePanel.js";
 import { ProjectDeadlines } from "../components/ProjectDeadlines.js";
+import { EditProjectModal } from "../components/EditProjectModal.js";
 
 export function ProjectPage() {
   const { id = "" } = useParams();
@@ -22,6 +23,7 @@ export function ProjectPage() {
   // fase em foco (default = fase atual do projeto) e vista dentro dessa fase
   const [faseSel, setFaseSel] = useState<string | null>(null);
   const [vista, setVista] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
 
   if (error) return <ErrorState error={error} onRetry={reload} />;
 
@@ -48,8 +50,22 @@ export function ProjectPage() {
             {data ? `${data.clientName} · ${data.code}` : " "}
           </div>
         </div>
-        {pipe && <span className="badge badge-muted">{pipe.badgeLabel}</span>}
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {pipe && <span className="badge badge-muted">{pipe.badgeLabel}</span>}
+          {data && (
+            <button className="btn btn-secondary" onClick={() => setEditing(true)}>Editar</button>
+          )}
+        </div>
       </div>
+
+      {editing && data && (
+        <EditProjectModal
+          project={data}
+          onClose={() => setEditing(false)}
+          onSaved={() => { reload(); reloadPipe(); }}
+          onDeleted={() => navigate("/projetos")}
+        />
+      )}
 
       {/* Pipeline em linguagem de cliente (TRNSF-963) */}
       {pipe && <PipelinePanel pipe={pipe} faseSelecionada={faseAtual} onSelect={selectFase} />}
@@ -91,10 +107,8 @@ export function ProjectPage() {
               <Progress value={data.progress} />
             </div>
           </div>
-          <div className="dp-field">
-            <div className="dp-field-label">Próxima acção</div>
-            <div className="dp-field-value">{data.nextAction ?? "—"}</div>
-          </div>
+          {/* "Próxima acção" removida: o que falta para avançar já aparece no
+              pipeline acima (TRNSF-963), tornando este campo redundante. */}
         </div>
       )}
 

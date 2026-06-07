@@ -91,8 +91,24 @@ export interface ProjectDetailDTO {
   progress: number;
   investmentTotal: string | null;
   incentiveValue: string | null;
-  responsibles: { initials: string; color: string; fullName: string }[];
+  /** família do sistema de incentivos, quando já definida */
+  family: string | null;
+  /** referência à oportunidade no Zoho CRM (read-only), quando presente */
+  crmDealId: string | null;
+  responsibles: { id: string; initials: string; color: string; fullName: string }[];
   milestones: MilestoneDTO[];
+}
+
+/**
+ * Edição do cabeçalho do projeto (TRNSF-1027). Todos os campos opcionais.
+ * RBAC na API: gestor/admin pode tudo; consultor só `responsibleIds`.
+ */
+export interface UpdateProjectRequest {
+  title?: string;
+  clientName?: string;
+  program?: ProgramCode;
+  family?: string | null;
+  responsibleIds?: string[];
 }
 
 /** Item da checklist documental de um projeto (B-04 / D-01). */
