@@ -195,9 +195,16 @@ export function SeguimentoTab({ projectId }: { projectId: string }) {
             <span className="deadline-sub">{f.clientEmail ?? "sem email"}</span>
           </div>
           {f.missing.length > 0 && (
-            <p style={{ fontSize: 12, color: "var(--danger)" }}>
-              Faltam: {f.missing.join(", ")}
-            </p>
+            <div style={{ fontSize: 12, marginBottom: 6 }}>
+              <div style={{ color: "var(--danger)", fontWeight: 600, marginBottom: 4 }}>
+                Em falta ({f.missing.length})
+              </div>
+              <ul style={{ margin: 0, paddingLeft: 18, color: "var(--danger)" }}>
+                {f.missing.map((m) => (
+                  <li key={m} style={{ marginBottom: 2 }}>{m}</li>
+                ))}
+              </ul>
+            </div>
           )}
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 6 }}>
             {f.reminders.length === 0 && (
