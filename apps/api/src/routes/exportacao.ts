@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { requireAuth } from "../auth/guards.js";
 import { buildExport, exportStatus, mimeFor, type ExportFormat } from "../export/engine.js";
+import { contentDisposition } from "../util/headers.js";
 
 const FORMATS: ExportFormat[] = ["xlsx", "docx", "pdf"];
 
@@ -27,7 +28,7 @@ export async function exportacaoRoutes(app: FastifyInstance) {
       const result = await buildExport(req.params.id, format);
       if (!result) return reply.code(404).send({ error: "Candidatura não iniciada." });
       reply.header("Content-Type", mimeFor(format));
-      reply.header("Content-Disposition", `attachment; filename="${result.filename}"`);
+      reply.header("Content-Disposition", contentDisposition(result.filename, "attachment"));
       return reply.send(result.buffer);
     } catch (e) {
       app.log.error({ err: e }, "Falha ao exportar candidatura");

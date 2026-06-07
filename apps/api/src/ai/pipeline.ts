@@ -93,6 +93,9 @@ export async function ingestDocument(input: IngestInput): Promise<IngestResult> 
       status: "em_analise",
     },
   });
+  // TRNSF-1046 — guarda os bytes na BD (por agora), para o ficheiro persistir
+  // entre deploys e o "Ver documento" servir o ficheiro real.
+  await prisma.documentBlob.create({ data: { documentId: original.id, bytes: new Uint8Array(input.content) } });
 
   // 3) multi-documento → divisão física, um Documento por parte
   if (result.multiDocument && result.parts && result.parts.length > 1 && input.mimeType === "application/pdf") {
@@ -102,7 +105,7 @@ export async function ingestDocument(input: IngestInput): Promise<IngestResult> 
       const partBuffer = await extractPages(input.content, part.startPage, part.endPage);
       const partName = `${input.originalFilename.replace(/\.pdf$/i, "")}_p${part.startPage}-${part.endPage}.pdf`;
       const up = await wd.uploadFile(root.workdriveId, partName, partBuffer, "application/pdf");
-      await prisma.document.create({
+      const partDoc = await prisma.document.create({
         data: {
           projectId: project.id,
           parentDocumentId: original.id,
@@ -121,6 +124,7 @@ export async function ingestDocument(input: IngestInput): Promise<IngestResult> 
           status: "a_validar",
         },
       });
+      await prisma.documentBlob.create({ data: { documentId: partDoc.id, bytes: new Uint8Array(partBuffer) } });
       created += 1;
     }
     await prisma.document.update({ where: { id: original.id }, data: { status: "dividido" } });
