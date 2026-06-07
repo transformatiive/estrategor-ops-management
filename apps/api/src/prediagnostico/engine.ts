@@ -5,6 +5,7 @@ import {
   type PreDiagnosticoDTO,
 } from "@estrategor/shared";
 import { prisma } from "../db.js";
+import { extrairElegibilidadeDoAviso } from "../extraction/aviso.js";
 import { consultarVies } from "./vies.js";
 import { consultarEmpresas } from "./empresas.js";
 import { consultarSonar } from "./sonar.js";
@@ -32,6 +33,7 @@ export async function runPreDiagnostico(projectId: string): Promise<void> {
     where: { projectId },
     update: {
       estado: "pendente", estadoVies: "pendente", estadoApiEmpresas: "pendente", estadoSonar: "pendente", estadoSonnet: "pendente",
+      estadoElegibilidade: "pendente", elegibilidadeDetalhe: null,
       campos: [] as object, fontesSonar: [] as object, checklistAConfirmar: CHECKLIST_BASE as object, executadoEm: null,
     },
     create: { projectId, estado: "pendente", checklistAConfirmar: CHECKLIST_BASE as object },
@@ -40,7 +42,7 @@ export async function runPreDiagnostico(projectId: string): Promise<void> {
   if (!nif) {
     await prisma.preDiagnostico.update({
       where: { projectId },
-      data: { estado: "falhou", estadoVies: "falhou", estadoApiEmpresas: "falhou", estadoSonar: "falhou", estadoSonnet: "falhou", checklistAConfirmar: CHECKLIST_BASE as object, executadoEm: new Date() },
+      data: { estado: "falhou", estadoVies: "falhou", estadoApiEmpresas: "falhou", estadoSonar: "falhou", estadoSonnet: "falhou", estadoElegibilidade: "indisponivel", checklistAConfirmar: CHECKLIST_BASE as object, executadoEm: new Date() },
     });
     return;
   }
@@ -93,6 +95,31 @@ export async function runPreDiagnostico(projectId: string): Promise<void> {
     if (sonnet.leitura.sinais) campos.push({ key: "sinais", label: "Sinais de candidatabilidade", value: sonnet.leitura.sinais, origem: "pre_diagnostico_ia", estado: "por_validar", fonte });
   }
 
+  // Faixa D — Elegibilidade do aviso (do PDF), quando há aviso escolhido.
+  // Importa como PROPOSTA (por_validar); não sobrescreve uma já validada.
+  let estadoElegibilidade: FaixaEstado = "indisponivel";
+  let elegibilidadeDetalhe: string | null = "Sem aviso escolhido — escolha o aviso para importar a elegibilidade.";
+  const diag = await prisma.diagnostic.findUnique({ where: { projectId }, select: { meritGridId: true, avisoConfirmado: true } });
+  if (diag?.avisoConfirmado && diag.meritGridId) {
+    const grid = await prisma.meritGrid.findUnique({ where: { id: diag.meritGridId }, select: { id: true, fonteUrl: true, eligibilidade: true } });
+    const eligRaw = (grid?.eligibilidade ?? null) as { estado?: string } | null;
+    if (eligRaw?.estado === "validado") {
+      estadoElegibilidade = "ok";
+      elegibilidadeDetalhe = "Elegibilidade já validada para este aviso.";
+    } else if (grid?.fonteUrl) {
+      const { proposta, nota } = await extrairElegibilidadeDoAviso(grid.fonteUrl);
+      const temAlgo = proposta.caeElegiveis.length > 0 || proposta.nuts2Elegiveis.length > 0 || proposta.exigeBaixaDensidade || proposta.naturezasElegiveis.length > 0;
+      await prisma.meritGrid.update({ where: { id: grid.id }, data: { eligibilidade: { ...proposta, fonteUrl: grid.fonteUrl } as object } });
+      estadoElegibilidade = temAlgo ? "ok" : "falhou";
+      elegibilidadeDetalhe = temAlgo
+        ? `${proposta.caeElegiveis.length} CAE · ${proposta.nuts2Elegiveis.length} região(ões) propostos (por validar)`
+        : nota;
+    } else {
+      estadoElegibilidade = "falhou";
+      elegibilidadeDetalhe = "Aviso sem URL do PDF — defina a Fonte para importar.";
+    }
+  }
+
   const checklist = [...CHECKLIST_BASE, ...sonnet.checklistExtra];
   // se nenhuma faixa correu, marca falhou; senão concluído
   const algumaOk = [vies.estado, emp.estado, sonar.estado, sonnet.estado].includes("ok");
@@ -102,6 +129,8 @@ export async function runPreDiagnostico(projectId: string): Promise<void> {
     data: {
       estado: algumaOk ? "concluido" : "falhou",
       estadoSonnet: sonnet.estado,
+      estadoElegibilidade,
+      elegibilidadeDetalhe,
       campos: campos as object,
       checklistAConfirmar: checklist as object,
       executadoEm: new Date(),
@@ -125,6 +154,8 @@ type Row = {
   estadoApiEmpresas: string;
   estadoSonar: string;
   estadoSonnet: string;
+  estadoElegibilidade: string;
+  elegibilidadeDetalhe: string | null;
   campos: unknown;
   checklistAConfirmar: unknown;
   fontesSonar: unknown;
@@ -157,10 +188,12 @@ function toDTO(row: Row): PreDiagnosticoDTO {
       apiEmpresas: row.estadoApiEmpresas as FaixaEstado,
       sonar: row.estadoSonar as FaixaEstado,
       sonnet: row.estadoSonnet as FaixaEstado,
+      elegibilidade: row.estadoElegibilidade as FaixaEstado,
     },
     faixasDetalhe: {
       vies: row.estadoVies === "falhou" ? razaoFalha(row.brutoVies) : null,
       apiEmpresas: row.estadoApiEmpresas === "falhou" ? razaoFalha(row.brutoApiEmpresas) : null,
+      elegibilidade: row.elegibilidadeDetalhe ?? null,
     },
     campos: Array.isArray(row.campos) ? (row.campos as PreDiagCampo[]) : [],
     checklistAConfirmar: Array.isArray(row.checklistAConfirmar) ? (row.checklistAConfirmar as ChecklistAConfirmar[]) : [],
@@ -172,7 +205,7 @@ function toDTO(row: Row): PreDiagnosticoDTO {
 export async function buildPreDiagnosticoDTO(projectId: string): Promise<PreDiagnosticoDTO> {
   const row = await prisma.preDiagnostico.findUnique({ where: { projectId } });
   if (!row) {
-    return { projectId, estado: "inexistente", faixas: { vies: "pendente", apiEmpresas: "pendente", sonar: "pendente", sonnet: "pendente" }, campos: [], checklistAConfirmar: [], fontesSonar: [], executadoEm: null };
+    return { projectId, estado: "inexistente", faixas: { vies: "pendente", apiEmpresas: "pendente", sonar: "pendente", sonnet: "pendente", elegibilidade: "pendente" }, campos: [], checklistAConfirmar: [], fontesSonar: [], executadoEm: null };
   }
   return toDTO(row as unknown as Row);
 }
