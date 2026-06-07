@@ -309,6 +309,9 @@ export interface DiagnosticDTO {
   // região do investimento (resolve a matriz regional A.1); regiões disponíveis na grelha
   regiao: string | null;
   availableRegions: string[];
+  // região sugerida (a partir da localização validada da empresa, mapeada à
+  // matriz da grelha) quando o consultor ainda não escolheu; editável (TRNSF-1042)
+  regiaoSugerida?: string | null;
   // condições de acesso (dados do aviso) com o estado escolhido
   conditions: ConditionStateDTO[];
   // elegibilidade estruturada do aviso (TRNSF-1030), null se não definida

@@ -66,7 +66,9 @@ export function DiagnosticoTab({
       // selecção do consultor — fica editável; Guardar é o que conta.
       const proposta = data.meritProposal?.selection ?? {};
       setSelection({ ...data.meritSelection, ...proposta });
-      setRegiao(data.regiao ?? "");
+      // Pré-preenche a região: a do consultor quando existe; senão a sugerida a
+      // partir da localização validada da empresa (TRNSF-1042). Fica editável.
+      setRegiao(data.regiao || data.regiaoSugerida || "");
     }
   }, [data]);
 
@@ -354,6 +356,12 @@ export function DiagnosticoTab({
                   placeholder="— escolher região —"
                   options={data.availableRegions.map((r) => ({ value: r, label: r }))}
                 />
+                {!data.regiao && data.regiaoSugerida && regiao === data.regiaoSugerida && (
+                  <p className="deadline-sub" style={{ marginTop: 4 }}>
+                    Pré-preenchida a partir da localização validada da empresa —
+                    confirme se o investimento é noutra região.
+                  </p>
+                )}
               </div>
             )}
 

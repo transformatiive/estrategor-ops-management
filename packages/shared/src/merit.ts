@@ -104,6 +104,55 @@ export function gridRegions(grid: MeritGridData): string[] {
   return [...set];
 }
 
+/** Normaliza para comparação acento-insensível e minúsculas. */
+function normRegiao(s: string): string {
+  return s
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .trim()
+    .toLowerCase();
+}
+
+/**
+ * Aliases conhecidos NUTS II → chave RIS3 da grelha (quando diferem).
+ * Ex.: o NUTS II canónico é "Área Metropolitana de Lisboa" mas a matriz
+ * regional A.1 usa a chave "Lisboa". As chaves estão normalizadas.
+ */
+const NUTS2_PARA_GRELHA_ALIAS: Record<string, string> = {
+  [normRegiao("Área Metropolitana de Lisboa")]: "Lisboa",
+  [normRegiao("Lisboa")]: "Lisboa",
+};
+
+/**
+ * Mapeia o NUTS II (canónico) da empresa para a chave da matriz regional da
+ * grelha que lhe corresponde, ou null se nenhuma corresponde.
+ *
+ * Regras (TRNSF-1042): a região do investimento é uma SUGESTÃO que o consultor
+ * confirma. Esta função NUNCA inventa uma região que não esteja em
+ * `regioesGrelha` — só devolve um valor efetivamente presente na grelha.
+ *  (a) correspondência exata (acento/caixa-insensível) com `regioesGrelha`;
+ *  (b) alias conhecido RIS3↔NUTS II (ex.: AML → "Lisboa"), validado contra a grelha;
+ *  (c) caso contrário, null.
+ */
+export function regiaoGrelhaParaNuts2(
+  nuts2: string | null | undefined,
+  regioesGrelha: string[],
+): string | null {
+  if (!nuts2?.trim() || regioesGrelha.length === 0) return null;
+  const alvo = normRegiao(nuts2);
+  // (a) correspondência exata com uma chave da grelha
+  const exata = regioesGrelha.find((r) => normRegiao(r) === alvo);
+  if (exata) return exata;
+  // (b) alias conhecido → só vale se essa chave existir na grelha
+  const aliasKey = NUTS2_PARA_GRELHA_ALIAS[alvo];
+  if (aliasKey) {
+    const naGrelha = regioesGrelha.find((r) => normRegiao(r) === normRegiao(aliasKey));
+    if (naGrelha) return naGrelha;
+  }
+  // (c) sem correspondência → null (nunca inventa região fora da grelha)
+  return null;
+}
+
 /** true se a grelha tem subcritérios que variam por região (matriz regional). */
 export function gridHasRegionalMatrix(grid: MeritGridData): boolean {
   return grid.criterios.some((c) =>
