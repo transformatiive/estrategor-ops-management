@@ -320,6 +320,16 @@ export const api = {
   deleteAviso: (id: string) => del<{ ok: boolean }>(`/api/avisos/${id}`),
   importarAviso: (fonteUrl: string) =>
     post<PropostaAvisoDTO>("/api/avisos/importar", { fonteUrl }),
+  // sincronização dos avisos PT2030 → grelhas rascunho (TRNSF-1072)
+  buildAvisos2030: (limit = 5) =>
+    post<{
+      ok: boolean;
+      total: number;
+      abertos: number;
+      criadas: number;
+      ignoradas: number;
+      erros: number;
+    }>(`/api/avisos/2030/build?limit=${limit}`, {}),
 
   // pré-diagnóstico assistido por IA (TRNSF-967)
   prediagnostico: (id: string) =>

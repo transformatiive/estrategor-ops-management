@@ -20,6 +20,24 @@ export function Avisos() {
   } = useAsync(() => api.listAvisos());
   const [editar, setEditar] = useState<AvisoFullDTO | null | "novo">(null);
   const [acao, setAcao] = useState<string | null>(null);
+  const [sync, setSync] = useState(false);
+  const [syncMsg, setSyncMsg] = useState<string | null>(null);
+
+  async function sincronizar2030() {
+    setSync(true);
+    setSyncMsg(null);
+    try {
+      const r = await api.buildAvisos2030(5);
+      setSyncMsg(
+        `PT2030: ${r.abertos} avisos abertos · ${r.criadas} grelha(s) nova(s) (rascunho), ${r.ignoradas} já existiam, ${r.erros} erro(s).`,
+      );
+      reload();
+    } catch (e) {
+      setSyncMsg(e instanceof ApiError ? e.message : "Erro ao sincronizar os avisos PT2030.");
+    } finally {
+      setSync(false);
+    }
+  }
 
   async function abrirEditor(id: string) {
     setAcao(id);
@@ -100,10 +118,21 @@ export function Avisos() {
             Configuração · catálogo de avisos e grelhas de mérito
           </div>
         </div>
-        <button className="btn btn-primary" onClick={() => setEditar("novo")}>
-          + Novo aviso
-        </button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button className="btn btn-secondary" onClick={sincronizar2030} disabled={sync}>
+            {sync ? "A sincronizar…" : "Sincronizar PT2030"}
+          </button>
+          <button className="btn btn-primary" onClick={() => setEditar("novo")}>
+            + Novo aviso
+          </button>
+        </div>
       </div>
+
+      {syncMsg && (
+        <div className="deadline-sub" style={{ marginBottom: 10 }}>
+          {syncMsg} As grelhas novas entram como <strong>rascunho</strong> — abra cada uma para rever e publicar.
+        </div>
+      )}
 
       {loading && <p style={{ color: "var(--muted)" }}>A carregar…</p>}
       {error && <ErrorState error={error} onRetry={reload} />}
