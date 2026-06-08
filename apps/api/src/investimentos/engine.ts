@@ -143,6 +143,24 @@ export async function deleteLinha(projectId: string, linhaId: string, userId: st
   await saveLinhas(cand.id, linhas, userId);
 }
 
+/**
+ * Importa linhas do mapa de investimentos (TRNSF-1070). `modo` "append"
+ * acrescenta às existentes; "replace" substitui-as. Devolve o nº importado.
+ */
+export async function importLinhas(
+  projectId: string,
+  novas: NovaInvestimentoLinha[],
+  modo: "append" | "replace",
+  userId: string,
+): Promise<number> {
+  const cand = await loadCand(projectId);
+  if (!cand) throw new Error("CANDIDATURA_NOT_FOUND");
+  const existentes = modo === "replace" ? [] : await loadLinhas(cand.id);
+  const adicionadas = novas.map((l) => ({ id: randomUUID(), ...sanitize(l) }));
+  await saveLinhas(cand.id, [...existentes, ...adicionadas], userId);
+  return adicionadas.length;
+}
+
 /** Compila o Resumo Executivo: números calculados + texto gerado (TRNSF-943). */
 export async function buildResumoExecutivo(projectId: string): Promise<ResumoExecutivoDTO | null> {
   const cand = await loadCand(projectId);

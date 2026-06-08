@@ -92,6 +92,12 @@ export interface NovaInvestimentoLinha {
   ef?: boolean;
 }
 
+/** Pré-visualização da importação do mapa de investimentos (TRNSF-1070). */
+export interface MapaInvestimentosPreviewDTO {
+  linhas: NovaInvestimentoLinha[];
+  nota: string | null;
+}
+
 export interface ResumoExecutivoIndicador {
   key: string;
   label: string;
