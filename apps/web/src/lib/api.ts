@@ -25,6 +25,7 @@ import type {
   GeneratedFieldDTO,
   HealthDTO,
   InvestimentosDTO,
+  MapaInvestimentosPreviewDTO,
   NovaInvestimentoLinha,
   ResumoExecutivoDTO,
   VerificacaoDTO,
@@ -509,6 +510,15 @@ export const api = {
     ),
   resumoExecutivo: (id: string) =>
     get<ResumoExecutivoDTO>(`/api/projects/${id}/candidatura/resumo`),
+
+  // importar o mapa de investimentos (Excel) — TRNSF-1070
+  previewMapaInvestimentos: (id: string, documentId: string) =>
+    post<MapaInvestimentosPreviewDTO>(
+      `/api/projects/${id}/candidatura/investimentos/importar/preview`,
+      { documentId },
+    ),
+  importarInvestimentos: (id: string, linhas: NovaInvestimentoLinha[], modo: "append" | "replace") =>
+    post<InvestimentosDTO>(`/api/projects/${id}/candidatura/investimentos/importar`, { linhas, modo }),
 
   // verificador + mérito (TRNSF-946)
   verificacao: (id: string) =>

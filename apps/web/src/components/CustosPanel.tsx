@@ -1,5 +1,11 @@
 import { useState } from "react";
-import type { InvestimentosDTO, NovaInvestimentoLinha, ResumoExecutivoDTO } from "@estrategor/shared";
+import type {
+  InvestimentosDTO,
+  MapaInvestimentosPreviewDTO,
+  NovaInvestimentoLinha,
+  ProjectDocumentsDTO,
+  ResumoExecutivoDTO,
+} from "@estrategor/shared";
 import { api, ApiError } from "../lib/api.js";
 import { useAsync } from "../lib/useAsync.js";
 import { ErrorState } from "./ui.js";
@@ -114,9 +120,112 @@ export function CustosPanel({ projectId, onChanged }: { projectId: string; onCha
           </div>
           {msg && <div className="login-error" style={{ marginTop: 8 }}>{msg}</div>}
 
+          <ImportarMapa projectId={projectId} onImported={() => { reload(); onChanged(); }} />
+
           <ResumoExecutivo projectId={projectId} />
         </div>
       )}
+    </div>
+  );
+}
+
+/** Importar o mapa de investimentos (Excel) → linhas de custos (TRNSF-1070). */
+function ImportarMapa({ projectId, onImported }: { projectId: string; onImported: () => void }) {
+  const { data: docs } = useAsync<ProjectDocumentsDTO>(() => api.documents(projectId), [projectId]);
+  const [documentId, setDocumentId] = useState("");
+  const [modo, setModo] = useState<"append" | "replace">("append");
+  const [preview, setPreview] = useState<MapaInvestimentosPreviewDTO | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const allDocs = [...(docs?.archived ?? []), ...(docs?.queue ?? [])];
+
+  async function previewar() {
+    setBusy(true);
+    setMsg(null);
+    setPreview(null);
+    try {
+      setPreview(await api.previewMapaInvestimentos(projectId, documentId));
+    } catch (e) {
+      setMsg(e instanceof ApiError ? e.message : "Não foi possível ler o mapa.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function importar() {
+    if (!preview?.linhas.length) return;
+    setBusy(true);
+    setMsg(null);
+    try {
+      await api.importarInvestimentos(projectId, preview.linhas, modo);
+      setPreview(null);
+      setDocumentId("");
+      onImported();
+    } catch (e) {
+      setMsg(e instanceof ApiError ? e.message : "Não foi possível importar.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="card" style={{ marginTop: 16 }}>
+      <div className="cand-section-name" style={{ marginBottom: 6 }}>Importar do mapa de investimentos (Excel)</div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+        <select className="login-input" style={{ flex: "2 1 220px" }} value={documentId} onChange={(e) => { setDocumentId(e.target.value); setPreview(null); }}>
+          <option value="">— Escolher Excel do projeto —</option>
+          {allDocs.map((d) => (
+            <option key={d.id} value={d.id}>{d.originalFilename}</option>
+          ))}
+        </select>
+        <button className="btn btn-secondary" disabled={busy || !documentId} onClick={previewar}>Pré-visualizar</button>
+      </div>
+
+      {preview && (
+        <div style={{ marginTop: 10 }}>
+          {preview.nota && <div className="login-error" style={{ marginBottom: 8 }}>{preview.nota}</div>}
+          {preview.linhas.length > 0 && (
+            <>
+              <div className="deadline-sub" style={{ marginBottom: 6 }}>{preview.linhas.length} linha(s) detetada(s):</div>
+              <div style={{ overflowX: "auto" }}>
+                <table className="fin-table" style={{ minWidth: 480 }}>
+                  <thead><tr><th>Designação</th><th>Categoria</th><th>Data</th><th>Elegível</th><th>EF</th></tr></thead>
+                  <tbody>
+                    {preview.linhas.slice(0, 12).map((l, i) => (
+                      <tr key={i}>
+                        <td>{l.designacao}</td>
+                        <td>{l.categoria || "—"}</td>
+                        <td>{l.dataAquisicao ?? "—"}</td>
+                        <td style={{ textAlign: "right" }}>{eur(l.elegivel)}</td>
+                        <td style={{ textAlign: "center" }}>{l.ef ? "✓" : ""}</td>
+                      </tr>
+                    ))}
+                    {preview.linhas.length > 12 && (
+                      <tr><td colSpan={5} className="deadline-sub">… e mais {preview.linhas.length - 12} linha(s).</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8 }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <input type="radio" name="modo-imp" checked={modo === "append"} onChange={() => setModo("append")} /> Acrescentar
+                </label>
+                <label style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <input type="radio" name="modo-imp" checked={modo === "replace"} onChange={() => setModo("replace")} /> Substituir as existentes
+                </label>
+                <button className="btn btn-primary" disabled={busy} onClick={importar}>
+                  Importar {preview.linhas.length} linha(s)
+                </button>
+              </div>
+              <p className="deadline-sub" style={{ marginTop: 6 }}>
+                Reveja as categorias após importar — podem vir vazias do mapa e precisam de ser associadas ao catálogo.
+              </p>
+            </>
+          )}
+        </div>
+      )}
+      {msg && <div className="login-error" style={{ marginTop: 8 }}>{msg}</div>}
     </div>
   );
 }
