@@ -359,6 +359,17 @@ export const api = {
     },
   ) => patch<PreDiagnosticoDTO>(`/api/leads/${id}/prediagnostico/campo`, body),
 
+  // diagnóstico da lead (mesmo motor/DTO/handlers, dono = lead).
+  // Sem advance/encerrar/reopen — qualificar/rejeitar vivem na própria lead.
+  leadDiagnostic: (id: string) =>
+    get<DiagnosticDTO>(`/api/leads/${id}/diagnostic`),
+  saveLeadDiagnostic: (id: string, data: SaveDiagnosticRequest) =>
+    put<DiagnosticDTO>(`/api/leads/${id}/diagnostic`, data),
+  setLeadAviso: (id: string, meritGridId: string) =>
+    put<DiagnosticDTO>(`/api/leads/${id}/diagnostic/aviso`, { meritGridId }),
+  sugerirLeadMerito: (id: string) =>
+    post<DiagnosticDTO>(`/api/leads/${id}/diagnostic/merito/sugerir`),
+
   // candidatura (TRNSF-942)
   candidatura: (id: string) =>
     get<
