@@ -26,8 +26,11 @@ describe("pipeline em linguagem de cliente (TRNSF-963)", () => {
     expect(byKey.recolha).toBe("concluido");
     expect(byKey.preparacao).toBe("em_curso");
     expect(byKey.revisao).toBe("por_iniciar");
-    expect(byKey.analise).toBe("execucao"); // bloco execução esbatido
-    expect(progresso).toEqual({ concluidas: 2, total: 5 });
+    // TRNSF-1067: Análise é agora candidatura (por iniciar); a Execução (termo)
+    // é que fica esbatida.
+    expect(byKey.analise).toBe("por_iniciar");
+    expect(byKey.termo).toBe("execucao"); // bloco execução esbatido
+    expect(progresso).toEqual({ concluidas: 2, total: 7 });
   });
 
   it("numa fase de execução, a candidatura está toda concluída", () => {

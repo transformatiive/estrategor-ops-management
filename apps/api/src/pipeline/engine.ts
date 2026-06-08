@@ -83,6 +83,14 @@ export async function buildPipelineDTO(projectId: string): Promise<PipelineDTO |
     requisitos.push({ label: "MP previsto acima do mínimo do aviso", done: verif?.atingeMinimo === true });
   } else if (faseAtual === "submissao") {
     requisitos.push({ label: "Exportar o pacote e submeter no portal SGO", done: false });
+    requisitos.push({ label: "Marcar a candidatura como submetida (entra em Análise)", done: false });
+  } else if (faseAtual === "analise") {
+    // Cauda da Candidatura (TRNSF-1067): a candidatura está em análise pelo
+    // organismo. O acompanhamento detalhado do pedido de elementos é o 949.
+    requisitos.push({ label: "Acompanhar a análise e responder a pedidos de elementos", done: false });
+    requisitos.push({ label: "Registar a decisão do organismo", done: false });
+  } else if (faseAtual === "alegacoes") {
+    requisitos.push({ label: "Preparar e submeter as alegações contrárias", done: false });
   } else {
     // bloco Execução — só mapa, não trabalhável nesta fase
     nota = "Esta fase faz parte da execução do projeto e fica disponível após a aprovação da candidatura.";

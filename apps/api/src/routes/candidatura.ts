@@ -600,4 +600,98 @@ export async function candidaturaRoutes(app: FastifyInstance) {
       return buildRevisaoDTO(project.id, fresh!, true);
     },
   );
+
+  // ─── Cauda da Candidatura (TRNSF-1067 · 2b) ─────────────────────────────
+  // Esqueleto navegável das fases Submissão → Análise → (Decisão) →
+  // Alegações/Execução. O workflow rico (portal, pedido de elementos, registo
+  // da decisão) segue em 948/949/950.
+
+  // (1) Marcar como submetida: A4 → A5 (entra em Análise pelo organismo).
+  app.post<{ Params: { id: string } }>(
+    "/api/projects/:id/candidatura/submeter",
+    async (req, reply) => {
+      const project = await prisma.project.findUnique({ where: { id: req.params.id } });
+      if (!project) return reply.code(404).send({ error: "Projeto não encontrado." });
+      if (project.state !== "A4") {
+        return reply.code(409).send({ error: "Só é possível submeter a partir de “Pronto para submissão”." });
+      }
+      await prisma.$transaction([
+        prisma.project.update({ where: { id: project.id }, data: { state: "A5" } }),
+        prisma.stateTransition.create({
+          data: { projectId: project.id, fromState: "A4", toState: "A5", byUserId: req.user!.id },
+        }),
+        prisma.activityLog.create({
+          data: {
+            projectId: project.id,
+            userId: req.user!.id,
+            type: "candidatura_submetida",
+            description: "Candidatura submetida no portal — entrou em Análise (A5).",
+          },
+        }),
+      ]);
+      return { ok: true, state: "A5" };
+    },
+  );
+
+  // (2) Registar a decisão: A5 → B0 (favorável, segue para Execução/Termo de
+  // aceitação) ou A5 → A6 (cortes/indeferida, segue para Alegações contrárias).
+  app.post<{ Params: { id: string }; Body: { resultado: string } }>(
+    "/api/projects/:id/candidatura/decisao",
+    async (req, reply) => {
+      const project = await prisma.project.findUnique({ where: { id: req.params.id } });
+      if (!project) return reply.code(404).send({ error: "Projeto não encontrado." });
+      if (project.state !== "A5") {
+        return reply.code(409).send({ error: "Só é possível registar a decisão a partir da Análise." });
+      }
+      const parsed = z
+        .object({ resultado: z.enum(["favoravel", "cortes", "indeferida"]) })
+        .safeParse(req.body ?? {});
+      if (!parsed.success) return reply.code(400).send({ error: "Resultado inválido." });
+
+      const favoravel = parsed.data.resultado === "favoravel";
+      const toState = favoravel ? "B0" : "A6";
+      const descricao = favoravel
+        ? "Decisão favorável — segue para Execução (Termo de aceitação)."
+        : parsed.data.resultado === "cortes"
+          ? "Decisão com cortes — segue para Alegações contrárias (A6)."
+          : "Candidatura indeferida — segue para Alegações contrárias (A6).";
+      await prisma.$transaction([
+        prisma.project.update({ where: { id: project.id }, data: { state: toState } }),
+        prisma.stateTransition.create({
+          data: { projectId: project.id, fromState: "A5", toState, byUserId: req.user!.id },
+        }),
+        prisma.activityLog.create({
+          data: { projectId: project.id, userId: req.user!.id, type: "candidatura_decisao", description: descricao },
+        }),
+      ]);
+      return { ok: true, state: toState };
+    },
+  );
+
+  // (3) Concluir alegações: A6 → B0 (segue para Execução/Termo de aceitação).
+  app.post<{ Params: { id: string } }>(
+    "/api/projects/:id/candidatura/alegacoes/concluir",
+    async (req, reply) => {
+      const project = await prisma.project.findUnique({ where: { id: req.params.id } });
+      if (!project) return reply.code(404).send({ error: "Projeto não encontrado." });
+      if (project.state !== "A6") {
+        return reply.code(409).send({ error: "Só é possível concluir as alegações a partir dessa fase." });
+      }
+      await prisma.$transaction([
+        prisma.project.update({ where: { id: project.id }, data: { state: "B0" } }),
+        prisma.stateTransition.create({
+          data: { projectId: project.id, fromState: "A6", toState: "B0", byUserId: req.user!.id },
+        }),
+        prisma.activityLog.create({
+          data: {
+            projectId: project.id,
+            userId: req.user!.id,
+            type: "alegacoes_concluidas",
+            description: "Alegações contrárias concluídas — segue para Execução (Termo de aceitação).",
+          },
+        }),
+      ]);
+      return { ok: true, state: "B0" };
+    },
+  );
 }

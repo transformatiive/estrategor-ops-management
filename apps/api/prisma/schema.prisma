@@ -30,7 +30,9 @@ enum ProjectState {
   A2
   A3
   A4
-  B0
+  A5 // Análise pelo organismo (cauda da Candidatura) — TRNSF-1067 · 2b
+  A6 // Alegações contrárias (cauda da Candidatura) — TRNSF-1067 · 2b
+  B0 // Termo de aceitação (1.ª fase da Execução) — TRNSF-1067 · 2b
   B1
   B2
   ENCERRADO // estado terminal reversível "Não prosseguiu" (TRNSF-1044)

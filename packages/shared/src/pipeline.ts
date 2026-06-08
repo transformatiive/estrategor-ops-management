@@ -17,15 +17,21 @@ export interface FaseDef {
   bloco: PipelineBloco;
 }
 
-/** As fases por ordem. A extração corre DENTRO da Recolha (não é um passo). */
+/**
+ * As fases por ordem. A extração corre DENTRO da Recolha (não é um passo).
+ *
+ * TRNSF-1067 · 2b: a Análise e as Alegações contrárias passaram para o bloco
+ * Candidatura; a "Decisão" deixou de ser uma fase (é o gate entre a Análise e a
+ * Execução/Alegações); a Execução arranca no Termo de aceitação.
+ */
 export const PIPELINE_FASES: FaseDef[] = [
   { key: "diagnostico", label: "Diagnóstico", bloco: "candidatura" },
   { key: "recolha", label: "Recolha de documentos", bloco: "candidatura" },
   { key: "preparacao", label: "Preparação", bloco: "candidatura" },
   { key: "revisao", label: "Revisão interna", bloco: "candidatura" },
   { key: "submissao", label: "Submissão", bloco: "candidatura" },
-  { key: "analise", label: "Análise", bloco: "execucao" },
-  { key: "decisao", label: "Decisão", bloco: "execucao" },
+  { key: "analise", label: "Análise", bloco: "candidatura" },
+  { key: "alegacoes", label: "Alegações contrárias", bloco: "candidatura" },
   { key: "termo", label: "Termo de aceitação", bloco: "execucao" },
   { key: "execucao", label: "Execução", bloco: "execucao" },
   { key: "encerramento", label: "Encerramento", bloco: "execucao" },
@@ -38,21 +44,25 @@ export const STATE_TO_FASE: Record<ProjectState, string> = {
   A2: "preparacao",
   A3: "revisao",
   A4: "submissao",
-  B0: "analise",
+  A5: "analise",
+  A6: "alegacoes",
+  B0: "termo",
   B1: "execucao",
   B2: "encerramento",
   // Terminal "Não prosseguiu" (TRNSF-1044): congela na fase do diagnóstico.
   ENCERRADO: "diagnostico",
 };
 
-/** Badge de estado em linguagem de cliente (nunca A0–A4). */
+/** Badge de estado em linguagem de cliente (nunca A0–A6/B*). */
 export const STATE_BADGE_LABEL: Record<ProjectState, string> = {
   A0: "Diagnóstico",
   A1: "Recolha de documentos",
   A2: "Em preparação da candidatura",
   A3: "Revisão interna",
   A4: "Pronto para submissão",
-  B0: "Em análise",
+  A5: "Em análise",
+  A6: "Alegações contrárias",
+  B0: "Termo de aceitação",
   B1: "Em execução",
   B2: "Encerramento",
   ENCERRADO: "Não prosseguiu",
@@ -67,8 +77,11 @@ export const FASE_VISTAS: Record<string, string[]> = {
   preparacao: ["resumo", "candidatura", "extracao", "documentos", "seguimento"],
   revisao: ["resumo", "candidatura", "seguimento"],
   submissao: ["resumo", "candidatura"],
-  analise: ["resumo", "milestones", "seguimento"],
-  decisao: ["resumo", "milestones", "seguimento"],
+  // Cauda da Candidatura (TRNSF-1067): em Análise consulta-se a candidatura
+  // submetida e acompanha-se o pedido de elementos; nas Alegações há novos
+  // documentos e escrita.
+  analise: ["resumo", "candidatura", "seguimento", "milestones"],
+  alegacoes: ["resumo", "candidatura", "documentos", "seguimento"],
   termo: ["resumo", "milestones", "seguimento"],
   execucao: ["resumo", "milestones", "seguimento"],
   encerramento: ["resumo", "milestones", "seguimento"],
@@ -93,11 +106,14 @@ export interface FasePasso extends FaseDef {
 export interface PipelineView {
   faseAtual: string;
   passos: FasePasso[];
-  /** progresso só do bloco candidatura (5 fases) */
+  /** progresso só do bloco candidatura */
   progresso: { concluidas: number; total: number };
 }
 
 const faseIndex = (key: string) => PIPELINE_FASES.findIndex((f) => f.key === key);
+
+/** Nº total de fases do bloco Candidatura (denominador do progresso). */
+const CANDIDATURA_TOTAL = PIPELINE_FASES.filter((f) => f.bloco === "candidatura").length;
 
 /** Deriva os estados de cada passo a partir da fase atual (puro, sem BD). */
 export function computePipeline(faseAtual: string): PipelineView {
@@ -114,7 +130,7 @@ export function computePipeline(faseAtual: string): PipelineView {
   });
 
   const candidaturaConcluidas = passos.filter((p) => p.bloco === "candidatura" && p.estado === "concluido").length;
-  return { faseAtual: PIPELINE_FASES[cur]?.key ?? "diagnostico", passos, progresso: { concluidas: candidaturaConcluidas, total: 5 } };
+  return { faseAtual: PIPELINE_FASES[cur]?.key ?? "diagnostico", passos, progresso: { concluidas: candidaturaConcluidas, total: CANDIDATURA_TOTAL } };
 }
 
 export function vistasDaFase(faseKey: string): string[] {

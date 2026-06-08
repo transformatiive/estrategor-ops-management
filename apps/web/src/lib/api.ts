@@ -424,6 +424,14 @@ export const api = {
       comentarios,
     }),
 
+  // cauda da candidatura: submissão → análise → decisão → alegações (TRNSF-1067)
+  submeterCandidatura: (id: string) =>
+    post<{ ok: boolean; state: string }>(`/api/projects/${id}/candidatura/submeter`, {}),
+  registarDecisao: (id: string, resultado: "favoravel" | "cortes" | "indeferida") =>
+    post<{ ok: boolean; state: string }>(`/api/projects/${id}/candidatura/decisao`, { resultado }),
+  concluirAlegacoes: (id: string) =>
+    post<{ ok: boolean; state: string }>(`/api/projects/${id}/candidatura/alegacoes/concluir`, {}),
+
   // motor de extração de dados (TRNSF-952)
   extracoes: (id: string) =>
     get<ProjectExtracoesDTO>(`/api/projects/${id}/extracoes`),
