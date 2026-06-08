@@ -202,6 +202,7 @@ model Lead {
   program        Program         @relation(fields: [programId], references: [id])
   project        Project?        @relation("LeadProject", fields: [projectId], references: [id])
   preDiagnostico PreDiagnostico?
+  diagnostic     Diagnostic?
 
   @@index([clientId])
   @@map("leads")
@@ -475,7 +476,9 @@ model Task {
 // Resultado do diagnóstico A0 de um projecto (condições de acesso + mérito).
 model Diagnostic {
   id            String   @id @default(cuid())
-  projectId     String   @unique @map("project_id")
+  // Um diagnóstico pertence a UM projeto OU a UMA lead (pré-projeto, Lead/Análise).
+  projectId     String?  @unique @map("project_id")
+  leadId        String?  @unique @map("lead_id")
   programId     String   @map("program_id")
   // condições de acesso avaliadas: [{ key, label, status: PASSA|FALHA|NA, note }]
   conditions    Json?
@@ -506,7 +509,8 @@ model Diagnostic {
   updatedAt     DateTime @updatedAt @map("updated_at")
   createdAt     DateTime @default(now()) @map("created_at")
 
-  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project   Project?   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  lead      Lead?      @relation(fields: [leadId], references: [id], onDelete: Cascade)
   program   Program    @relation(fields: [programId], references: [id])
   meritGrid MeritGrid? @relation(fields: [meritGridId], references: [id])
   decidedBy User?      @relation(fields: [decidedByUserId], references: [id])

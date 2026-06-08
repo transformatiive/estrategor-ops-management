@@ -20,6 +20,7 @@ import {
   type MeritGridSummaryDTO,
   type MeritProposalDTO,
   type PreDiagCampo,
+  type ProjectState,
 } from "@estrategor/shared";
 import { prisma } from "../db.js";
 import { requireAuth } from "../auth/guards.js";
@@ -57,6 +58,62 @@ const eligSchema = z.object({
   notas: z.string().nullable().optional(),
   fonteUrl: z.string().nullable().optional(),
 });
+
+/**
+ * Dono do diagnóstico: ou um projeto (fluxo legado A0) ou uma lead (pré-projeto,
+ * Lead/Análise). Os handlers são agnósticos ao dono; resolvem o "sujeito"
+ * (título/medida/programa) a partir dele e gravam/lêem o Diagnostic via
+ * `where: owner`. Espelha `PreDiagOwner` do motor de pré-diagnóstico.
+ */
+export type DiagOwner = { projectId: string } | { leadId: string };
+
+/**
+ * Sujeito do diagnóstico — o conjunto mínimo de dados (independente de projeto
+ * ou lead) de que os helpers de grelha/mérito/elegibilidade precisam.
+ * `projectState` é benigno para leads (não há máquina de estados de projeto).
+ */
+type DiagSubject = {
+  title: string;
+  measureLabel: string | null;
+  program: { id: string; code: string };
+  programId: string;
+  projectState: ProjectState;
+};
+
+/**
+ * Resolve o sujeito a partir do dono. Projeto: carrega título/medida/programa
+ * como hoje. Lead: carrega cliente + programa — título = nome do cliente,
+ * medida = null, programa = lead.program. Devolve null se o dono não existe.
+ */
+async function resolveSubject(owner: DiagOwner): Promise<DiagSubject | null> {
+  if ("projectId" in owner) {
+    const project = await prisma.project.findUnique({
+      where: { id: owner.projectId },
+      include: { program: true },
+    });
+    if (!project) return null;
+    return {
+      title: project.title,
+      measureLabel: project.measureLabel,
+      program: { id: project.program.id, code: project.program.code },
+      programId: project.programId,
+      projectState: project.state,
+    };
+  }
+  const lead = await prisma.lead.findUnique({
+    where: { id: owner.leadId },
+    include: { client: true, program: true },
+  });
+  if (!lead) return null;
+  return {
+    title: lead.client.name,
+    measureLabel: null,
+    program: { id: lead.program.id, code: lead.program.code },
+    programId: lead.programId,
+    // Numa lead não há estado de projeto; valor benigno (a vista da lead não o usa).
+    projectState: "A0",
+  };
+}
 
 /** Procura a grelha de mérito aplicável a um projecto (por programa/medida). */
 async function findGridForProject(project: {
@@ -163,8 +220,8 @@ function deriveResult(
 
 /** Extrai do pré-diagnóstico (TRNSF-967) os dados relevantes para as condições
  *  de acesso. Só dados recolhidos; ausência → campos vazios (sem invenção). */
-async function dadosAcessoDoProjeto(projectId: string): Promise<DadosAcesso> {
-  const row = await prisma.preDiagnostico.findUnique({ where: { projectId }, select: { campos: true } });
+async function dadosAcesso(owner: DiagOwner): Promise<DadosAcesso> {
+  const row = await prisma.preDiagnostico.findUnique({ where: owner, select: { campos: true } });
   const campos = Array.isArray(row?.campos) ? (row!.campos as unknown as PreDiagCampo[]) : [];
   const valor = (key: string): string | null => {
     const c = campos.find((x) => x.key === key);
@@ -259,15 +316,15 @@ function lerPropostaMerito(
 /** Monta o contexto textual do projeto (dados do pré-diagnóstico, com rótulos)
  *  para a sugestão de mérito por IA. Só dados recolhidos; ausência → linhas
  *  omitidas (sem invenção). */
-async function contextoMeritoDoProjeto(
-  project: { title: string; measureLabel: string | null },
-  projectId: string,
+async function contextoMerito(
+  subject: { title: string; measureLabel: string | null },
+  owner: DiagOwner,
 ): Promise<string> {
   const linhas: string[] = [];
-  if (project.title?.trim()) linhas.push(`Projeto: ${project.title.trim()}`);
-  if (project.measureLabel?.trim()) linhas.push(`Medida/Aviso: ${project.measureLabel.trim()}`);
+  if (subject.title?.trim()) linhas.push(`Projeto: ${subject.title.trim()}`);
+  if (subject.measureLabel?.trim()) linhas.push(`Medida/Aviso: ${subject.measureLabel.trim()}`);
 
-  const row = await prisma.preDiagnostico.findUnique({ where: { projectId }, select: { campos: true } });
+  const row = await prisma.preDiagnostico.findUnique({ where: owner, select: { campos: true } });
   const campos = Array.isArray(row?.campos) ? (row!.campos as unknown as PreDiagCampo[]) : [];
   for (const c of campos) {
     if (c.value == null || String(c.value).trim() === "") continue;
@@ -290,16 +347,14 @@ function enriquecerCondicoes(
   });
 }
 
-async function buildDTO(projectId: string): Promise<DiagnosticDTO | null> {
-  const project = await prisma.project.findUnique({
-    where: { id: projectId },
-    include: { program: true },
-  });
-  if (!project) return null;
+async function buildDTO(owner: DiagOwner): Promise<DiagnosticDTO | null> {
+  const subject = await resolveSubject(owner);
+  if (!subject) return null;
+  const ownerId = "projectId" in owner ? owner.projectId : owner.leadId;
 
-  const diag = await prisma.diagnostic.findUnique({ where: { projectId } });
+  const diag = await prisma.diagnostic.findUnique({ where: owner });
   const avisoConfirmado = diag?.avisoConfirmado ?? false;
-  const grid = await resolveGrid(project, diag?.meritGridId ?? null);
+  const grid = await resolveGrid(subject, diag?.meritGridId ?? null);
 
   const baseConditions: ConditionStateDTO[] =
     (diag?.conditions as ConditionStateDTO[] | null) ??
@@ -310,7 +365,7 @@ async function buildDTO(projectId: string): Promise<DiagnosticDTO | null> {
     }));
   // Pré-análise recalculada na leitura (reflete o pré-diagnóstico atual + a
   // elegibilidade estruturada do aviso, quando validada).
-  const dados = await dadosAcessoDoProjeto(projectId);
+  const dados = await dadosAcesso(owner);
   const eligibilidade = lerElegibilidade(grid?.eligibilidade);
   const geo = await resolverLocalizacao(dados.concelho ?? null, dados.freguesia ?? null);
   const conditions = enriquecerCondicoes(baseConditions, dados, eligibilidade, geo);
@@ -329,9 +384,9 @@ async function buildDTO(projectId: string): Promise<DiagnosticDTO | null> {
   const merit = gridData ? computeMerit(gridData, meritSelection, regiao) : null;
 
   return {
-    projectId,
-    programCode: project.program.code,
-    projectState: project.state,
+    projectId: ownerId,
+    programCode: subject.program.code,
+    projectState: subject.projectState,
     result: (diag?.result as DiagnosticResult) ?? (grid ? "POR_INICIAR" : "SEM_GRELHA"),
     eligible: diag?.eligible ?? null,
     mp: merit && merit.missing.length === 0 ? merit.mp : (diag?.mp ? Number(diag.mp) : null),
@@ -343,7 +398,7 @@ async function buildDTO(projectId: string): Promise<DiagnosticDTO | null> {
     eligibilidade,
     selectedGridId: grid?.id ?? null,
     avisoConfirmado,
-    avisos: await listAvisos(project.program.code),
+    avisos: await listAvisos(subject.program.code),
     grid: grid ? gridSummary(grid) : null,
     gridData,
     meritSelection,
@@ -358,12 +413,178 @@ async function buildDTO(projectId: string): Promise<DiagnosticDTO | null> {
   };
 }
 
+/**
+ * Lógica partilhada (projeto/lead) das mutações do diagnóstico. Cada função
+ * recebe o `owner` e devolve um resultado discriminado para o handler traduzir
+ * em código HTTP. O `where`/`create` do Diagnostic usa SEMPRE `{ ...owner }`,
+ * por isso projeto e lead diferem apenas pelo dono.
+ */
+type HandlerResult =
+  | { ok: true; dto: DiagnosticDTO | null }
+  | { ok: false; code: number; error: string };
+
+const NOT_FOUND = (owner: DiagOwner): { ok: false; code: number; error: string } => ({
+  ok: false,
+  code: 404,
+  error: "projectId" in owner ? "Projeto não encontrado." : "Lead não encontrada.",
+});
+
+/** TRNSF-1031 — ligar EXPLICITAMENTE o dono a um aviso (grelha) do programa. */
+async function setAvisoHandler(owner: DiagOwner, meritGridIdRaw: unknown): Promise<HandlerResult> {
+  const meritGridId = typeof meritGridIdRaw === "string" ? meritGridIdRaw : null;
+  if (!meritGridId) return { ok: false, code: 400, error: "Indique o aviso a associar." };
+  const subject = await resolveSubject(owner);
+  if (!subject) return NOT_FOUND(owner);
+  const grid = await prisma.meritGrid.findFirst({
+    where: { id: meritGridId, programCode: subject.program.code },
+  });
+  if (!grid) return { ok: false, code: 400, error: "Aviso inválido para o programa deste projeto." };
+
+  const current = await prisma.diagnostic.findUnique({ where: owner });
+  const mudouAviso = current?.meritGridId !== grid.id;
+  // Ao trocar de aviso, as condições de acesso passam a ser as do novo aviso.
+  const conditions = mudouAviso
+    ? ((grid.accessConditions as { key: string; label: string }[] | null) ?? []).map((c) => ({
+        key: c.key, label: c.label, status: "NA" as const,
+      }))
+    : (current?.conditions ?? []);
+
+  await prisma.diagnostic.upsert({
+    where: owner,
+    create: {
+      ...owner,
+      programId: subject.programId,
+      meritGridId: grid.id,
+      gridVersion: grid.versao,
+      avisoConfirmado: true,
+      conditions: conditions as object,
+      result: "POR_INICIAR",
+    },
+    update: {
+      meritGridId: grid.id,
+      gridVersion: grid.versao,
+      avisoConfirmado: true,
+      ...(mudouAviso ? { conditions: conditions as object, meritInputs: undefined, meritBreakdown: undefined, mp: null, result: "EM_PREENCHIMENTO", eligible: null } : {}),
+    },
+  });
+  return { ok: true, dto: await buildDTO(owner) };
+}
+
+/** TRNSF-1039 — sugerir a pontuação de mérito (IA propõe, consultor valida). */
+async function sugerirMeritoHandler(owner: DiagOwner): Promise<HandlerResult> {
+  const subject = await resolveSubject(owner);
+  if (!subject) return NOT_FOUND(owner);
+
+  const current = await prisma.diagnostic.findUnique({ where: owner });
+  const grid = await resolveGrid(subject, current?.meritGridId ?? null);
+  const gridData = (grid?.grid as MeritGridData | null) ?? null;
+  if (!grid || !gridData) {
+    return { ok: false, code: 409, error: "Sem grelha/aviso associado — escolha o aviso primeiro." };
+  }
+
+  // Região efetiva para a sugestão: a escolhida pelo consultor; na ausência, a
+  // inferida a partir da localização validada da empresa (NUTS II → matriz da
+  // grelha). FIXAÇÃO (bug do score instável): persistimos a grelha e a região no
+  // diagnóstico, para que leituras e sugestões seguintes usem SEMPRE a mesma base.
+  let regiao = current?.regiao ?? null;
+  if (!regiao) {
+    const dados = await dadosAcesso(owner);
+    const geo = await resolverLocalizacao(dados.concelho ?? null, dados.freguesia ?? null);
+    regiao = regiaoGrelhaParaNuts2(geo?.nuts2 ?? null, gridRegions(gridData)) ?? null;
+  }
+  const contexto = await contextoMerito(subject, owner);
+  const { selection, justificacoes, nota } = await extrairMeritoDoProjeto(gridData, contexto, regiao);
+
+  await prisma.diagnostic.upsert({
+    where: owner,
+    create: {
+      ...owner,
+      programId: subject.programId,
+      meritGridId: grid.id,
+      gridVersion: grid.versao,
+      regiao,
+      meritProposal: { selection, justificacoes, regiao } as object,
+      meritProposalEstado: "por_validar",
+      meritProposalNota: nota,
+    },
+    update: {
+      // Pin da grelha + região (evita re-resolução heurística na leitura).
+      meritGridId: grid.id,
+      gridVersion: grid.versao,
+      regiao,
+      meritProposal: { selection, justificacoes, regiao } as object,
+      meritProposalEstado: "por_validar",
+      meritProposalNota: nota,
+    },
+  });
+  return { ok: true, dto: await buildDTO(owner) };
+}
+
+/** G — guardar condições de acesso + selecções de mérito (recalcula e persiste). */
+async function saveDiagnosticHandler(owner: DiagOwner, body: unknown): Promise<HandlerResult> {
+  const parsed = saveSchema.safeParse(body);
+  if (!parsed.success) {
+    return { ok: false, code: 400, error: parsed.error.errors[0]?.message ?? "Dados inválidos." };
+  }
+  const subject = await resolveSubject(owner);
+  if (!subject) return NOT_FOUND(owner);
+
+  const current = await prisma.diagnostic.findUnique({ where: owner });
+  const grid = await resolveGrid(subject, current?.meritGridId ?? null);
+
+  const conditions =
+    parsed.data.conditions ??
+    (current?.conditions as ConditionStateDTO[] | null) ??
+    ((grid?.accessConditions as { key: string; label: string }[] | null) ?? []).map((c) => ({
+      key: c.key,
+      label: c.label,
+      status: "NA" as const,
+    }));
+  const meritSelection =
+    parsed.data.meritSelection ?? (current?.meritInputs as Record<string, number> | null) ?? {};
+  const regiao =
+    parsed.data.regiao !== undefined ? parsed.data.regiao : (current?.regiao ?? null);
+
+  const gridData = (grid?.grid as MeritGridData | null) ?? null;
+  const merit = gridData ? computeMerit(gridData, meritSelection, regiao) : null;
+  const { result, eligible } = deriveResult(conditions, merit, Boolean(gridData));
+
+  await prisma.diagnostic.upsert({
+    where: owner,
+    create: {
+      ...owner,
+      programId: subject.programId,
+      conditions: conditions as object,
+      regiao,
+      meritInputs: meritSelection as object,
+      meritBreakdown: (merit ?? undefined) as object | undefined,
+      mp: merit && merit.missing.length === 0 ? merit.mp : null,
+      meritGridId: grid?.id ?? null,
+      gridVersion: grid?.versao ?? null,
+      result,
+      eligible,
+    },
+    update: {
+      conditions: conditions as object,
+      regiao,
+      meritInputs: meritSelection as object,
+      meritBreakdown: (merit ?? undefined) as object | undefined,
+      mp: merit && merit.missing.length === 0 ? merit.mp : null,
+      meritGridId: grid?.id ?? null,
+      gridVersion: grid?.versao ?? null,
+      result,
+      eligible,
+    },
+  });
+  return { ok: true, dto: await buildDTO(owner) };
+}
+
 export async function diagnosticoRoutes(app: FastifyInstance) {
   app.addHook("preHandler", requireAuth);
 
   // G — abrir o diagnóstico de um projecto
   app.get<{ Params: { id: string } }>("/api/projects/:id/diagnostic", async (req, reply) => {
-    const dto = await buildDTO(req.params.id);
+    const dto = await buildDTO({ projectId: req.params.id });
     if (!dto) return reply.code(404).send({ error: "Projeto não encontrado." });
     return dto;
   });
@@ -374,43 +595,9 @@ export async function diagnosticoRoutes(app: FastifyInstance) {
   app.put<{ Params: { id: string }; Body: { meritGridId?: string } }>(
     "/api/projects/:id/diagnostic/aviso",
     async (req, reply) => {
-      const meritGridId = typeof req.body?.meritGridId === "string" ? req.body.meritGridId : null;
-      if (!meritGridId) return reply.code(400).send({ error: "Indique o aviso a associar." });
-      const project = await prisma.project.findUnique({ where: { id: req.params.id }, include: { program: true } });
-      if (!project) return reply.code(404).send({ error: "Projeto não encontrado." });
-      const grid = await prisma.meritGrid.findFirst({
-        where: { id: meritGridId, programCode: project.program.code },
-      });
-      if (!grid) return reply.code(400).send({ error: "Aviso inválido para o programa deste projeto." });
-
-      const current = await prisma.diagnostic.findUnique({ where: { projectId: project.id } });
-      const mudouAviso = current?.meritGridId !== grid.id;
-      // Ao trocar de aviso, as condições de acesso passam a ser as do novo aviso.
-      const conditions = mudouAviso
-        ? ((grid.accessConditions as { key: string; label: string }[] | null) ?? []).map((c) => ({
-            key: c.key, label: c.label, status: "NA" as const,
-          }))
-        : (current?.conditions ?? []);
-
-      await prisma.diagnostic.upsert({
-        where: { projectId: project.id },
-        create: {
-          projectId: project.id,
-          programId: project.programId,
-          meritGridId: grid.id,
-          gridVersion: grid.versao,
-          avisoConfirmado: true,
-          conditions: conditions as object,
-          result: "POR_INICIAR",
-        },
-        update: {
-          meritGridId: grid.id,
-          gridVersion: grid.versao,
-          avisoConfirmado: true,
-          ...(mudouAviso ? { conditions: conditions as object, meritInputs: undefined, meritBreakdown: undefined, mp: null, result: "EM_PREENCHIMENTO", eligible: null } : {}),
-        },
-      });
-      return buildDTO(project.id);
+      const r = await setAvisoHandler({ projectId: req.params.id }, req.body?.meritGridId);
+      if (!r.ok) return reply.code(r.code).send({ error: r.error });
+      return r.dto;
     },
   );
 
@@ -424,10 +611,10 @@ export async function diagnosticoRoutes(app: FastifyInstance) {
     if (!parsed.success) {
       return reply.code(400).send({ error: parsed.error.errors[0]?.message ?? "Dados inválidos." });
     }
-    const project = await prisma.project.findUnique({ where: { id: req.params.id }, include: { program: true } });
-    if (!project) return reply.code(404).send({ error: "Projeto não encontrado." });
-    const diag = await prisma.diagnostic.findUnique({ where: { projectId: project.id }, select: { meritGridId: true } });
-    const grid = await resolveGrid(project, diag?.meritGridId ?? null);
+    const subject = await resolveSubject({ projectId: req.params.id });
+    if (!subject) return reply.code(404).send({ error: "Projeto não encontrado." });
+    const diag = await prisma.diagnostic.findUnique({ where: { projectId: req.params.id }, select: { meritGridId: true } });
+    const grid = await resolveGrid(subject, diag?.meritGridId ?? null);
     if (!grid) return reply.code(409).send({ error: "Sem grelha/aviso associado — não há onde guardar a elegibilidade." });
 
     const elig: AvisoElegibilidade = {
@@ -440,7 +627,7 @@ export async function diagnosticoRoutes(app: FastifyInstance) {
       fonteUrl: parsed.data.fonteUrl ?? grid.fonteUrl ?? null,
     };
     await prisma.meritGrid.update({ where: { id: grid.id }, data: { eligibilidade: elig as object } });
-    return buildDTO(project.id);
+    return buildDTO({ projectId: req.params.id });
   });
 
   // TRNSF-1032 (Fase 2B) — importar a elegibilidade do PDF do aviso (admin).
@@ -452,10 +639,10 @@ export async function diagnosticoRoutes(app: FastifyInstance) {
       if (!canManageUsers(req.user!.role)) {
         return reply.code(403).send({ error: "Só um administrador pode importar a elegibilidade do aviso." });
       }
-      const project = await prisma.project.findUnique({ where: { id: req.params.id }, include: { program: true } });
-      if (!project) return reply.code(404).send({ error: "Projeto não encontrado." });
-      const diag = await prisma.diagnostic.findUnique({ where: { projectId: project.id }, select: { meritGridId: true } });
-      const grid = await resolveGrid(project, diag?.meritGridId ?? null);
+      const subject = await resolveSubject({ projectId: req.params.id });
+      if (!subject) return reply.code(404).send({ error: "Projeto não encontrado." });
+      const diag = await prisma.diagnostic.findUnique({ where: { projectId: req.params.id }, select: { meritGridId: true } });
+      const grid = await resolveGrid(subject, diag?.meritGridId ?? null);
       if (!grid) return reply.code(409).send({ error: "Sem grelha/aviso associado — escolha o aviso primeiro." });
 
       const urlInput = typeof req.body?.fonteUrl === "string" ? req.body.fonteUrl.trim() : "";
@@ -470,7 +657,7 @@ export async function diagnosticoRoutes(app: FastifyInstance) {
       const elig: AvisoElegibilidade = { ...proposta, fonteUrl: url };
       await prisma.meritGrid.update({ where: { id: grid.id }, data: { eligibilidade: elig as object } });
       void atual;
-      return buildDTO(project.id);
+      return buildDTO({ projectId: req.params.id });
     },
   );
 
@@ -483,121 +670,17 @@ export async function diagnosticoRoutes(app: FastifyInstance) {
   app.post<{ Params: { id: string } }>(
     "/api/projects/:id/diagnostic/merito/sugerir",
     async (req, reply) => {
-      const project = await prisma.project.findUnique({
-        where: { id: req.params.id },
-        include: { program: true },
-      });
-      if (!project) return reply.code(404).send({ error: "Projeto não encontrado." });
-
-      const current = await prisma.diagnostic.findUnique({ where: { projectId: project.id } });
-      const grid = await resolveGrid(project, current?.meritGridId ?? null);
-      const gridData = (grid?.grid as MeritGridData | null) ?? null;
-      if (!grid || !gridData) {
-        return reply.code(409).send({ error: "Sem grelha/aviso associado — escolha o aviso primeiro." });
-      }
-
-      // Região efetiva para a sugestão: a escolhida pelo consultor; na ausência,
-      // a inferida a partir da localização validada da empresa (NUTS II → matriz
-      // da grelha). FIXAÇÃO (bug do score instável): persistimos a grelha e a
-      // região no diagnóstico, para que leituras e sugestões seguintes usem
-      // SEMPRE a mesma base e o MP não mude sem ação explícita. Com a região
-      // por fixar, o mesmo índice resolvia para pontuações diferentes (3.84↔2.93).
-      let regiao = current?.regiao ?? null;
-      if (!regiao) {
-        const dados = await dadosAcessoDoProjeto(project.id);
-        const geo = await resolverLocalizacao(dados.concelho ?? null, dados.freguesia ?? null);
-        regiao = regiaoGrelhaParaNuts2(geo?.nuts2 ?? null, gridRegions(gridData)) ?? null;
-      }
-      const contexto = await contextoMeritoDoProjeto(project, project.id);
-      const { selection, justificacoes, nota } = await extrairMeritoDoProjeto(gridData, contexto, regiao);
-
-      await prisma.diagnostic.upsert({
-        where: { projectId: project.id },
-        create: {
-          projectId: project.id,
-          programId: project.programId,
-          meritGridId: grid.id,
-          gridVersion: grid.versao,
-          regiao,
-          meritProposal: { selection, justificacoes, regiao } as object,
-          meritProposalEstado: "por_validar",
-          meritProposalNota: nota,
-        },
-        update: {
-          // Pin da grelha + região (evita re-resolução heurística na leitura).
-          meritGridId: grid.id,
-          gridVersion: grid.versao,
-          regiao,
-          meritProposal: { selection, justificacoes, regiao } as object,
-          meritProposalEstado: "por_validar",
-          meritProposalNota: nota,
-        },
-      });
-      return buildDTO(project.id);
+      const r = await sugerirMeritoHandler({ projectId: req.params.id });
+      if (!r.ok) return reply.code(r.code).send({ error: r.error });
+      return r.dto;
     },
   );
 
   // G — guardar condições de acesso + selecções de mérito (recalcula e persiste)
   app.put<{ Params: { id: string } }>("/api/projects/:id/diagnostic", async (req, reply) => {
-    const parsed = saveSchema.safeParse(req.body);
-    if (!parsed.success) {
-      return reply.code(400).send({ error: parsed.error.errors[0]?.message ?? "Dados inválidos." });
-    }
-    const project = await prisma.project.findUnique({
-      where: { id: req.params.id },
-      include: { program: true },
-    });
-    if (!project) return reply.code(404).send({ error: "Projeto não encontrado." });
-
-    const current = await prisma.diagnostic.findUnique({ where: { projectId: project.id } });
-    const grid = await resolveGrid(project, current?.meritGridId ?? null);
-
-    const conditions =
-      parsed.data.conditions ??
-      (current?.conditions as ConditionStateDTO[] | null) ??
-      ((grid?.accessConditions as { key: string; label: string }[] | null) ?? []).map((c) => ({
-        key: c.key,
-        label: c.label,
-        status: "NA" as const,
-      }));
-    const meritSelection =
-      parsed.data.meritSelection ?? (current?.meritInputs as Record<string, number> | null) ?? {};
-    const regiao =
-      parsed.data.regiao !== undefined ? parsed.data.regiao : (current?.regiao ?? null);
-
-    const gridData = (grid?.grid as MeritGridData | null) ?? null;
-    const merit = gridData ? computeMerit(gridData, meritSelection, regiao) : null;
-    const { result, eligible } = deriveResult(conditions, merit, Boolean(gridData));
-
-    const saved = await prisma.diagnostic.upsert({
-      where: { projectId: project.id },
-      create: {
-        projectId: project.id,
-        programId: project.programId,
-        conditions: conditions as object,
-        regiao,
-        meritInputs: meritSelection as object,
-        meritBreakdown: (merit ?? undefined) as object | undefined,
-        mp: merit && merit.missing.length === 0 ? merit.mp : null,
-        meritGridId: grid?.id ?? null,
-        gridVersion: grid?.versao ?? null,
-        result,
-        eligible,
-      },
-      update: {
-        conditions: conditions as object,
-        regiao,
-        meritInputs: meritSelection as object,
-        meritBreakdown: (merit ?? undefined) as object | undefined,
-        mp: merit && merit.missing.length === 0 ? merit.mp : null,
-        meritGridId: grid?.id ?? null,
-        gridVersion: grid?.versao ?? null,
-        result,
-        eligible,
-      },
-    });
-    void saved;
-    return buildDTO(project.id);
+    const r = await saveDiagnosticHandler({ projectId: req.params.id }, req.body);
+    if (!r.ok) return reply.code(r.code).send({ error: r.error });
+    return r.dto;
   });
 
   // §8 — transição A0 → Candidatura (A1), só com diagnóstico concluído
@@ -732,4 +815,38 @@ export async function diagnosticoRoutes(app: FastifyInstance) {
       return { ok: true, state: "A0" };
     },
   );
+
+  // ── Rotas paralelas para a Lead (pré-projeto, Lead/Análise) ─────────────────
+  // Mesmo motor/DTO/handlers; o dono é a lead em vez do projeto. O diagnóstico da
+  // lead corre escolha de aviso + condições de acesso + mérito (não tem
+  // advance/encerrar/reopen — qualificar/rejeitar vivem na própria lead).
+  app.get<{ Params: { id: string } }>("/api/leads/:id/diagnostic", async (req, reply) => {
+    const dto = await buildDTO({ leadId: req.params.id });
+    if (!dto) return reply.code(404).send({ error: "Lead não encontrada." });
+    return dto;
+  });
+
+  app.put<{ Params: { id: string }; Body: { meritGridId?: string } }>(
+    "/api/leads/:id/diagnostic/aviso",
+    async (req, reply) => {
+      const r = await setAvisoHandler({ leadId: req.params.id }, req.body?.meritGridId);
+      if (!r.ok) return reply.code(r.code).send({ error: r.error });
+      return r.dto;
+    },
+  );
+
+  app.post<{ Params: { id: string } }>(
+    "/api/leads/:id/diagnostic/merito/sugerir",
+    async (req, reply) => {
+      const r = await sugerirMeritoHandler({ leadId: req.params.id });
+      if (!r.ok) return reply.code(r.code).send({ error: r.error });
+      return r.dto;
+    },
+  );
+
+  app.put<{ Params: { id: string } }>("/api/leads/:id/diagnostic", async (req, reply) => {
+    const r = await saveDiagnosticHandler({ leadId: req.params.id }, req.body);
+    if (!r.ok) return reply.code(r.code).send({ error: r.error });
+    return r.dto;
+  });
 }

@@ -12,6 +12,7 @@ import { useAsync } from "../lib/useAsync.js";
 import { ErrorState, ProgramBadge } from "../components/ui.js";
 import { Dropdown } from "../components/Dropdown.js";
 import { PreDiagnosticoPanel } from "../components/PreDiagnosticoPanel.js";
+import { DiagnosticoTab } from "../components/DiagnosticoTab.js";
 
 const ESTADO_BADGE: Record<LeadEstado, string> = {
   analise: "badge-warning",
@@ -239,6 +240,13 @@ function LeadDetalhe({ leadId, onClose, onChanged }: { leadId: string; onClose: 
             )}
 
             <PreDiagnosticoPanel owner={{ leadId }} />
+
+            {/* Diagnóstico completo na lead (escolha de aviso + condições de
+                acesso + mérito), reutilizando o mesmo separador do projeto em
+                modo lead — esconde avançar/encerrar e o estado de projeto. */}
+            <div style={{ marginTop: 16 }}>
+              <DiagnosticoTab leadId={leadId} />
+            </div>
 
             {msg && <div className="login-error" style={{ marginTop: 8 }}>{msg}</div>}
 

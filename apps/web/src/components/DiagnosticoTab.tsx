@@ -40,21 +40,35 @@ const COND_LABEL: Record<ConditionStatus, string> = {
   FALHA: "Falha ✗",
 };
 
+/**
+ * Separador de diagnóstico, reutilizado pelo projeto (A0, fluxo completo) e pela
+ * lead (pré-projeto, Lead/Análise). O dono determina as rotas da API e o `mode`
+ * esconde as partes só-projeto (avançar/encerrar/reabrir, badge de estado do
+ * projeto, elegibilidade admin). A escolha de aviso, condições de acesso e
+ * mérito (proposta IA + MP ao vivo) são idênticos para ambos.
+ */
 export function DiagnosticoTab({
   projectId,
+  leadId,
   onAdvanced,
   onChanged,
 }: {
-  projectId: string;
+  projectId?: string;
+  /** Quando presente, o diagnóstico é de uma lead (pré-projeto); esconde as
+   *  ações/estado só-projeto. */
+  leadId?: string;
   onAdvanced?: () => void;
   /** Recarrega o pipeline/projeto após uma alteração que não muda de fase
    *  (guardar, escolher aviso, sugerir mérito) — TRNSF-1048. */
   onChanged?: () => void;
 }) {
   const { user } = useAuth();
+  const isLead = leadId != null;
+  // Identificador do dono para as chamadas à API (projeto ou lead).
+  const ownerId = (isLead ? leadId : projectId) as string;
   const { data, loading, error, reload } = useAsync(
-    () => api.diagnostic(projectId),
-    [projectId],
+    () => (isLead ? api.leadDiagnostic(ownerId) : api.diagnostic(ownerId)),
+    [ownerId, isLead],
   );
   const [conditions, setConditions] = useState<ConditionStateDTO[]>([]);
   const [selection, setSelection] = useState<Record<string, number>>({});
@@ -124,7 +138,7 @@ export function DiagnosticoTab({
     setSaving(true);
     setMsg(null);
     try {
-      await api.setAviso(projectId, meritGridId);
+      await (isLead ? api.setLeadAviso(ownerId, meritGridId) : api.setAviso(ownerId, meritGridId));
       reload();
       onChanged?.();
       setMsg("Aviso associado ✓");
@@ -139,11 +153,12 @@ export function DiagnosticoTab({
     setSaving(true);
     setMsg(null);
     try {
-      await api.saveDiagnostic(projectId, {
+      const body = {
         conditions,
         meritSelection: selection,
         regiao: regiao || null,
-      });
+      };
+      await (isLead ? api.saveLeadDiagnostic(ownerId, body) : api.saveDiagnostic(ownerId, body));
       reload();
       onChanged?.();
       setMsg("Guardado ✓");
@@ -158,7 +173,7 @@ export function DiagnosticoTab({
     setSugerindo(true);
     setMsg(null);
     try {
-      await api.sugerirMerito(projectId);
+      await (isLead ? api.sugerirLeadMerito(ownerId) : api.sugerirMerito(ownerId));
       reload();
       onChanged?.();
       setMsg("Pontuação proposta pela IA — reveja, ajuste e guarde.");
@@ -178,7 +193,7 @@ export function DiagnosticoTab({
     setSaving(true);
     setMsg(null);
     try {
-      await api.encerrarDiagnostico(projectId, m);
+      await api.encerrarDiagnostico(ownerId, m);
       setEncerrarAberto(false);
       setMotivo("");
       reload();
@@ -195,7 +210,7 @@ export function DiagnosticoTab({
     setSaving(true);
     setMsg(null);
     try {
-      await api.reopenProject(projectId);
+      await api.reopenProject(ownerId);
       reload();
       onAdvanced?.();
       setMsg("Projeto reaberto — voltou ao diagnóstico (A0).");
@@ -210,7 +225,7 @@ export function DiagnosticoTab({
     setSaving(true);
     setMsg(null);
     try {
-      await api.advanceDiagnostic(projectId);
+      await api.advanceDiagnostic(ownerId);
       reload();
       onAdvanced?.();
       setMsg("Diagnóstico concluído — pode iniciar a candidatura ✓");
@@ -267,14 +282,14 @@ export function DiagnosticoTab({
   return (
     <div style={{ maxWidth: 760 }}>
       <div className="section-header">
-        <div className="section-title">Diagnóstico A0</div>
+        <div className="section-title">{isLead ? "Diagnóstico" : "Diagnóstico A0"}</div>
         <span className={"badge " + badge.cls}>{badge.label}</span>
       </div>
 
       {/* ── Aviso do projeto (TRNSF-1031): escolha explícita = certeza ── */}
       <div className="card" style={{ marginBottom: 16 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-          <div className="dp-section-title" style={{ marginBottom: 0 }}>Aviso do projeto</div>
+          <div className="dp-section-title" style={{ marginBottom: 0 }}>{isLead ? "Aviso" : "Aviso do projeto"}</div>
           <span className={"badge " + (data.avisoConfirmado ? "badge-green" : "badge-warning")}>
             {data.avisoConfirmado ? "Confirmado ✓" : "Por confirmar"}
           </span>
@@ -310,12 +325,14 @@ export function DiagnosticoTab({
       </div>
 
       {/* ── Pré-diagnóstico assistido por IA (TRNSF-967) — recolhe dados da
-           empresa e importa a elegibilidade do aviso (TRNSF-1034) ── */}
-      <PreDiagnosticoPanel owner={{ projectId }} onConcluido={reload} />
+           empresa e importa a elegibilidade do aviso (TRNSF-1034).
+           Na lead, o pré-diagnóstico é apresentado acima (na própria Análise),
+           por isso não o repetimos aqui. ── */}
+      {!isLead && <PreDiagnosticoPanel owner={{ projectId: ownerId }} onConcluido={reload} />}
 
       {/* ── Elegibilidade do aviso (admin) — depois do pré-diagnóstico, que a
-           propõe automaticamente; aqui revê-se e valida-se ── */}
-      {canManageUsers(user?.role ?? "CONSULTOR") && (
+           propõe automaticamente; aqui revê-se e valida-se. Só no projeto. ── */}
+      {!isLead && canManageUsers(user?.role ?? "CONSULTOR") && (
         <div className="card" style={{ marginBottom: 16 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
             <div className="dp-section-title" style={{ marginBottom: 0 }}>Elegibilidade do aviso</div>
@@ -324,7 +341,7 @@ export function DiagnosticoTab({
             </span>
           </div>
           <AvisoElegibilidadeEditor
-            projectId={projectId}
+            projectId={ownerId}
             atual={data.eligibilidade}
             fonteUrlAviso={data.grid?.fonteUrl ?? null}
             onSaved={reload}
@@ -529,26 +546,30 @@ export function DiagnosticoTab({
         <button className="btn btn-primary" onClick={save} disabled={saving}>
           {saving ? "A guardar…" : "Guardar diagnóstico"}
         </button>
-        <button
-          className="btn btn-secondary"
-          onClick={advance}
-          disabled={
-            saving ||
-            !data.avisoConfirmado ||
-            (data.result !== "ELEGIVEL" && data.result !== "A_REVER")
-          }
-          title={
-            !data.avisoConfirmado
-              ? "Escolha e confirme o aviso do projeto para avançar"
-              : data.result === "ELEGIVEL" || data.result === "A_REVER"
-                ? "Avançar para Candidatura"
-                : "Conclua o diagnóstico para avançar"
-          }
-        >
-          Avançar → Candidatura
-        </button>
-        {/* TRNSF-1044 — só quando o diagnóstico não passa */}
-        {podeEncerrar && !encerrarAberto && (
+        {/* Avançar/encerrar são só-projeto (A0 → A1). Na lead, a decisão é
+            qualificar/rejeitar, que vive na própria Análise. */}
+        {!isLead && (
+          <button
+            className="btn btn-secondary"
+            onClick={advance}
+            disabled={
+              saving ||
+              !data.avisoConfirmado ||
+              (data.result !== "ELEGIVEL" && data.result !== "A_REVER")
+            }
+            title={
+              !data.avisoConfirmado
+                ? "Escolha e confirme o aviso do projeto para avançar"
+                : data.result === "ELEGIVEL" || data.result === "A_REVER"
+                  ? "Avançar para Candidatura"
+                  : "Conclua o diagnóstico para avançar"
+            }
+          >
+            Avançar → Candidatura
+          </button>
+        )}
+        {/* TRNSF-1044 — só quando o diagnóstico não passa (só-projeto) */}
+        {!isLead && podeEncerrar && !encerrarAberto && (
           <button
             className="btn btn-secondary"
             onClick={() => {
