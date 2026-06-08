@@ -3,7 +3,6 @@ import {
   DOCUMENT_TAXONOMY,
   daysBetween,
   deriveChecklistStatus,
-  documentTypesForProgram,
   isDelivered,
   type FollowupDTO,
   type ProjectTrackingDTO,
@@ -12,7 +11,6 @@ import {
   type UrgentDeadlineDTO,
 } from "@estrategor/shared";
 
-type ProgramParam = Parameters<typeof documentTypesForProgram>[0];
 import { prisma } from "../db.js";
 import { env } from "../env.js";
 import { requireAuth } from "../auth/guards.js";
@@ -40,17 +38,15 @@ export async function seguimentoRoutes(app: FastifyInstance) {
 
     // F-01 — checklist verde/vermelho + estado dos lembretes do projecto
     priv.get<{ Params: { id: string } }>("/api/projects/:id/tracking", async (req, reply) => {
-      const project = await prisma.project.findUnique({
-        where: { id: req.params.id },
-        include: { program: true },
-      });
+      const project = await prisma.project.findUnique({ where: { id: req.params.id } });
       if (!project) return reply.code(404).send({ error: "Projeto não encontrado." });
 
-      // tipos aplicáveis ao programa (taxonomia §6) + checklist do projecto
-      const applicable = documentTypesForProgram(
-        project.program.code as ProgramParam,
-      ).map((d) => d.key);
-      const docTypes = await prisma.documentType.findMany({ where: { key: { in: applicable } } });
+      // pedidos de recolha do projecto — fonte da checklist (TRNSF-1069).
+      const links = await prisma.collectionLink.findMany({
+        where: { projectId: project.id },
+        include: { reminders: { orderBy: { attemptNo: "asc" } } },
+        orderBy: { createdAt: "desc" },
+      });
 
       // TRNSF-1050 — o estado da checklist é DERIVADO dos documentos do projecto,
       // para refletir sempre a realidade: arquivado → VALIDADO (verde); na fila
@@ -70,6 +66,20 @@ export async function seguimentoRoutes(app: FastifyInstance) {
         docsByType.set(typeId, arr);
       }
 
+      // TRNSF-1069 — a checklist mostra SÓ os documentos pedidos (união dos
+      // requestedKeys dos pedidos), mais os tipos que já chegaram (para não
+      // esconder o que foi recebido). Sem pedidos nem documentos, fica vazia.
+      const checklistKeys = new Set<string>();
+      for (const l of links) for (const k of l.requestedKeys) checklistKeys.add(k);
+      const docTypeIds = [...docsByType.keys()];
+      const typesFromDocs = docTypeIds.length
+        ? await prisma.documentType.findMany({ where: { id: { in: docTypeIds } } })
+        : [];
+      for (const dt of typesFromDocs) checklistKeys.add(dt.key);
+      const docTypes = checklistKeys.size
+        ? await prisma.documentType.findMany({ where: { key: { in: [...checklistKeys] } } })
+        : [];
+
       const tracking: TrackingItemDTO[] = docTypes.map((dt) => {
         const typeDocs = docsByType.get(dt.id) ?? [];
         const status = deriveChecklistStatus(typeDocs.map((d) => d.status));
@@ -84,12 +94,7 @@ export async function seguimentoRoutes(app: FastifyInstance) {
         };
       });
 
-      // pedidos de recolha + estado dos lembretes
-      const links = await prisma.collectionLink.findMany({
-        where: { projectId: project.id },
-        include: { reminders: { orderBy: { attemptNo: "asc" } } },
-        orderBy: { createdAt: "desc" },
-      });
+      // estado dos lembretes por pedido
       const receivedKeys = new Set(
         tracking.filter((t) => t.delivered).map((t) => t.documentTypeKey),
       );
