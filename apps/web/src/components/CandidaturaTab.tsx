@@ -174,6 +174,9 @@ export function CandidaturaTab({ projectId }: { projectId: string }) {
             <span className="deadline-sub">
               {sec.total === 0 ? "sem dados ainda" : `${sec.finalised}/${sec.total}`}
             </span>
+            {sec.key === "beneficiario" && (
+              <BeneficiarioImportButton projectId={projectId} onImported={reload} />
+            )}
           </div>
           {sec.total === 0 ? (
             <p className="cand-empty">
@@ -282,5 +285,47 @@ function FieldRow({
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * Botão de importação da identificação do beneficiário a partir do NIF da
+ * empresa (TRNSF-1061). Chama os adaptadores nif.pt + VIES (via API) e recarrega
+ * a secção; os campos entram como `por_validar` para o consultor validar.
+ */
+function BeneficiarioImportButton({
+  projectId,
+  onImported,
+}: {
+  projectId: string;
+  onImported: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+
+  async function importar() {
+    setBusy(true);
+    setMsg(null);
+    setErro(null);
+    try {
+      const res = await api.importBeneficiario(projectId);
+      setMsg(res.mensagem);
+      onImported();
+    } catch (e) {
+      setErro(e instanceof ApiError ? e.message : "Falha ao importar.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 8, marginLeft: "auto" }}>
+      {msg && <span className="deadline-sub">{msg}</span>}
+      {erro && <span className="login-error">{erro}</span>}
+      <button className="btn btn-secondary" disabled={busy} onClick={importar}>
+        {busy ? "A importar…" : "Importar dados da empresa (NIF)"}
+      </button>
+    </span>
   );
 }
