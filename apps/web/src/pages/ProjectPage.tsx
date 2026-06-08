@@ -10,6 +10,7 @@ import { SeguimentoTab } from "../components/SeguimentoTab.js";
 import { CandidaturaTab } from "../components/CandidaturaTab.js";
 import { ExtracaoTab } from "../components/ExtracaoTab.js";
 import { PipelinePanel } from "../components/PipelinePanel.js";
+import { FaseAcoesPanel } from "../components/FaseAcoesPanel.js";
 import { ProjectDeadlines } from "../components/ProjectDeadlines.js";
 import { EditProjectModal } from "../components/EditProjectModal.js";
 
@@ -68,6 +69,15 @@ export function ProjectPage() {
 
       {/* Pipeline em linguagem de cliente (TRNSF-963) */}
       {pipe && <PipelinePanel pipe={pipe} faseSelecionada={faseAtual} onSelect={selectFase} />}
+
+      {/* Ações de transição da cauda da Candidatura (TRNSF-1067), só na fase atual */}
+      {pipe && faseAtual === pipe.faseAtual && (
+        <FaseAcoesPanel
+          projectId={id}
+          faseAtual={faseAtual}
+          onChanged={() => { setFaseSel(null); setVista(null); reload(); reloadPipe(); }}
+        />
+      )}
 
       {/* Vistas da fase selecionada */}
       <div className="tabs">

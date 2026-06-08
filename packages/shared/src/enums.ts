@@ -21,8 +21,11 @@ export function canManageUsers(role: Role): boolean {
 }
 
 /**
- * Estados de um projeto (spec §8). A0–A4 = Fase A (candidatura/diagnóstico);
- * B0–B2 = Fase B (execução).
+ * Estados de um projeto (spec §8; reestruturado em TRNSF-1067 · 2b).
+ * A0–A6 = bloco Candidatura; B0–B2 = bloco Execução.
+ * A cauda da Candidatura passou a incluir Análise (A5) e Alegações contrárias
+ * (A6). A "Decisão" deixou de ser uma fase: é o gate de A5 → Execução (B0,
+ * Termo de aceitação) ou → Alegações (A6). A Execução só arranca com a aprovação.
  */
 export const PROJECT_STATES = [
   "A0",
@@ -30,6 +33,8 @@ export const PROJECT_STATES = [
   "A2",
   "A3",
   "A4",
+  "A5",
+  "A6",
   "B0",
   "B1",
   "B2",
@@ -46,7 +51,9 @@ export const PROJECT_STATE_LABELS: Record<ProjectState, string> = {
   A2: "A2 · Preparação",
   A3: "A3 · Revisão",
   A4: "A4 · Submissão",
-  B0: "B0 · Arranque",
+  A5: "A5 · Análise",
+  A6: "A6 · Alegações contrárias",
+  B0: "B0 · Termo de aceitação",
   B1: "B1 · Execução",
   B2: "B2 · Encerramento",
   ENCERRADO: "Não prosseguiu",
@@ -73,7 +80,12 @@ const STATE_TO_COLUMN: Record<ProjectState, KanbanColumn> = {
   A2: "Em preparação",
   A3: "Em preparação",
   A4: "Aprovado",
-  B0: "Aprovado",
+  // Cauda da Candidatura (TRNSF-1067): submetida/em análise e alegações ficam no
+  // grupo "Aprovado" deste kanban legado.
+  A5: "Aprovado",
+  A6: "Aprovado",
+  // Execução arranca no Termo de aceitação (B0).
+  B0: "Execução",
   B1: "Execução",
   B2: "Encerramento",
   ENCERRADO: "Não prosseguiu",
