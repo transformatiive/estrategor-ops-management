@@ -6,6 +6,8 @@ import type {
   MeritGridData,
   BeneficiarioImportDTO,
   CandidaturaDTO,
+  CandContextSourceDTO,
+  CandContextKind,
   CandFieldDTO,
   CandFamily,
   ChecklistItemDTO,
@@ -431,6 +433,16 @@ export const api = {
     post<{ ok: boolean; state: string }>(`/api/projects/${id}/candidatura/decisao`, { resultado }),
   concluirAlegacoes: (id: string) =>
     post<{ ok: boolean; state: string }>(`/api/projects/${id}/candidatura/alegacoes/concluir`, {}),
+
+  // fontes de contexto da Preparação (TRNSF-1068)
+  contexto: (id: string) =>
+    get<{ sources: CandContextSourceDTO[] }>(`/api/projects/${id}/candidatura/contexto`),
+  addContexto: (
+    id: string,
+    body: { kind: CandContextKind; label?: string; content?: string; documentId?: string },
+  ) => post<CandContextSourceDTO>(`/api/projects/${id}/candidatura/contexto`, body),
+  removeContexto: (id: string, sourceId: string) =>
+    del<{ ok: boolean }>(`/api/projects/${id}/candidatura/contexto/${sourceId}`),
 
   // motor de extração de dados (TRNSF-952)
   extracoes: (id: string) =>

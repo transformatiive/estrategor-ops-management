@@ -13,6 +13,7 @@ import { avisosRoutes } from "./routes/avisos.js";
 import { documentosRoutes } from "./routes/documentos.js";
 import { seguimentoRoutes } from "./routes/seguimento.js";
 import { candidaturaRoutes } from "./routes/candidatura.js";
+import { contextoRoutes } from "./routes/contexto.js";
 import { beneficiarioRoutes } from "./routes/beneficiario.js";
 import { catalogosRoutes } from "./routes/catalogos.js";
 import { extracaoRoutes } from "./routes/extracao.js";
@@ -64,6 +65,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(documentosRoutes);
   await app.register(seguimentoRoutes);
   await app.register(candidaturaRoutes);
+  await app.register(contextoRoutes);
   await app.register(beneficiarioRoutes);
   await app.register(catalogosRoutes);
   await app.register(deadlinesRoutes);

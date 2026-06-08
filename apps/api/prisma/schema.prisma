@@ -139,6 +139,7 @@ model User {
   validatedGeneratedFields GeneratedField[] @relation("ValidatedGeneratedFields")
   createdMeritGrids  MeritGrid[]       @relation("CreatedMeritGrids")
   revisoesInternas   RevisaoInterna[]  @relation("RevisoesInternas")
+  contextSources     CandContextSource[] @relation("ContextSources")
 
   @@map("users")
 }
@@ -366,6 +367,7 @@ model Document {
   parts          Document[]      @relation("DocumentSplits")
   extracao       Extracao?
   blob           DocumentBlob?
+  contextSources CandContextSource[]
 
   @@index([projectId])
   @@index([collectionLinkId])
@@ -639,8 +641,32 @@ model Candidatura {
   extracoes       Extracao[]
   generatedFields GeneratedField[]
   verificacoes    Verificacao[]
+  contextSources  CandContextSource[]
 
   @@map("candidaturas")
+}
+
+// ─── Fontes de contexto da Preparação (TRNSF-1068 · item 1) ──────────────────
+// O consultor junta fontes descritivas (texto colado de emails, descrição do
+// projeto, candidaturas anteriores, memória descritiva, mapas) que alimentam o
+// motor de geração da candidatura ("CONTEXTO E PRECEDENTES"). Quando a fonte é
+// um documento, o `content` guarda o texto extraído (PDF/Excel) na altura.
+model CandContextSource {
+  id            String   @id @default(cuid())
+  candidaturaId String   @map("candidatura_id")
+  kind          String // texto | email | precedente | documento
+  label         String
+  content       String   @db.Text
+  documentId    String?  @map("document_id")
+  createdById   String?  @map("created_by_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  candidatura Candidatura @relation(fields: [candidaturaId], references: [id], onDelete: Cascade)
+  document    Document?   @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  createdBy   User?       @relation("ContextSources", fields: [createdById], references: [id])
+
+  @@index([candidaturaId])
+  @@map("cand_context_sources")
 }
 
 // ─── Revisão interna (TRNSF-947) ─────────────────────────────────────────
