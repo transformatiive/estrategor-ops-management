@@ -46,8 +46,10 @@ export async function generateText(
   def: GenDocTypeDef,
   sources: GenSources,
   maxChars?: number,
-): Promise<{ conteudo: string; viaIa: boolean }> {
-  if (!env.OPENROUTER_API_KEY) return { conteudo: stubDraft(def), viaIa: false };
+): Promise<{ conteudo: string; viaIa: boolean; motivo?: string }> {
+  if (!env.OPENROUTER_API_KEY) {
+    return { conteudo: stubDraft(def), viaIa: false, motivo: "Sem OPENROUTER_API_KEY configurada." };
+  }
   try {
     const res = await fetch(`${env.OPENROUTER_BASE}/chat/completions`, {
       method: "POST",
@@ -65,12 +67,21 @@ export async function generateText(
         temperature: 0.3,
       }),
     });
-    if (!res.ok) throw new Error(`OpenRouter ${res.status}`);
+    if (!res.ok) {
+      // Inclui o corpo da resposta no motivo (ex.: "model not found", créditos)
+      // para diagnosticar em vez de cair em silêncio no rascunho-stub.
+      const body = await res.text().catch(() => "");
+      throw new Error(`OpenRouter ${res.status}${body ? `: ${body.slice(0, 300)}` : ""}`);
+    }
     const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
     const text = json.choices?.[0]?.message?.content?.trim();
-    if (!text) throw new Error("resposta vazia");
+    if (!text) throw new Error("OpenRouter devolveu resposta vazia.");
     return { conteudo: text, viaIa: true };
-  } catch {
-    return { conteudo: stubDraft(def), viaIa: false };
+  } catch (err) {
+    return {
+      conteudo: stubDraft(def),
+      viaIa: false,
+      motivo: err instanceof Error ? err.message : String(err),
+    };
   }
 }

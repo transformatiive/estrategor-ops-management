@@ -348,6 +348,10 @@ export interface GeneratedFieldDTO {
   /** n.º de marcadores [A PREENCHER: ...] por resolver */
   placeholders: number;
   versao: number;
+  /** (só na resposta de geração) usou mesmo o motor de IA? */
+  viaIa?: boolean;
+  /** (só na resposta de geração) motivo quando caiu no rascunho-stub */
+  motivo?: string | null;
 }
 
 export interface CandidaturaGeracaoDTO {

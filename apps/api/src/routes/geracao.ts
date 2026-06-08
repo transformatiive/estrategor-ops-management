@@ -29,6 +29,14 @@ export async function geracaoRoutes(app: FastifyInstance) {
     if (!parsed.success) return reply.code(400).send({ error: "docType em falta." });
     try {
       const field = await generateField(req.params.id, parsed.data.docType, req.user!.id);
+      // Sem motor de IA / falha do OpenRouter: cai no rascunho-stub. Em vez de
+      // silêncio, regista o motivo (visível nos logs) e devolve-o ao cliente.
+      if (field.viaIa === false) {
+        app.log.warn(
+          { docType: parsed.data.docType, motivo: field.motivo },
+          "Geração de minuta sem IA (rascunho-stub)",
+        );
+      }
       return field;
     } catch (e) {
       if (e instanceof GenerationError) {

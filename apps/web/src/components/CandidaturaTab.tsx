@@ -161,9 +161,6 @@ export function CandidaturaTab({ projectId }: { projectId: string }) {
       {/* Verificador + Mérito (TRNSF-946) */}
       <VerificadorPanel projectId={projectId} />
 
-      {/* Exportação estruturada (TRNSF-954) */}
-      <ExportPanel projectId={projectId} />
-
       {/* Geração IA dos campos de texto (TRNSF-943) */}
       <GeracaoPanel projectId={projectId} onChanged={reload} />
 
@@ -189,6 +186,9 @@ export function CandidaturaTab({ projectId }: { projectId: string }) {
           )}
         </div>
       ))}
+
+      {/* Exportação estruturada (TRNSF-954) — último passo: depois do conteúdo */}
+      <ExportPanel projectId={projectId} />
     </div>
   );
 }
