@@ -9,11 +9,12 @@ import {
   type ProjectFoldersDTO,
   type ProjectListItemDTO,
 } from "@estrategor/shared";
-import { documentTypesForProgram, canManageUsers } from "@estrategor/shared";
+import { canManageUsers } from "@estrategor/shared";
 import { prisma } from "../db.js";
 import { requireAuth } from "../auth/guards.js";
 import { provisionProjectFolders } from "../workdrive/provision.js";
 import { runPreDiagnostico } from "../prediagnostico/engine.js";
+import { createProjectForClient } from "../projects/create.js";
 
 const createProjectSchema = z.object({
   title: z.string().min(1),
@@ -113,58 +114,34 @@ export async function projectRoutes(app: FastifyInstance) {
     const programRow = await prisma.program.findUnique({ where: { code: program } });
     if (!programRow) return reply.code(400).send({ error: `Programa ${program} não existe.` });
 
-    // código simples e único por ano (placeholder até integração CRM/aviso)
-    const year = new Date().getFullYear();
-    const seq = (await prisma.project.count()) + 1;
-    const code = `${program}-${year}-${String(seq).padStart(4, "0")}`;
+    // Cria o cliente e atribui responsáveis; a criação do projeto (código,
+    // checklist, ActivityLog, pastas) é o fluxo partilhado `createProjectForClient`.
+    const client = await prisma.client.create({ data: { name: clientName, nif: clientNif } });
 
-    const project = await prisma.$transaction(async (tx) => {
-      const client = await tx.client.create({ data: { name: clientName, nif: clientNif } });
-      const created = await tx.project.create({
-        data: {
-          code,
-          title,
-          clientId: client.id,
-          programId: programRow.id,
-          state: "A0",
-          measureLabel: program === "PT2030" ? (measureLabel?.trim() || null) : null,
-          responsibles: responsibleIds?.length
-            ? { create: responsibleIds.map((userId) => ({ userId })) }
-            : undefined,
-        },
-      });
-      // checklist a partir da taxonomia do programa (D-01)
-      const docTypes = documentTypesForProgram(program);
-      for (const dt of docTypes) {
-        const docType = await tx.documentType.findUnique({ where: { key: dt.key } });
-        if (docType) {
-          await tx.checklistItem.create({
-            data: { projectId: created.id, documentTypeId: docType.id, status: "EM_FALTA" },
-          });
-        }
-      }
-      await tx.activityLog.create({
-        data: { projectId: created.id, userId: req.user!.id, type: "project_create", description: `Criou o projecto ${title}.` },
-      });
-      return created;
+    const project = await createProjectForClient(app, {
+      clientId: client.id,
+      programId: programRow.id,
+      programCode: program,
+      title,
+      state: "A0",
+      userId: req.user!.id,
+      measureLabel,
     });
 
-    // provisiona pastas (idempotente); não bloqueia a criação se falhar
-    let foldersError: string | null = null;
-    try {
-      await provisionProjectFolders(project.id, measureLabel);
-    } catch (e) {
-      foldersError = e instanceof Error ? e.message : String(e);
-      app.log.error({ err: e }, "Falha ao provisionar pastas");
+    if (responsibleIds?.length) {
+      await prisma.projectResponsible.createMany({
+        data: responsibleIds.map((userId) => ({ projectId: project.id, userId })),
+        skipDuplicates: true,
+      });
     }
 
     // TRNSF-967 — pré-diagnóstico em segundo plano se o cliente tiver NIF.
     // Não bloqueia a criação; tolerante a falhas.
     if (clientNif?.trim()) {
-      runPreDiagnostico(project.id).catch((e) => app.log.error({ err: e }, "pré-diagnóstico falhou"));
+      runPreDiagnostico({ projectId: project.id }).catch((e) => app.log.error({ err: e }, "pré-diagnóstico falhou"));
     }
 
-    return reply.code(201).send({ id: project.id, code: project.code, foldersError });
+    return reply.code(201).send({ id: project.id, code: project.code, foldersError: project.foldersError });
   });
 
   // B-01 — lista de projetos com fase atual

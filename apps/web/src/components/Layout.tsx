@@ -12,6 +12,7 @@ interface NavItem {
 
 const GERAL: NavItem[] = [
   { to: "/dashboard", label: "Dashboard" },
+  { to: "/analise", label: "Análise" },
   { to: "/projetos", label: "Projectos" },
   { to: "/prazos", label: "Prazos" },
   { to: "/tarefas", label: "Tarefas" },

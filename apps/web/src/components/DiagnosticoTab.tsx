@@ -311,7 +311,7 @@ export function DiagnosticoTab({
 
       {/* ── Pré-diagnóstico assistido por IA (TRNSF-967) — recolhe dados da
            empresa e importa a elegibilidade do aviso (TRNSF-1034) ── */}
-      <PreDiagnosticoPanel projectId={projectId} onConcluido={reload} />
+      <PreDiagnosticoPanel owner={{ projectId }} onConcluido={reload} />
 
       {/* ── Elegibilidade do aviso (admin) — depois do pré-diagnóstico, que a
            propõe automaticamente; aqui revê-se e valida-se ── */}

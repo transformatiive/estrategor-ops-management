@@ -166,6 +166,7 @@ model Client {
   crmDealId         String?   @unique @map("crm_deal_id")
   createdAt         DateTime  @default(now()) @map("created_at")
   projects          Project[]
+  leads             Lead[]
 
   @@map("clients")
 }
@@ -177,8 +178,33 @@ model Program {
   projects    Project[]
   diagnostics Diagnostic[]
   avisos      Aviso[]
+  leads       Lead[]
 
   @@map("programs")
+}
+
+// ─── Lead / Análise (pré-projeto) ────────────────────────────────────────────
+// Qualificação de lead antes de existir um Project. Corre-se o pré-diagnóstico
+// na Lead (reutilizando o motor); ao "Qualificar" materializa-se um Project que
+// arranca na fase de Recolha (A1).
+model Lead {
+  id        String   @id @default(cuid())
+  clientId  String   @map("client_id")
+  programId String   @map("program_id")
+  // analise | qualificada | rejeitada
+  estado    String   @default("analise")
+  // preenchido quando a lead é materializada num projeto
+  projectId String?  @unique @map("project_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  client         Client          @relation(fields: [clientId], references: [id])
+  program        Program         @relation(fields: [programId], references: [id])
+  project        Project?        @relation("LeadProject", fields: [projectId], references: [id])
+  preDiagnostico PreDiagnostico?
+
+  @@index([clientId])
+  @@map("leads")
 }
 
 // ─── Épico B — Base da Aplicação ─────────────────────────────────────────
@@ -216,6 +242,7 @@ model Project {
   candidatura      Candidatura?
   preDiagnostico   PreDiagnostico?
   revisoesInternas RevisaoInterna[]
+  lead             Lead?            @relation("LeadProject")
 
   @@index([clientId])
   @@index([programId])
@@ -494,7 +521,9 @@ model Diagnostic {
 // contextual). NADA tem efeito sem validação humana. 1:1 com o projeto.
 model PreDiagnostico {
   id        String   @id @default(cuid())
-  projectId String   @unique @map("project_id")
+  // Um pré-diagnóstico pertence a UM projeto OU a UMA lead (pré-projeto).
+  projectId String?  @unique @map("project_id")
+  leadId    String?  @unique @map("lead_id")
   // pendente | concluido | falhou
   estado    String   @default("pendente")
   // estado por faixa: pendente | ok | falhou | sem_chave
@@ -517,7 +546,8 @@ model PreDiagnostico {
   executadoEm       DateTime? @map("executado_em")
   createdAt         DateTime  @default(now()) @map("created_at")
 
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  lead    Lead?    @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
   @@map("pre_diagnosticos")
 }

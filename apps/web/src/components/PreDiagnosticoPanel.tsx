@@ -42,8 +42,25 @@ function emBullets(texto: string): string[] {
  * Rascunho com proveniência e fonte por campo; corrigível campo a campo.
  * Enquanto não validado, NÃO tem efeito (não altera estado nem elegibilidade).
  */
-export function PreDiagnosticoPanel({ projectId, onConcluido }: { projectId: string; onConcluido?: () => void }) {
-  const { data, reload } = useAsync<PreDiagnosticoDTO>(() => api.prediagnostico(projectId), [projectId]);
+/**
+ * Dono do pré-diagnóstico: um projeto (fluxo legado, Diagnóstico A0) ou uma lead
+ * (pré-projeto, secção Análise). Determina os endpoints usados.
+ */
+export type PreDiagOwner = { projectId: string } | { leadId: string };
+
+const ownerId = (o: PreDiagOwner) => ("projectId" in o ? o.projectId : o.leadId);
+const fetchPreDiag = (o: PreDiagOwner) =>
+  "projectId" in o ? api.prediagnostico(o.projectId) : api.leadPrediagnostico(o.leadId);
+const runPreDiag = (o: PreDiagOwner) =>
+  "projectId" in o ? api.runPrediagnostico(o.projectId) : api.runLeadPrediagnostico(o.leadId);
+const updatePreDiagCampo = (
+  o: PreDiagOwner,
+  body: { key: string; value?: string | number | null; action: "validar" | "corrigir" },
+) => ("projectId" in o ? api.updatePrediagCampo(o.projectId, body) : api.updateLeadPrediagCampo(o.leadId, body));
+
+export function PreDiagnosticoPanel({ owner, onConcluido }: { owner: PreDiagOwner; onConcluido?: () => void }) {
+  const id = ownerId(owner);
+  const { data, reload } = useAsync<PreDiagnosticoDTO>(() => fetchPreDiag(owner), [id]);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -85,7 +102,7 @@ export function PreDiagnosticoPanel({ projectId, onConcluido }: { projectId: str
     <div className="card" style={{ marginBottom: 16, maxWidth: 820 }}>
       <div className="section-header" style={{ marginBottom: 8 }}>
         <div className="section-title" style={{ fontSize: 15 }}>Pré-diagnóstico assistido por IA</div>
-        <button className="btn btn-secondary" disabled={busy || aCorrer} onClick={() => run(() => api.runPrediagnostico(projectId))}>
+        <button className="btn btn-secondary" disabled={busy || aCorrer} onClick={() => run(() => runPreDiag(owner))}>
           {aCorrer ? "A analisar…" : inexistente ? "Correr pré-diagnóstico" : "Recorrer"}
         </button>
       </div>
@@ -152,7 +169,7 @@ export function PreDiagnosticoPanel({ projectId, onConcluido }: { projectId: str
 
           {/* Campos pré-preenchidos com proveniência */}
           {data.campos.map((c) => (
-            <CampoRow key={c.key} projectId={projectId} campo={c} onChanged={reload} />
+            <CampoRow key={c.key} owner={owner} campo={c} onChanged={reload} />
           ))}
           {data.campos.length === 0 && <p className="cand-empty">Sem campos pré-preenchidos.</p>}
 
@@ -198,7 +215,7 @@ export function PreDiagnosticoPanel({ projectId, onConcluido }: { projectId: str
   );
 }
 
-function CampoRow({ projectId, campo, onChanged }: { projectId: string; campo: PreDiagCampo; onChanged: () => void }) {
+function CampoRow({ owner, campo, onChanged }: { owner: PreDiagOwner; campo: PreDiagCampo; onChanged: () => void }) {
   const [editing, setEditing] = useState(false);
   const [val, setVal] = useState(String(campo.value ?? ""));
   const [busy, setBusy] = useState(false);
@@ -212,7 +229,7 @@ function CampoRow({ projectId, campo, onChanged }: { projectId: string; campo: P
   async function corrigir() {
     setBusy(true);
     try {
-      await api.updatePrediagCampo(projectId, { key: campo.key, action: "corrigir", value: val });
+      await updatePreDiagCampo(owner, { key: campo.key, action: "corrigir", value: val });
       setEditing(false);
       onChanged();
     } finally { setBusy(false); }

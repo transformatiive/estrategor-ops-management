@@ -19,29 +19,45 @@ const CHECKLIST_BASE: ChecklistAConfirmar[] = [
 ];
 
 /**
+ * Dono do pré-diagnóstico: ou um projeto (fluxo legado) ou uma lead (pré-projeto,
+ * TRNSF Lead/Análise). O motor é agnóstico ao dono; resolve o cliente/NIF a partir
+ * dele e grava/lê o PreDiagnostico via `where: owner`.
+ */
+export type PreDiagOwner = { projectId: string } | { leadId: string };
+
+/**
  * Corre o pré-diagnóstico (TRNSF-967) em segundo plano, tolerante a falhas por
  * faixa. Nunca decide elegibilidade; tudo entra como rascunho com proveniência.
+ * Aceita como dono um projeto OU uma lead (pré-projeto).
  */
-export async function runPreDiagnostico(projectId: string): Promise<void> {
-  const project = await prisma.project.findUnique({ where: { id: projectId }, include: { client: true } });
-  if (!project) return;
-  const nif = project.client.nif?.trim();
+export async function runPreDiagnostico(owner: PreDiagOwner): Promise<void> {
+  // Resolve o cliente/NIF a partir do dono (projeto ou lead).
+  let nif: string | undefined;
+  if ("projectId" in owner) {
+    const project = await prisma.project.findUnique({ where: { id: owner.projectId }, include: { client: true } });
+    if (!project) return;
+    nif = project.client.nif?.trim();
+  } else {
+    const lead = await prisma.lead.findUnique({ where: { id: owner.leadId }, include: { client: true } });
+    if (!lead) return;
+    nif = lead.client.nif?.trim();
+  }
 
   // Arranca tudo pendente e mostra já a checklist de linha vermelha (visível de
   // imediato). Em re-execução, limpa campos/fontes anteriores.
   await prisma.preDiagnostico.upsert({
-    where: { projectId },
+    where: owner,
     update: {
       estado: "pendente", estadoVies: "pendente", estadoApiEmpresas: "pendente", estadoSonar: "pendente", estadoSonnet: "pendente",
       estadoElegibilidade: "pendente", elegibilidadeDetalhe: null,
       campos: [] as object, fontesSonar: [] as object, checklistAConfirmar: CHECKLIST_BASE as object, executadoEm: null,
     },
-    create: { projectId, estado: "pendente", checklistAConfirmar: CHECKLIST_BASE as object },
+    create: { ...owner, estado: "pendente", checklistAConfirmar: CHECKLIST_BASE as object },
   });
 
   if (!nif) {
     await prisma.preDiagnostico.update({
-      where: { projectId },
+      where: owner,
       data: { estado: "falhou", estadoVies: "falhou", estadoApiEmpresas: "falhou", estadoSonar: "falhou", estadoSonnet: "falhou", estadoElegibilidade: "indisponivel", checklistAConfirmar: CHECKLIST_BASE as object, executadoEm: new Date() },
     });
     return;
@@ -56,7 +72,7 @@ export async function runPreDiagnostico(projectId: string): Promise<void> {
     if (vies.morada) campos.push({ key: "morada", label: "Morada", value: vies.morada, origem: "oficial_vies", estado: "validado", fonte: "VIES (Comissão Europeia)" });
   }
   await prisma.preDiagnostico.update({
-    where: { projectId },
+    where: owner,
     data: { estadoVies: vies.estado, campos: campos as object, brutoVies: vies.bruto as object },
   });
 
@@ -78,14 +94,14 @@ export async function runPreDiagnostico(projectId: string): Promise<void> {
     if (emp.distrito) campos.push({ key: "distrito", label: "Distrito", value: emp.distrito, origem: "api_empresas", estado: "por_validar", fonte: "nif.pt" });
   }
   await prisma.preDiagnostico.update({
-    where: { projectId },
+    where: owner,
     data: { estadoApiEmpresas: emp.estado, campos: campos as object, brutoApiEmpresas: emp.bruto as object },
   });
 
   // Faixa C (recolha) — Sonar (contexto + fontes)
   const sonar = await consultarSonar(nif, vies.nome);
   await prisma.preDiagnostico.update({
-    where: { projectId },
+    where: owner,
     data: { estadoSonar: sonar.estado, fontesSonar: sonar.fontes as object },
   });
 
@@ -103,7 +119,14 @@ export async function runPreDiagnostico(projectId: string): Promise<void> {
   // Importa como PROPOSTA (por_validar); não sobrescreve uma já validada.
   let estadoElegibilidade: FaixaEstado = "indisponivel";
   let elegibilidadeDetalhe: string | null = "Sem aviso escolhido — escolha o aviso para importar a elegibilidade.";
-  const diag = await prisma.diagnostic.findUnique({ where: { projectId }, select: { meritGridId: true, avisoConfirmado: true } });
+  // Faixa D só se aplica a projetos (há Diagnostic/aviso). Numa lead (pré-projeto)
+  // ainda não existe aviso escolhido, por isso fica indisponível.
+  const diag = "projectId" in owner
+    ? await prisma.diagnostic.findUnique({ where: { projectId: owner.projectId }, select: { meritGridId: true, avisoConfirmado: true } })
+    : null;
+  if (!("projectId" in owner)) {
+    elegibilidadeDetalhe = "Elegibilidade do aviso analisa-se já no projeto (após qualificar).";
+  }
   if (diag?.avisoConfirmado && diag.meritGridId) {
     const grid = await prisma.meritGrid.findUnique({ where: { id: diag.meritGridId }, select: { id: true, fonteUrl: true, eligibilidade: true } });
     const eligRaw = (grid?.eligibilidade ?? null) as { estado?: string } | null;
@@ -129,7 +152,7 @@ export async function runPreDiagnostico(projectId: string): Promise<void> {
   const algumaOk = [vies.estado, emp.estado, sonar.estado, sonnet.estado].includes("ok");
 
   await prisma.preDiagnostico.update({
-    where: { projectId },
+    where: owner,
     data: {
       estado: algumaOk ? "concluido" : "falhou",
       estadoSonnet: sonnet.estado,
@@ -141,18 +164,23 @@ export async function runPreDiagnostico(projectId: string): Promise<void> {
     },
   });
 
-  // Notifica a consultora responsável (vista no Diagnóstico)
-  await prisma.activityLog.create({
-    data: {
-      projectId,
-      type: "pre_diagnostico",
-      description: algumaOk ? "Pré-diagnóstico pronto para validação." : "Pré-diagnóstico falhou em todas as faixas.",
-    },
-  });
+  // Notifica a consultora responsável (vista no Diagnóstico). ActivityLog está
+  // ligado a um projeto; numa lead (pré-projeto) ainda não há projeto, por isso
+  // só regista quando o dono é um projeto.
+  if ("projectId" in owner) {
+    await prisma.activityLog.create({
+      data: {
+        projectId: owner.projectId,
+        type: "pre_diagnostico",
+        description: algumaOk ? "Pré-diagnóstico pronto para validação." : "Pré-diagnóstico falhou em todas as faixas.",
+      },
+    });
+  }
 }
 
 type Row = {
-  projectId: string;
+  projectId: string | null;
+  leadId: string | null;
   estado: string;
   estadoVies: string;
   estadoApiEmpresas: string;
@@ -183,9 +211,10 @@ function razaoFalha(bruto: unknown): string | null {
   return null;
 }
 
-function toDTO(row: Row): PreDiagnosticoDTO {
+function toDTO(row: Row, owner: PreDiagOwner): PreDiagnosticoDTO {
   return {
-    projectId: row.projectId,
+    // Identificador do dono (projeto ou lead) — usado só como referência no DTO.
+    projectId: "projectId" in owner ? owner.projectId : owner.leadId,
     estado: row.estado as PreDiagnosticoDTO["estado"],
     faixas: {
       vies: row.estadoVies as FaixaEstado,
@@ -206,22 +235,23 @@ function toDTO(row: Row): PreDiagnosticoDTO {
   };
 }
 
-export async function buildPreDiagnosticoDTO(projectId: string): Promise<PreDiagnosticoDTO> {
-  const row = await prisma.preDiagnostico.findUnique({ where: { projectId } });
+export async function buildPreDiagnosticoDTO(owner: PreDiagOwner): Promise<PreDiagnosticoDTO> {
+  const ownerId = "projectId" in owner ? owner.projectId : owner.leadId;
+  const row = await prisma.preDiagnostico.findUnique({ where: owner });
   if (!row) {
-    return { projectId, estado: "inexistente", faixas: { vies: "pendente", apiEmpresas: "pendente", sonar: "pendente", sonnet: "pendente", elegibilidade: "pendente" }, campos: [], checklistAConfirmar: [], fontesSonar: [], executadoEm: null };
+    return { projectId: ownerId, estado: "inexistente", faixas: { vies: "pendente", apiEmpresas: "pendente", sonar: "pendente", sonnet: "pendente", elegibilidade: "pendente" }, campos: [], checklistAConfirmar: [], fontesSonar: [], executadoEm: null };
   }
-  return toDTO(row as unknown as Row);
+  return toDTO(row as unknown as Row, owner);
 }
 
 /** Validar/corrigir um campo do pré-diagnóstico (campo a campo). */
 export async function updatePreDiagCampo(
-  projectId: string,
+  owner: PreDiagOwner,
   key: string,
   action: "validar" | "corrigir",
   value: string | number | null | undefined,
 ): Promise<PreDiagnosticoDTO | null> {
-  const row = await prisma.preDiagnostico.findUnique({ where: { projectId } });
+  const row = await prisma.preDiagnostico.findUnique({ where: owner });
   if (!row) return null;
   const campos = Array.isArray(row.campos) ? (row.campos as unknown as PreDiagCampo[]) : [];
   const idx = campos.findIndex((c) => c.key === key);
@@ -230,6 +260,6 @@ export async function updatePreDiagCampo(
   campos[idx] = action === "corrigir"
     ? { ...campo, value: value ?? null, estado: "corrigido" }
     : { ...campo, estado: "validado" };
-  await prisma.preDiagnostico.update({ where: { projectId }, data: { campos: campos as object } });
-  return buildPreDiagnosticoDTO(projectId);
+  await prisma.preDiagnostico.update({ where: owner, data: { campos: campos as object } });
+  return buildPreDiagnosticoDTO(owner);
 }
