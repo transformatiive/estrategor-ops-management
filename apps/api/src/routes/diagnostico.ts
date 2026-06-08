@@ -497,10 +497,11 @@ export async function diagnosticoRoutes(app: FastifyInstance) {
       }
 
       // Região efetiva para a sugestão: a escolhida pelo consultor; na ausência,
-      // a sugerida a partir da localização validada da empresa (NUTS II → matriz
-      // da grelha), para a IA resolver as opções regionais de A.1. NÃO persiste
-      // `diag.regiao` — continua a ser uma sugestão que o consultor confirma ao
-      // guardar; só fica registada na própria proposta (`meritProposal.regiao`).
+      // a inferida a partir da localização validada da empresa (NUTS II → matriz
+      // da grelha). FIXAÇÃO (bug do score instável): persistimos a grelha e a
+      // região no diagnóstico, para que leituras e sugestões seguintes usem
+      // SEMPRE a mesma base e o MP não mude sem ação explícita. Com a região
+      // por fixar, o mesmo índice resolvia para pontuações diferentes (3.84↔2.93).
       let regiao = current?.regiao ?? null;
       if (!regiao) {
         const dados = await dadosAcessoDoProjeto(project.id);
@@ -517,11 +518,16 @@ export async function diagnosticoRoutes(app: FastifyInstance) {
           programId: project.programId,
           meritGridId: grid.id,
           gridVersion: grid.versao,
+          regiao,
           meritProposal: { selection, justificacoes, regiao } as object,
           meritProposalEstado: "por_validar",
           meritProposalNota: nota,
         },
         update: {
+          // Pin da grelha + região (evita re-resolução heurística na leitura).
+          meritGridId: grid.id,
+          gridVersion: grid.versao,
+          regiao,
           meritProposal: { selection, justificacoes, regiao } as object,
           meritProposalEstado: "por_validar",
           meritProposalNota: nota,
