@@ -90,11 +90,18 @@ export async function generateField(
 
   const sources = await gatherSources(cand.id, cand.family, cand.codigoAviso, projectId);
 
-  let { conteudo } = await generateText(def, sources);
+  const first = await generateText(def, sources);
+  let conteudo = first.conteudo;
+  let viaIa = first.viaIa;
+  let motivo = first.motivo;
   // limite de caracteres: se exceder, tenta regenerar mais curto (uma vez)
   if (conteudo.length > def.charLimit) {
     const retry = await generateText(def, sources, Math.floor(def.charLimit * 0.95));
-    if (retry.conteudo.length < conteudo.length) conteudo = retry.conteudo;
+    if (retry.conteudo.length < conteudo.length) {
+      conteudo = retry.conteudo;
+      viaIa = retry.viaIa;
+      motivo = retry.motivo;
+    }
   }
 
   const last = await prisma.generatedField.findFirst({
@@ -141,7 +148,7 @@ export async function generateField(
     });
   });
 
-  return toFieldDTO(def, "por_validar", conteudo, versao);
+  return { ...toFieldDTO(def, "por_validar", conteudo, versao), viaIa, motivo: motivo ?? null };
 }
 
 function toFieldDTO(

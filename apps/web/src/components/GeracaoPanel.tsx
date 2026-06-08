@@ -82,7 +82,15 @@ function GeracaoFieldRow({
     setBusy(true);
     setErr(null);
     try {
-      await api.gerarMinuta(projectId, field.docType);
+      const f = await api.gerarMinuta(projectId, field.docType);
+      // Distinguir "gerado pela IA" de "caiu no rascunho-stub" (sem motor /
+      // falha do OpenRouter) — antes era indistinguível e parecia não funcionar.
+      if (f.viaIa === false) {
+        setErr(
+          `Minuta inserida como rascunho (sem IA): ${f.motivo ?? "motor de IA indisponível"}. ` +
+            `Contém marcadores [A PREENCHER].`,
+        );
+      }
       onChanged();
     } catch (e) {
       setErr(e instanceof ApiError ? e.message : "Erro ao gerar.");

@@ -105,6 +105,16 @@ async function buildDTO(candidaturaId: string): Promise<CandidaturaDTO | null> {
     });
   }
 
+  // Ordenar pela numeração oficial do SGO da família (ex.: B mostrava
+  // "18. Declarações" antes de "1. Identificação"). As secções sem número
+  // (extras fora do catálogo) vão para o fim. Ordenação estável (TRNSF-1060).
+  const sgoSortKey = (ref: string | null): number => {
+    if (!ref) return Number.POSITIVE_INFINITY;
+    const n = parseFloat(ref);
+    return Number.isNaN(n) ? Number.POSITIVE_INFINITY : n;
+  };
+  sections.sort((a, b) => sgoSortKey(a.sgoRef) - sgoSortKey(b.sgoRef));
+
   const pendingValidation = (cand.fields as FieldRow[]).filter(
     (f) => !isFieldFinal(f.origin, f.state),
   ).length;

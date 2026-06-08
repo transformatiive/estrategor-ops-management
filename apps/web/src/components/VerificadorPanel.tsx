@@ -15,6 +15,7 @@ export function VerificadorPanel({ projectId }: { projectId: string }) {
   const { data, loading, error, reload } = useAsync<VerificacaoDTO>(() => api.verificacao(projectId), [projectId]);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [ok, setOk] = useState<string | null>(null);
 
   if (loading) return null;
   if (error) return <ErrorState error={error} onRetry={reload} />;
@@ -23,8 +24,18 @@ export function VerificadorPanel({ projectId }: { projectId: string }) {
   async function verificar() {
     setBusy(true);
     setMsg(null);
+    setOk(null);
     try {
-      await api.verificar(projectId);
+      const r = await api.verificar(projectId);
+      // Feedback explícito: sem isto, uma verificação determinística que dá o
+      // mesmo resultado re-renderizava igual e parecia "não fazer nada".
+      const nErros = r.naoConformidades.filter((n) => n.gravidade === "erro").length;
+      const nAvisos = r.naoConformidades.filter((n) => n.gravidade === "aviso").length;
+      setOk(
+        nErros === 0 && nAvisos === 0
+          ? "✓ Verificação concluída — sem não-conformidades."
+          : `✓ Verificação concluída — ${nErros} erro(s), ${nAvisos} aviso(s).`,
+      );
       reload();
     } catch (e) {
       setMsg(e instanceof ApiError ? e.message : "Erro ao verificar.");
@@ -60,6 +71,7 @@ export function VerificadorPanel({ projectId }: { projectId: string }) {
         {data.criadoEm && <span className="deadline-sub">última verificação: {new Date(data.criadoEm).toLocaleString("pt-PT")}</span>}
       </div>
       {msg && <div className="login-error" style={{ marginTop: 8 }}>{msg}</div>}
+      {ok && <div className="deadline-sub" style={{ marginTop: 8, color: "var(--green, #16a34a)" }}>{ok}</div>}
 
       {/* Critérios de seleção (A.20 / B.16) — vista só-de-leitura do mérito */}
       {data.mpPorCriterio.length > 0 && (
