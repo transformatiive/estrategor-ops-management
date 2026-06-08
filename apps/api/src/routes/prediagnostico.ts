@@ -20,7 +20,7 @@ export async function prediagnosticoRoutes(app: FastifyInstance) {
   app.get<{ Params: { id: string } }>("/api/projects/:id/prediagnostico", async (req, reply) => {
     const project = await prisma.project.findUnique({ where: { id: req.params.id } });
     if (!project) return reply.code(404).send({ error: "Projeto não encontrado." });
-    return buildPreDiagnosticoDTO(project.id);
+    return buildPreDiagnosticoDTO({ projectId: project.id });
   });
 
   // Correr (ou recorrer) o pré-diagnóstico em segundo plano
@@ -29,7 +29,7 @@ export async function prediagnosticoRoutes(app: FastifyInstance) {
     if (!project) return reply.code(404).send({ error: "Projeto não encontrado." });
     if (!project.client.nif) return reply.code(409).send({ error: "Cliente sem NIF — pré-diagnóstico não aplicável." });
     // não bloqueia: corre em segundo plano
-    runPreDiagnostico(project.id).catch((e) => app.log.error({ err: e }, "pré-diagnóstico falhou"));
+    runPreDiagnostico({ projectId: project.id }).catch((e) => app.log.error({ err: e }, "pré-diagnóstico falhou"));
     return { ok: true, estado: "pendente" };
   });
 
@@ -37,7 +37,31 @@ export async function prediagnosticoRoutes(app: FastifyInstance) {
   app.patch<{ Params: { id: string } }>("/api/projects/:id/prediagnostico/campo", async (req, reply) => {
     const parsed = campoSchema.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ error: "Dados inválidos." });
-    const dto = await updatePreDiagCampo(req.params.id, parsed.data.key, parsed.data.action, parsed.data.value);
+    const dto = await updatePreDiagCampo({ projectId: req.params.id }, parsed.data.key, parsed.data.action, parsed.data.value);
+    if (!dto) return reply.code(404).send({ error: "Campo ou pré-diagnóstico não encontrado." });
+    return dto;
+  });
+
+  // ── Rotas paralelas para a Lead (pré-projeto, Lead/Análise) ─────────────────
+  // Mesmo motor/DTO; o dono é a lead em vez do projeto.
+  app.get<{ Params: { id: string } }>("/api/leads/:id/prediagnostico", async (req, reply) => {
+    const lead = await prisma.lead.findUnique({ where: { id: req.params.id } });
+    if (!lead) return reply.code(404).send({ error: "Lead não encontrada." });
+    return buildPreDiagnosticoDTO({ leadId: lead.id });
+  });
+
+  app.post<{ Params: { id: string } }>("/api/leads/:id/prediagnostico/run", async (req, reply) => {
+    const lead = await prisma.lead.findUnique({ where: { id: req.params.id }, include: { client: true } });
+    if (!lead) return reply.code(404).send({ error: "Lead não encontrada." });
+    if (!lead.client.nif) return reply.code(409).send({ error: "Cliente sem NIF — pré-diagnóstico não aplicável." });
+    runPreDiagnostico({ leadId: lead.id }).catch((e) => app.log.error({ err: e }, "pré-diagnóstico falhou"));
+    return { ok: true, estado: "pendente" };
+  });
+
+  app.patch<{ Params: { id: string } }>("/api/leads/:id/prediagnostico/campo", async (req, reply) => {
+    const parsed = campoSchema.safeParse(req.body);
+    if (!parsed.success) return reply.code(400).send({ error: "Dados inválidos." });
+    const dto = await updatePreDiagCampo({ leadId: req.params.id }, parsed.data.key, parsed.data.action, parsed.data.value);
     if (!dto) return reply.code(404).send({ error: "Campo ou pré-diagnóstico não encontrado." });
     return dto;
   });

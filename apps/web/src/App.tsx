@@ -2,6 +2,7 @@ import { Navigate, Outlet, Route, Routes } from "react-router-dom";
 import { Layout } from "./components/Layout.js";
 import { Dashboard } from "./pages/Dashboard.js";
 import { Projetos } from "./pages/Projetos.js";
+import { Analise } from "./pages/Analise.js";
 import { ProjectPage } from "./pages/ProjectPage.js";
 import { Pt2030 } from "./pages/Pt2030.js";
 import { Prazos } from "./pages/Prazos.js";
@@ -40,6 +41,7 @@ export function App() {
         <Route element={<Layout />}>
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/analise" element={<Analise />} />
           <Route path="/projetos" element={<Projetos />} />
           <Route path="/projetos/:id" element={<ProjectPage />} />
           <Route path="/pt2030" element={<Pt2030 />} />

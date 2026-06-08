@@ -63,6 +63,9 @@ import type {
   NovoDeadline,
   ClientListItemDTO,
   ClientDetailDTO,
+  LeadDTO,
+  LeadListItemDTO,
+  CreateLeadRequest,
   AssignableUserDTO,
   SearchResultsDTO,
   UserDTO,
@@ -331,6 +334,30 @@ export const api = {
     },
   ) =>
     patch<PreDiagnosticoDTO>(`/api/projects/${id}/prediagnostico/campo`, body),
+
+  // leads / Análise (pré-projeto)
+  leads: () => get<LeadListItemDTO[]>("/api/leads"),
+  lead: (id: string) => get<LeadDTO>(`/api/leads/${id}`),
+  createLead: (body: CreateLeadRequest) => post<LeadDTO>("/api/leads", body),
+  qualificarLead: (id: string) =>
+    post<{ projectId: string }>(`/api/leads/${id}/qualificar`),
+  rejeitarLead: (id: string, motivo?: string) =>
+    post<LeadDTO>(`/api/leads/${id}/rejeitar`, { motivo }),
+  // pré-diagnóstico da lead (mesmo motor/DTO, dono = lead)
+  leadPrediagnostico: (id: string) =>
+    get<PreDiagnosticoDTO>(`/api/leads/${id}/prediagnostico`),
+  runLeadPrediagnostico: (id: string) =>
+    post<{ ok: boolean; estado: string }>(
+      `/api/leads/${id}/prediagnostico/run`,
+    ),
+  updateLeadPrediagCampo: (
+    id: string,
+    body: {
+      key: string;
+      value?: string | number | null;
+      action: "validar" | "corrigir";
+    },
+  ) => patch<PreDiagnosticoDTO>(`/api/leads/${id}/prediagnostico/campo`, body),
 
   // candidatura (TRNSF-942)
   candidatura: (id: string) =>
