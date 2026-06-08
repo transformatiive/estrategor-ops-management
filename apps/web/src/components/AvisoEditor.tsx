@@ -382,25 +382,24 @@ export function AvisoEditor({
   }
 
   return (
-    <div
-      className="detail-overlay"
-      onClick={(e) => e.target === e.currentTarget && onClose()}
-    >
-      <div
-        className="modal-card"
-        style={{
-          maxWidth: 920,
-          width: "94vw",
-          maxHeight: "92vh",
-          overflow: "auto",
-        }}
-      >
-        <div className="dp-title">{aviso ? "Editar aviso" : "Novo aviso"}</div>
-        <p className="deadline-sub" style={{ marginTop: 0 }}>
-          A IA propõe a partir do PDF; o admin revê, corrige e valida. Guardar
-          mantém o aviso como rascunho (por publicar) — não fica visível aos
-          consultores. "Publicar" torna-o disponível aos projetos.
-        </p>
+    <div className="aviso-editor">
+      <div className="page-header" style={{ alignItems: "flex-start" }}>
+        <div>
+          <button
+            className="back-link"
+            onClick={onClose}
+            style={{ marginBottom: 6 }}
+          >
+            ← Voltar à listagem
+          </button>
+          <div className="page-title">{aviso ? "Editar aviso" : "Novo aviso"}</div>
+          <p className="deadline-sub" style={{ marginTop: 4, maxWidth: 720 }}>
+            A IA propõe a partir do PDF; o admin revê, corrige e valida. Guardar
+            mantém o aviso como rascunho (por publicar) — não fica visível aos
+            consultores. "Publicar" torna-o disponível aos projetos.
+          </p>
+        </div>
+      </div>
 
         {/* Importar do PDF */}
         <div
@@ -772,7 +771,6 @@ export function AvisoEditor({
             </div>
           </div>
         )}
-      </div>
     </div>
   );
 }

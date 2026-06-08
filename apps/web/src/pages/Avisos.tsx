@@ -76,6 +76,21 @@ export function Avisos() {
 
   const cols = "0.9fr 1.6fr 0.9fr 0.8fr 1fr 1.1fr 1.6fr";
 
+  // Editor em ecrã próprio (TRNSF-1072): em vez de modal, ocupa a página com
+  // "voltar à listagem". Mostra-se a listagem OU o editor.
+  if (editar !== null) {
+    return (
+      <AvisoEditor
+        aviso={editar === "novo" ? null : editar}
+        onClose={() => setEditar(null)}
+        onSaved={() => {
+          setEditar(null);
+          reload();
+        }}
+      />
+    );
+  }
+
   return (
     <>
       <div className="page-header">
@@ -176,16 +191,6 @@ export function Avisos() {
         </div>
       )}
 
-      {editar !== null && (
-        <AvisoEditor
-          aviso={editar === "novo" ? null : editar}
-          onClose={() => setEditar(null)}
-          onSaved={() => {
-            setEditar(null);
-            reload();
-          }}
-        />
-      )}
     </>
   );
 }
