@@ -6,13 +6,15 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { canManageUsers, type UserDTO } from "@estrategor/shared";
+import { canManageUsers, hasPermission, type PermissionKey, type UserDTO } from "@estrategor/shared";
 import { api } from "./api.js";
 
 interface AuthState {
   user: UserDTO | null;
   loading: boolean;
   canManageUsers: boolean;
+  /** O utilizador da sessão tem a permissão? (TRNSF-1056) */
+  can: (key: PermissionKey) => boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   /** Recarrega o utilizador da sessão (ex.: depois de editar o próprio perfil). */
@@ -54,6 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         loading,
         canManageUsers: user ? canManageUsers(user.role) : false,
+        can: (key) => (user ? hasPermission(user, key) : false),
         login,
         logout,
         refresh,

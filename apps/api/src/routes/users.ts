@@ -1,18 +1,30 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { ROLES, canManageUsers, type Role, type UserDTO } from "@estrategor/shared";
+import {
+  PERMISSION_KEYS,
+  ROLES,
+  canManageUsers,
+  defaultPermissionsForRole,
+  type Role,
+  type UserDTO,
+} from "@estrategor/shared";
 import { prisma } from "../db.js";
 import { hashPassword } from "../auth/password.js";
 import { revokeUserSessions } from "../auth/session.js";
 import { requireManager } from "../auth/guards.js";
 
 const roleEnum = z.enum(ROLES);
+// Aceita apenas chaves de permissão conhecidas (ignora desconhecidas no input).
+const permissionsSchema = z.array(z.string()).transform((p) =>
+  [...new Set(p.filter((k) => PERMISSION_KEYS.includes(k)))],
+);
 
 const createSchema = z.object({
   fullName: z.string().min(1),
   email: z.string().email(),
   role: roleEnum,
   password: z.string().min(8, "A palavra-passe deve ter pelo menos 8 caracteres."),
+  permissions: permissionsSchema.optional(),
 });
 
 const updateSchema = z.object({
@@ -20,6 +32,7 @@ const updateSchema = z.object({
   email: z.string().email().optional(),
   role: roleEnum.optional(),
   active: z.boolean().optional(),
+  permissions: permissionsSchema.optional(),
 });
 
 const resetSchema = z.object({
@@ -41,6 +54,7 @@ function toDTO(u: {
   initials: string;
   color: string;
   active: boolean;
+  permissions: string[];
 }): UserDTO {
   return {
     id: u.id,
@@ -50,6 +64,7 @@ function toDTO(u: {
     initials: u.initials,
     color: u.color,
     active: u.active,
+    permissions: u.permissions,
   };
 }
 
@@ -76,7 +91,7 @@ export async function userRoutes(app: FastifyInstance) {
     if (!parsed.success) {
       return reply.code(400).send({ error: parsed.error.errors[0]?.message ?? "Dados inválidos." });
     }
-    const { fullName, email, role, password } = parsed.data;
+    const { fullName, email, role, password, permissions } = parsed.data;
     const exists = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
     if (exists) return reply.code(409).send({ error: "Já existe um utilizador com esse email." });
 
@@ -85,6 +100,8 @@ export async function userRoutes(app: FastifyInstance) {
         fullName,
         email: email.toLowerCase(),
         role,
+        // Sem permissões explícitas → defaults do papel (TRNSF-1056).
+        permissions: permissions ?? defaultPermissionsForRole(role),
         passwordHash: await hashPassword(password),
         initials: initialsFrom(fullName),
         color: "green",
@@ -135,6 +152,7 @@ export async function userRoutes(app: FastifyInstance) {
         email: data.email?.toLowerCase(),
         role: data.role,
         active: data.active,
+        ...(data.permissions ? { permissions: data.permissions } : {}),
         ...(data.fullName ? { initials: initialsFrom(data.fullName) } : {}),
       },
     });

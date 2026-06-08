@@ -1,5 +1,12 @@
 import { useState, type FormEvent } from "react";
-import { ROLES, ROLE_LABELS, type Role, type UserDTO } from "@estrategor/shared";
+import {
+  PERMISSIONS,
+  ROLES,
+  ROLE_LABELS,
+  defaultPermissionsForRole,
+  type Role,
+  type UserDTO,
+} from "@estrategor/shared";
 import { Dropdown } from "../components/Dropdown.js";
 import { api, ApiError } from "../lib/api.js";
 import { useAsync } from "../lib/useAsync.js";
@@ -12,9 +19,16 @@ interface FormState {
   email: string;
   role: Role;
   password: string;
+  permissions: string[];
 }
 
-const EMPTY: FormState = { fullName: "", email: "", role: "CONSULTOR", password: "" };
+const EMPTY: FormState = {
+  fullName: "",
+  email: "",
+  role: "CONSULTOR",
+  password: "",
+  permissions: defaultPermissionsForRole("CONSULTOR"),
+};
 
 export function Utilizadores() {
   const { user, refresh } = useAuth();
@@ -35,6 +49,7 @@ export function Utilizadores() {
           fullName: form.fullName,
           email: form.email,
           role: form.role,
+          permissions: form.permissions,
         });
       } else {
         await api.createUser({
@@ -42,6 +57,7 @@ export function Utilizadores() {
           email: form.email,
           role: form.role,
           password: form.password,
+          permissions: form.permissions,
         });
       }
       // se editou o próprio perfil, recarrega a sessão (nome/iniciais no topo)
@@ -132,7 +148,14 @@ export function Utilizadores() {
                 <button
                   className="back-link"
                   onClick={() => {
-                    setForm({ id: u.id, fullName: u.fullName, email: u.email, role: u.role, password: "" });
+                    setForm({
+                      id: u.id,
+                      fullName: u.fullName,
+                      email: u.email,
+                      role: u.role,
+                      password: "",
+                      permissions: u.permissions,
+                    });
                     setFormError(null);
                   }}
                 >
@@ -179,9 +202,49 @@ export function Utilizadores() {
             <Dropdown
               block
               value={form.role}
-              onChange={(v) => setForm({ ...form, role: v as Role })}
+              onChange={(v) => {
+                const role = v as Role;
+                // Mudar de papel repõe as permissões pelos defaults desse papel
+                // (continua editável abaixo).
+                setForm({ ...form, role, permissions: defaultPermissionsForRole(role) });
+              }}
               options={ROLES.map((r) => ({ value: r, label: ROLE_LABELS[r] }))}
             />
+
+            <label className="login-label">Permissões</label>
+            {form.role === "ADMIN" ? (
+              <p className="login-sub" style={{ marginTop: 0 }}>
+                O perfil Admin tem todas as permissões.
+              </p>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 4 }}>
+                {PERMISSIONS.map((p) => {
+                  const checked = form.permissions.includes(p.key);
+                  return (
+                    <label key={p.key} style={{ display: "flex", gap: 8, alignItems: "flex-start", fontSize: 12.5 }}>
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        style={{ marginTop: 2 }}
+                        onChange={() =>
+                          setForm({
+                            ...form,
+                            permissions: checked
+                              ? form.permissions.filter((k) => k !== p.key)
+                              : [...form.permissions, p.key],
+                          })
+                        }
+                      />
+                      <span>
+                        <b>{p.label}</b>
+                        <span className="deadline-sub" style={{ display: "block" }}>{p.description}</span>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+
             {!form.id && (
               <>
                 <label className="login-label">Palavra-passe inicial</label>

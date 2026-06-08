@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import {
   canManageUsers,
+  hasPermission,
   classificacaoBaixaDensidade,
   computeMerit,
   freguesiaBaixaDensidade,
@@ -694,8 +695,9 @@ export async function diagnosticoRoutes(app: FastifyInstance) {
   app.post<{ Params: { id: string } }>(
     "/api/projects/:id/reopen",
     async (req, reply) => {
-      if (!canManageUsers(req.user!.role)) {
-        return reply.code(403).send({ error: "Só um gestor ou administrador pode reabrir um projeto." });
+      // Papel de gestão OU permissão explícita "reabrir_projeto" (TRNSF-1056).
+      if (!canManageUsers(req.user!.role) && !hasPermission(req.user!, "reabrir_projeto")) {
+        return reply.code(403).send({ error: "Sem permissão para reabrir um projeto." });
       }
       const project = await prisma.project.findUnique({ where: { id: req.params.id } });
       if (!project) return reply.code(404).send({ error: "Projeto não encontrado." });

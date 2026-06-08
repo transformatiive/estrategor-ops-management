@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import {
   canManageUsers,
+  hasPermission,
   meritGridDataSchema,
   accessConditionSchema,
   parseMeritGrid,
@@ -186,10 +187,12 @@ export async function avisosRoutes(app: FastifyInstance) {
 
   // Guarda: todas as rotas do catálogo são só de admin.
   function exigeAdmin(
-    req: { user?: { role: import("@estrategor/shared").Role } },
+    req: { user?: { role: import("@estrategor/shared").Role; permissions?: string[] } },
     reply: { code: (c: number) => { send: (b: unknown) => unknown } },
   ): boolean {
-    if (!req.user || !canManageUsers(req.user.role)) {
+    // Papel de gestão OU permissão explícita "gerir_avisos" (TRNSF-1056).
+    const u = req.user;
+    if (!u || (!canManageUsers(u.role) && !hasPermission(u, "gerir_avisos"))) {
       reply
         .code(403)
         .send({
