@@ -25,6 +25,7 @@ import { InovacaoExtraPanel } from "./InovacaoExtraPanel.js";
 import { InovacaoCondPanel } from "./InovacaoCondPanel.js";
 import { IntlAcoesPanel } from "./IntlAcoesPanel.js";
 import { IntlDetalhePanel } from "./IntlDetalhePanel.js";
+import { RevisaoInternaPanel } from "./RevisaoInternaPanel.js";
 
 type CandResponse = CandidaturaDTO | { candidatura: null; familyChosen: CandFamily | null };
 
@@ -129,6 +130,9 @@ export function CandidaturaTab({ projectId }: { projectId: string }) {
         </div>
         {msg && <div className="login-error" style={{ marginTop: 10 }}>{msg}</div>}
       </div>
+
+      {/* Revisão interna A3 (TRNSF-947) — painel de aprovação/devolução + histórico */}
+      <RevisaoInternaPanel projectId={projectId} stage={cand.stage} onChanged={reload} />
 
       {/* Secções específicas da Família A — Inovação Produtiva */}
       {cand.family === "inovacao_produtiva" && (

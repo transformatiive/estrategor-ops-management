@@ -52,6 +52,7 @@ import type {
   ProjectListItemDTO,
   ProjectTrackingDTO,
   PublicCollectionDTO,
+  RevisaoInternaDTO,
   SaveDiagnosticRequest,
   UpdateUserRequest,
   UrgentDeadlineDTO,
@@ -358,6 +359,18 @@ export const api = {
       `/api/projects/${id}/candidatura/stage`,
       { to },
     ),
+
+  // revisão interna A3 (TRNSF-947)
+  revisao: (id: string) =>
+    get<RevisaoInternaDTO>(`/api/projects/${id}/candidatura/revisao`),
+  aprovarRevisao: (id: string, comentarios?: string) =>
+    post<RevisaoInternaDTO>(`/api/projects/${id}/candidatura/revisao/aprovar`, {
+      comentarios,
+    }),
+  devolverRevisao: (id: string, comentarios: string) =>
+    post<RevisaoInternaDTO>(`/api/projects/${id}/candidatura/revisao/devolver`, {
+      comentarios,
+    }),
 
   // motor de extração de dados (TRNSF-952)
   extracoes: (id: string) =>
