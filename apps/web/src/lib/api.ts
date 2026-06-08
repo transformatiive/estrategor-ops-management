@@ -6,8 +6,10 @@ import type {
   MeritGridData,
   BeneficiarioImportDTO,
   CandidaturaDTO,
+  CandFieldDTO,
   CandFamily,
   ChecklistItemDTO,
+  CreateManualFieldRequest,
   CollectionRequestDTO,
   CreateCollectionRequest,
   CreateProjectRequest,
@@ -355,6 +357,12 @@ export const api = {
       action: "validar" | "corrigir";
     },
   ) => patch<CandidaturaDTO>(`/api/projects/${id}/candidatura/field`, body),
+  // adicionar um campo manual (intake) a uma secção genérica (TRNSF-1062)
+  addManualField: (id: string, body: CreateManualFieldRequest) =>
+    post<CandFieldDTO>(`/api/projects/${id}/candidatura/field/manual`, body),
+  // remover um campo manual (TRNSF-1062)
+  deleteCandField: (id: string, fieldId: string) =>
+    del<{ ok: boolean }>(`/api/projects/${id}/candidatura/field/${fieldId}`),
   candidaturaStage: (id: string, to: "A3" | "A2") =>
     post<{ ok: boolean; stage: string }>(
       `/api/projects/${id}/candidatura/stage`,

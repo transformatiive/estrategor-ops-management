@@ -178,15 +178,15 @@ export function CandidaturaTab({ projectId }: { projectId: string }) {
               <BeneficiarioImportButton projectId={projectId} onImported={reload} />
             )}
           </div>
-          {sec.total === 0 ? (
+          {sec.total === 0 && (
             <p className="cand-empty">
-              Por preencher — será montado pela extração / intake / geração nos passos seguintes.
+              Por preencher — adicione campos manualmente ou aguarde a extração / intake / geração dos passos seguintes.
             </p>
-          ) : (
-            sec.fields.map((f) => (
-              <FieldRow key={f.id} projectId={projectId} field={f} onChanged={reload} />
-            ))
           )}
+          {sec.fields.map((f) => (
+            <FieldRow key={f.id} projectId={projectId} field={f} onChanged={reload} />
+          ))}
+          <AddFieldForm projectId={projectId} section={sec.key} onAdded={reload} />
         </div>
       ))}
 
@@ -240,6 +240,10 @@ function FieldRow({
   const badge = FIELD_STATE_BADGE[field.state];
   const final = isFieldFinal(field.origin, field.state);
 
+  // Campo manual: criado pelo consultor (origin "intake", sourceRef "manual").
+  // Só estes são removíveis; campos automáticos não devem poder ser apagados.
+  const manual = field.origin === "intake";
+
   async function act(action: "validar" | "corrigir") {
     setBusy(true);
     try {
@@ -250,6 +254,16 @@ function FieldRow({
         value: action === "corrigir" ? val : undefined,
       });
       setEditing(false);
+      onChanged();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function remove() {
+    setBusy(true);
+    try {
+      await api.deleteCandField(projectId, field.id);
       onChanged();
     } finally {
       setBusy(false);
@@ -281,9 +295,82 @@ function FieldRow({
             {requiresHumanValidation(field.origin) && field.state === "por_validar" && (
               <button className="back-link" disabled={busy} onClick={() => act("validar")}>validar</button>
             )}
+            {manual && (
+              <button className="back-link" disabled={busy} title="Remover campo" onClick={remove}>✕</button>
+            )}
           </span>
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Editor de intake manual (TRNSF-1062): permite ao consultor acrescentar um
+ * campo livre (rótulo + valor) a uma secção genérica. O rótulo torna-se a chave
+ * do campo (não há coluna `label`); entra como `intake`/`validado`.
+ */
+function AddFieldForm({
+  projectId,
+  section,
+  onAdded,
+}: {
+  projectId: string;
+  section: string;
+  onAdded: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [label, setLabel] = useState("");
+  const [value, setValue] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  function cancelar() {
+    setOpen(false);
+    setLabel("");
+    setValue("");
+    setErro(null);
+  }
+
+  async function guardar() {
+    setBusy(true);
+    setErro(null);
+    try {
+      await api.addManualField(projectId, { section, label, value });
+      cancelar();
+      onAdded();
+    } catch (e) {
+      setErro(e instanceof ApiError ? e.message : "Não foi possível adicionar o campo.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!open) {
+    return (
+      <button className="back-link" onClick={() => setOpen(true)}>
+        + Adicionar campo
+      </button>
+    );
+  }
+
+  return (
+    <div className="cand-field-edit" style={{ marginTop: 8 }}>
+      <input
+        className="login-input"
+        placeholder="Rótulo"
+        value={label}
+        onChange={(e) => setLabel(e.target.value)}
+      />
+      <input
+        className="login-input"
+        placeholder="Valor"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+      />
+      <button className="btn btn-primary" disabled={busy} onClick={guardar}>Guardar</button>
+      <button className="btn btn-secondary" disabled={busy} onClick={cancelar}>Cancelar</button>
+      {erro && <span className="login-error" style={{ flexBasis: "100%" }}>{erro}</span>}
     </div>
   );
 }
