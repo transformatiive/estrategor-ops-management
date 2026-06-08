@@ -136,6 +136,7 @@ model User {
   validatedExtracoes Extracao[]        @relation("ValidatedExtracoes")
   validatedGeneratedFields GeneratedField[] @relation("ValidatedGeneratedFields")
   createdMeritGrids  MeritGrid[]       @relation("CreatedMeritGrids")
+  revisoesInternas   RevisaoInterna[]  @relation("RevisoesInternas")
 
   @@map("users")
 }
@@ -214,6 +215,7 @@ model Project {
   activities       ActivityLog[]
   candidatura      Candidatura?
   preDiagnostico   PreDiagnostico?
+  revisoesInternas RevisaoInterna[]
 
   @@index([clientId])
   @@index([programId])
@@ -603,6 +605,26 @@ model Candidatura {
   verificacoes    Verificacao[]
 
   @@map("candidaturas")
+}
+
+// ─── Revisão interna (TRNSF-947) ─────────────────────────────────────────
+// Registo (LOG) das decisões de revisão interna na fase A3. Uma linha por
+// decisão — mantém o histórico de aprovações/devoluções. Guarda o revisor, a
+// data, o resultado, comentários e um snapshot da checklist no momento.
+model RevisaoInterna {
+  id          String   @id @default(cuid())
+  projectId   String   @map("project_id")
+  resultado   String // "aprovada" | "devolvida"
+  checklist   Json // snapshot dos itens da checklist no momento da decisão
+  comentarios String?
+  revisorId   String   @map("revisor_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  revisor User    @relation("RevisoesInternas", fields: [revisorId], references: [id])
+
+  @@index([projectId])
+  @@map("revisoes_internas")
 }
 
 // Armazém genérico de campos da candidatura com proveniência por campo.
