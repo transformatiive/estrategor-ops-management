@@ -35,6 +35,12 @@ const updateFieldSchema = z.object({
   action: z.enum(["validar", "corrigir"]),
 });
 
+const manualFieldSchema = z.object({
+  section: z.string().min(1),
+  label: z.string(),
+  value: z.unknown().optional(),
+});
+
 type FieldRow = {
   id: string;
   section: string;
@@ -363,6 +369,83 @@ export async function candidaturaRoutes(app: FastifyInstance) {
     }
     return buildDTO(cand.id);
   });
+
+  // Criar um campo manual (intake) numa secção genérica (TRNSF-1062). Permite ao
+  // consultor preencher livremente secções que de outra forma ficariam vazias.
+  app.post<{ Params: { id: string } }>("/api/projects/:id/candidatura/field/manual", async (req, reply) => {
+    const parsed = manualFieldSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ error: parsed.error.errors[0]?.message ?? "Dados inválidos." });
+    }
+    const cand = await prisma.candidatura.findUnique({ where: { projectId: req.params.id } });
+    if (!cand) return reply.code(409).send({ error: "Candidatura não iniciada." });
+
+    const { section } = parsed.data;
+    if (isStructuredSection(section)) {
+      return reply.code(400).send({ error: "Secção gerida por painel próprio." });
+    }
+    const key = parsed.data.label.trim();
+    if (!key) return reply.code(400).send({ error: "Indique o rótulo do campo." });
+
+    const existing = await prisma.candField.findUnique({
+      where: { candidaturaId_section_key: { candidaturaId: cand.id, section, key } },
+    });
+    if (existing) {
+      return reply.code(409).send({ error: "Já existe um campo com esse nome nesta secção." });
+    }
+
+    const field = await prisma.candField.create({
+      data: {
+        candidaturaId: cand.id,
+        section,
+        key,
+        // `intake`/`validado` → conta como finalizado no resumo de proveniência.
+        value: (parsed.data.value ?? null) as unknown as object,
+        origin: "intake",
+        state: "validado",
+        sourceRef: "manual",
+        updatedById: req.user!.id,
+      },
+    });
+    await prisma.activityLog.create({
+      data: {
+        projectId: req.params.id,
+        userId: req.user!.id,
+        type: "campo_manual_criado",
+        description: `Adicionou o campo "${key}" à secção ${section}.`,
+      },
+    });
+    return reply.code(201).send(toFieldDTO(field as FieldRow));
+  });
+
+  // Remover um campo manual (intake). Apenas campos manuais são removíveis aqui;
+  // campos automáticos (extraído/gerado/...) não devem poder ser apagados.
+  app.delete<{ Params: { id: string; fieldId: string } }>(
+    "/api/projects/:id/candidatura/field/:fieldId",
+    async (req, reply) => {
+      const cand = await prisma.candidatura.findUnique({ where: { projectId: req.params.id } });
+      if (!cand) return reply.code(404).send({ error: "Candidatura não encontrada." });
+
+      const field = await prisma.candField.findUnique({ where: { id: req.params.fieldId } });
+      if (!field || field.candidaturaId !== cand.id) {
+        return reply.code(404).send({ error: "Campo não encontrado." });
+      }
+      if (field.origin !== "intake") {
+        return reply.code(409).send({ error: "Só campos manuais podem ser removidos." });
+      }
+
+      await prisma.candField.delete({ where: { id: field.id } });
+      await prisma.activityLog.create({
+        data: {
+          projectId: req.params.id,
+          userId: req.user!.id,
+          type: "campo_manual_removido",
+          description: `Removeu o campo "${field.key}" da secção ${field.section}.`,
+        },
+      });
+      return { ok: true };
+    },
+  );
 
   // §8 — transição A2 → A3 (revisão interna) e devolução A3 → A2
   app.post<{ Params: { id: string }; Body: { to: "A3" | "A2" } }>(

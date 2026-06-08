@@ -216,6 +216,17 @@ export interface UpdateCandFieldRequest {
 }
 
 /**
+ * Adicionar um campo manual (intake) a uma secção genérica (TRNSF-1062).
+ * O `label` torna-se a `key` do CandField (não há coluna `label` no modelo),
+ * pelo que é simultaneamente o identificador e o rótulo legível do campo.
+ */
+export interface CreateManualFieldRequest {
+  section: string;
+  label: string;
+  value?: unknown;
+}
+
+/**
  * Resultado da importação da identificação do beneficiário a partir do NIF da
  * empresa (TRNSF-1061). Reutiliza os adaptadores nif.pt + VIES do pré-diagnóstico.
  * Os campos importados entram como `api_empresas` / `por_validar` (o consultor
