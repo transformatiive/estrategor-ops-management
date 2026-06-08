@@ -8,6 +8,7 @@ import { DocumentsTab } from "../components/DocumentsTab.js";
 import { DiagnosticoTab } from "../components/DiagnosticoTab.js";
 import { SeguimentoTab } from "../components/SeguimentoTab.js";
 import { CandidaturaTab } from "../components/CandidaturaTab.js";
+import { ContextoPanel } from "../components/ContextoPanel.js";
 import { ExtracaoTab } from "../components/ExtracaoTab.js";
 import { PipelinePanel } from "../components/PipelinePanel.js";
 import { FaseAcoesPanel } from "../components/FaseAcoesPanel.js";
@@ -144,6 +145,7 @@ export function ProjectPage() {
       )}
 
       {vistaAtiva === "candidatura" && <CandidaturaTab projectId={id} />}
+      {vistaAtiva === "contexto" && <ContextoPanel projectId={id} />}
       {vistaAtiva === "extracao" && <ExtracaoTab projectId={id} />}
       {vistaAtiva === "documentos" && <DocumentsTab projectId={id} />}
       {vistaAtiva === "diagnostico" && (

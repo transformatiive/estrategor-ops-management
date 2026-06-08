@@ -9,7 +9,7 @@ import {
   type GenDocTypeDef,
   type GeneratedFieldDTO,
 } from "@estrategor/shared";
-import { CAND_FAMILY_LABELS } from "@estrategor/shared";
+import { CAND_FAMILY_LABELS, assembleContexto, type CandContextKind } from "@estrategor/shared";
 import { prisma } from "../db.js";
 import { generateText, type GenSources } from "./prompt.js";
 
@@ -53,7 +53,16 @@ async function gatherSources(
       .join("\n");
   }
 
-  return { familyLabel: CAND_FAMILY_LABELS[family], codigoAviso, dossier, meritGuidance };
+  // Contexto e precedentes fornecidos pelo consultor (TRNSF-1068).
+  const ctxSources = await prisma.candContextSource.findMany({
+    where: { candidaturaId },
+    orderBy: { createdAt: "asc" },
+  });
+  const contexto = assembleContexto(
+    ctxSources.map((s) => ({ kind: s.kind as CandContextKind, label: s.label, content: s.content })),
+  );
+
+  return { familyLabel: CAND_FAMILY_LABELS[family], codigoAviso, dossier, meritGuidance, contexto };
 }
 
 /** Verifica a configuração mínima para gerar (não gerar às cegas). */

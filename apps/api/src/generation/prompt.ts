@@ -9,6 +9,8 @@ export interface GenSources {
   dossier: string;
   /** orientação dos critérios da grelha de mérito (A/B/C/D) */
   meritGuidance: string;
+  /** contexto e precedentes fornecidos pelo consultor (TRNSF-1068) */
+  contexto: string;
 }
 
 const SYSTEM_TEMPLATE = (def: GenDocTypeDef, familyLabel: string): string =>
@@ -28,6 +30,7 @@ const userPrompt = (def: GenDocTypeDef, s: GenSources, maxChars?: number): strin
   `INGREDIENTES ESPECÍFICOS deste campo:\n${def.ingredientes}\n\n` +
   `AVISO: ${s.codigoAviso ?? "[A PREENCHER: código do aviso]"}\n\n` +
   `ORIENTAÇÃO DA GRELHA DE MÉRITO:\n${s.meritGuidance || "—"}\n\n` +
+  `CONTEXTO E PRECEDENTES (fontes fornecidas pelo consultor — usa como matéria-prima, anonimiza precedentes):\n${s.contexto || "(sem contexto fornecido)"}\n\n` +
   `DOSSIER (factos disponíveis):\n${s.dossier || "(sem dados estruturados ainda)"}\n\n` +
   (maxChars ? `IMPORTANTE: a versão anterior excedeu o limite. Sê mais conciso: máximo ${maxChars} caracteres.\n\n` : "") +
   `Redige agora o campo, respeitando as regras e o limite de ${def.charLimit} caracteres.`;

@@ -74,7 +74,7 @@ export const FASE_VISTAS: Record<string, string[]> = {
   // TRNSF-1050 — o separador "Recolha" foi fundido em "Checklist & Seguimento":
   // pedir documentos (gerar ligação) + estado por cores + lembretes num só lugar.
   recolha: ["resumo", "documentos", "seguimento"],
-  preparacao: ["resumo", "candidatura", "extracao", "documentos", "seguimento"],
+  preparacao: ["resumo", "candidatura", "contexto", "extracao", "documentos", "seguimento"],
   revisao: ["resumo", "candidatura", "seguimento"],
   submissao: ["resumo", "candidatura"],
   // Cauda da Candidatura (TRNSF-1067): em Análise consulta-se a candidatura
@@ -93,6 +93,7 @@ export const VISTA_LABELS: Record<string, string> = {
   milestones: "Milestones",
   diagnostico: "Diagnóstico",
   candidatura: "Candidatura",
+  contexto: "Contexto",
   extracao: "Extração",
   documentos: "Documentos",
   seguimento: "Checklist & Seguimento",
