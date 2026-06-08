@@ -4,6 +4,7 @@ import type {
   AccessCondition,
   AvisoElegibilidadeLike,
   MeritGridData,
+  BeneficiarioImportDTO,
   CandidaturaDTO,
   CandFamily,
   ChecklistItemDTO,
@@ -358,6 +359,11 @@ export const api = {
     post<{ ok: boolean; stage: string }>(
       `/api/projects/${id}/candidatura/stage`,
       { to },
+    ),
+  // importar a identificação do beneficiário a partir do NIF da empresa (TRNSF-1061)
+  importBeneficiario: (id: string) =>
+    post<BeneficiarioImportDTO>(
+      `/api/projects/${id}/candidatura/beneficiario/importar`,
     ),
 
   // revisão interna A3 (TRNSF-947)

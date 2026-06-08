@@ -214,3 +214,20 @@ export interface UpdateCandFieldRequest {
   /** marcar como validado (sem alterar valor) ou corrigido (com novo valor) */
   action: "validar" | "corrigir";
 }
+
+/**
+ * Resultado da importação da identificação do beneficiário a partir do NIF da
+ * empresa (TRNSF-1061). Reutiliza os adaptadores nif.pt + VIES do pré-diagnóstico.
+ * Os campos importados entram como `api_empresas` / `por_validar` (o consultor
+ * valida; nunca se inventam dados).
+ *  - `ok`        — pelo menos um campo escrito, sem degradação relevante;
+ *  - `parcial`   — escreveu-se algo, mas alguma faixa falhou (ex.: VIES deu nome,
+ *                  API de empresas falhou);
+ *  - `sem_chave` — API de empresas sem chave e nada pôde ser escrito;
+ *  - `falhou`    — nenhuma faixa devolveu dados.
+ */
+export interface BeneficiarioImportDTO {
+  estado: "ok" | "parcial" | "sem_chave" | "falhou";
+  preenchidos: number;
+  mensagem: string;
+}
