@@ -119,6 +119,8 @@ model User {
   initials     String
   color        String   @default("green")
   active       Boolean  @default(true)
+  // Permissões (capacidades) por utilizador — fundação RBAC (TRNSF-1056).
+  permissions  String[] @default([])
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 

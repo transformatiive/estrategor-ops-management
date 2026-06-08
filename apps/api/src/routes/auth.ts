@@ -24,6 +24,7 @@ function toDTO(u: {
   initials: string;
   color: string;
   active: boolean;
+  permissions: string[];
 }): UserDTO {
   return {
     id: u.id,
@@ -33,6 +34,7 @@ function toDTO(u: {
     initials: u.initials,
     color: u.color,
     active: u.active,
+    permissions: u.permissions,
   };
 }
 

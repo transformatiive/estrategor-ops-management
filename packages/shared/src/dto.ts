@@ -15,6 +15,8 @@ export interface UserDTO {
   initials: string;
   color: string;
   active: boolean;
+  /** Permissões (capacidades) atribuídas ao utilizador (TRNSF-1056). */
+  permissions: string[];
 }
 
 /** Utilizador atribuível como responsável de projeto (seletor na criação). */
@@ -36,6 +38,7 @@ export interface CreateUserRequest {
   email: string;
   role: Role;
   password: string;
+  permissions?: string[];
 }
 
 /** Edição de utilizador (campos opcionais). */
@@ -44,6 +47,7 @@ export interface UpdateUserRequest {
   email?: string;
   role?: Role;
   active?: boolean;
+  permissions?: string[];
 }
 
 /** Resposta do endpoint de saúde (Fase 0). */

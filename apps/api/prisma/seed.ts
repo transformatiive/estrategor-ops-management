@@ -12,6 +12,7 @@ import {
   DOCUMENT_TAXONOMY,
   QUALIFICACAO_MPR_2025_2,
   buildFolderTree,
+  defaultPermissionsForRole,
   documentTypesForProgram,
   type ProgramCode,
 } from "@estrategor/shared";
@@ -185,7 +186,12 @@ async function main() {
   const usersByInitials = new Map<string, string>();
   for (const u of USERS) {
     const created = await prisma.user.create({
-      data: { ...u, email: u.email.toLowerCase(), passwordHash: demoHash },
+      data: {
+        ...u,
+        email: u.email.toLowerCase(),
+        passwordHash: demoHash,
+        permissions: defaultPermissionsForRole(u.role),
+      },
     });
     usersByInitials.set(u.initials, created.id);
   }
