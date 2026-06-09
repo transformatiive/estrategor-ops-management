@@ -14,6 +14,7 @@
 import { prisma } from "../db.js";
 import { extrairGrelhaDoAviso } from "../extraction/grelha.js";
 import { fetchAvisos2030, isOpen, resolvePdfUrl, type Aviso2030 } from "./source.js";
+import { fetchCompeteOpenAvisos } from "./compete.js";
 
 export interface BuildResultado {
   total: number;
@@ -109,5 +110,73 @@ export async function buildGridsForOpenAvisos(opts: { limit?: number } = {}): Pr
     }
   }
 
+  return res;
+}
+
+/**
+ * Constrói uma grelha rascunho a partir do URL do regulamento de um aviso
+ * (reutilizado pelos adaptadores de portal). Idempotente por `codigoAviso`.
+ */
+async function criarGrelhaDeRegulamento(
+  codigo: string,
+  titulo: string,
+  url: string,
+  programaDefault: string,
+  res: BuildResultado,
+): Promise<void> {
+  const existente = await prisma.meritGrid.findFirst({ where: { codigoAviso: codigo } });
+  if (existente) {
+    res.ignoradas += 1;
+    res.detalhes.push({ codigo, estado: "existente" });
+    return;
+  }
+  try {
+    const proposta = await extrairGrelhaDoAviso(url);
+    const m = proposta.metadata;
+    await prisma.meritGrid.create({
+      data: {
+        programCode: m.programCode || programaDefault,
+        measure: (m.medida || titulo).slice(0, 250),
+        codigoAviso: codigo,
+        regiao: m.regiao,
+        versao: m.versao?.trim() || new Date().toISOString().slice(0, 10),
+        fonteUrl: url,
+        mpMinimo: m.mp_minimo,
+        minimoPorCriterio: m.minimo_por_criterio,
+        formulaMp: m.formula_mp || null,
+        grid: proposta.grid as object,
+        accessConditions: proposta.accessConditions as object,
+        eligibilidade: proposta.eligibilidade as object,
+        extracted: false,
+      },
+    });
+    res.criadas += 1;
+    res.detalhes.push({ codigo, estado: "criada", nota: proposta.nota || undefined });
+  } catch (e) {
+    res.erros += 1;
+    res.detalhes.push({ codigo, estado: "erro", nota: e instanceof Error ? e.message : String(e) });
+  }
+}
+
+/**
+ * Enumeração pelo portal Compete2030 → grelhas rascunho. Ao contrário do
+ * portugal2030, o Compete enumera os avisos abertos e hospeda o regulamento
+ * (com a grelha) diretamente. `limit` controla o custo da IA por execução.
+ */
+export async function buildGridsCompete(opts: { limit?: number } = {}): Promise<BuildResultado> {
+  const limit = opts.limit ?? 10;
+  const avisos = await fetchCompeteOpenAvisos();
+  const res: BuildResultado = {
+    total: avisos.length,
+    abertos: avisos.length,
+    criadas: 0,
+    ignoradas: 0,
+    erros: 0,
+    detalhes: [],
+  };
+  for (const a of avisos) {
+    if (res.criadas >= limit) break;
+    await criarGrelhaDeRegulamento(a.codigo, a.titulo, a.regulamentoUrl, "PT2030", res);
+  }
   return res;
 }
