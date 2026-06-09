@@ -330,6 +330,15 @@ export const api = {
       ignoradas: number;
       erros: number;
     }>(`/api/avisos/2030/build?limit=${limit}`, {}),
+  buildAvisosCompete: (limit = 5) =>
+    post<{
+      ok: boolean;
+      total: number;
+      abertos: number;
+      criadas: number;
+      ignoradas: number;
+      erros: number;
+    }>(`/api/avisos/compete/build?limit=${limit}`, {}),
 
   // pré-diagnóstico assistido por IA (TRNSF-967)
   prediagnostico: (id: string) =>

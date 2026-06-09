@@ -23,17 +23,20 @@ export function Avisos() {
   const [sync, setSync] = useState(false);
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
 
-  async function sincronizar2030() {
+  async function correrSync(
+    etiqueta: string,
+    fn: () => Promise<{ abertos: number; criadas: number; ignoradas: number; erros: number }>,
+  ) {
     setSync(true);
     setSyncMsg(null);
     try {
-      const r = await api.buildAvisos2030(5);
+      const r = await fn();
       setSyncMsg(
-        `PT2030: ${r.abertos} avisos abertos · ${r.criadas} grelha(s) nova(s) (rascunho), ${r.ignoradas} já existiam, ${r.erros} erro(s).`,
+        `${etiqueta}: ${r.abertos} avisos abertos · ${r.criadas} grelha(s) nova(s) (rascunho), ${r.ignoradas} já existiam, ${r.erros} erro(s).`,
       );
       reload();
     } catch (e) {
-      setSyncMsg(e instanceof ApiError ? e.message : "Erro ao sincronizar os avisos PT2030.");
+      setSyncMsg(e instanceof ApiError ? e.message : `Erro ao sincronizar (${etiqueta}).`);
     } finally {
       setSync(false);
     }
@@ -119,8 +122,19 @@ export function Avisos() {
           </div>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
-          <button className="btn btn-secondary" onClick={sincronizar2030} disabled={sync}>
-            {sync ? "A sincronizar…" : "Sincronizar PT2030"}
+          <button
+            className="btn btn-secondary"
+            onClick={() => correrSync("Compete2030", () => api.buildAvisosCompete(5))}
+            disabled={sync}
+          >
+            {sync ? "A sincronizar…" : "Sincronizar Compete2030"}
+          </button>
+          <button
+            className="btn btn-secondary"
+            onClick={() => correrSync("PT2030 (plano anual)", () => api.buildAvisos2030(5))}
+            disabled={sync}
+          >
+            Sincronizar PT2030
           </button>
           <button className="btn btn-primary" onClick={() => setEditar("novo")}>
             + Novo aviso

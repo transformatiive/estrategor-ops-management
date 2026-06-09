@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { canManageUsers, hasPermission } from "@estrategor/shared";
 import { requireAuth } from "../auth/guards.js";
 import { env } from "../env.js";
-import { buildGridsForOpenAvisos, listOpenAvisos2030 } from "../avisos2030/build.js";
+import { buildGridsCompete, buildGridsForOpenAvisos, listOpenAvisos2030 } from "../avisos2030/build.js";
 
 function cronAutorizado(req: FastifyRequest): boolean {
   const auth = req.headers.authorization ?? "";
@@ -37,6 +37,14 @@ export async function avisos2030Routes(app: FastifyInstance): Promise<void> {
     return { ok: true, ...res };
   });
 
+  // Cron: construir grelhas a partir do portal Compete2030 (regulamento real).
+  app.post("/api/cron/avisos/compete", async (req, reply) => {
+    if (!cronAutorizado(req)) return reply.code(401).send({ error: "Token de cron inválido." });
+    const limit = parseLimit((req.query as { limit?: string })?.limit);
+    const res = await buildGridsCompete({ limit });
+    return { ok: true, ...res };
+  });
+
   // ── Admin (sessão) ──
   app.register(async (priv) => {
     priv.addHook("preHandler", requireAuth);
@@ -53,6 +61,14 @@ export async function avisos2030Routes(app: FastifyInstance): Promise<void> {
       if (!exigeAdmin(req, reply)) return;
       const limit = parseLimit((req.query as { limit?: string })?.limit);
       const res = await buildGridsForOpenAvisos({ limit });
+      return { ok: true, ...res };
+    });
+
+    // Trigger manual: construir grelhas a partir do Compete2030 (regulamento real).
+    priv.post("/api/avisos/compete/build", async (req, reply) => {
+      if (!exigeAdmin(req, reply)) return;
+      const limit = parseLimit((req.query as { limit?: string })?.limit);
+      const res = await buildGridsCompete({ limit });
       return { ok: true, ...res };
     });
   });
